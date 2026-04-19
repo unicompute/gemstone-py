@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head><title>MagTag Sign Up</title></head>
+<body>
+  <h1>Sign Up</h1>
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}{% for msg in messages %}<p style="color:red">{{ msg }}</p>{% endfor %}{% endif %}
+  {% endwith %}
+  <form method="post" action="{{ url_for('do_signup') }}">
+    <p><label>Username: <input type="text" name="username"></label></p>
+    <p><label>Password: <input type="password" name="password"></label></p>
+    <p><label>Confirm: <input type="password" name="confirmpassword"></label></p>
+    <p><input type="submit" value="Sign Up"></p>
+  </form>
+  <p><a href="{{ url_for('login') }}">Already have an account?</a></p>
+</body>
+</html>

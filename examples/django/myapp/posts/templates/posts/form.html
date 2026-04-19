@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action }} Post{% endblock %}
+
+{% block content %}
+<h1>{{ action }} Post</h1>
+{% if form.errors %}
+  <div class="error-box">
+    <h2>{{ form.errors|length }} error(s) prevented this post from being saved:</h2>
+    <ul>{% for field, errors in form.errors.items %}
+      {% for error in errors %}<li>{{ field }}: {{ error }}</li>{% endfor %}
+    {% endfor %}</ul>
+  </div>
+{% endif %}
+<form method="post">
+  {% csrf_token %}
+  {% for field in form %}
+    <div>
+      {{ field.label_tag }}<br>
+      {{ field }}
+      {% if field.errors %}<span style="color:red">{{ field.errors }}</span>{% endif %}
+    </div><br>
+  {% endfor %}
+  <input type="submit" value="Save">
+</form>
+<p>
+  {% if post %}<a href="{% url 'post_detail' post.pk %}">Back</a>{% else %}<a href="{% url 'post_list' %}">Back</a>{% endif %}
+</p>
+{% endblock %}

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head><title>MagTag Login</title></head>
+<body>
+  <h1>MagTag</h1>
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      {% for msg in messages %}<p style="color:red">{{ msg }}</p>{% endfor %}
+    {% endif %}
+  {% endwith %}
+  <form method="post" action="{{ url_for('do_login') }}">
+    <p><label>Username: <input type="text" name="username"></label></p>
+    <p><label>Password: <input type="password" name="password"></label></p>
+    <p><input type="submit" value="Login"></p>
+  </form>
+  <p><a href="{{ url_for('signup') }}">Sign up</a> |
+     <a href="{{ url_for('setup') }}">Setup demo users</a></p>
+</body>
+</html>

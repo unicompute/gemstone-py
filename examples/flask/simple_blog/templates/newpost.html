@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head><title>New Post</title></head>
+<body>
+  <h1>New Post</h1>
+  <form method="post" action="{{ url_for('create_post') }}">
+    <p><label>Title: <input type="text" name="title" size="60"></label></p>
+    <p><label>Tags (space separated): <input type="text" name="tags" size="40"></label></p>
+    <p><label>Text:<br><textarea name="text" rows="10" cols="60"></textarea></label></p>
+    <p><input type="submit" value="Create Post"></p>
+  </form>
+  <p><a href="{{ url_for('posts') }}">Back to posts</a></p>
+</body>
+</html>

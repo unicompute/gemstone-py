@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head><title>Debug</title></head>
+<body>
+  <h1>Debug</h1>
+  <h2>Session</h2><pre>{{ session }}</pre>
+  <h2>User</h2>
+  {% if user %}
+    <pre>name={{ user.name }}
+tweets={{ user.num_tweets }}
+followers={{ user.num_followers }}
+following={{ user.num_following }}</pre>
+  {% else %}
+    <p>Not logged in</p>
+  {% endif %}
+  <p><a href="{{ url_for('home') }}">Home</a></p>
+</body>
+</html>

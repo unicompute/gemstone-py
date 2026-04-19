@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<h1>Home#index</h1>
+<p>Find me in the Django port of the Rails scaffold.</p>
+<p><a href="{% url 'post_list' %}">Browse posts</a></p>
+{% endblock %}

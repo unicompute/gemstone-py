@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head><title>MagTag – Home</title></head>
+<body>
+  <h1>MagTag</h1>
+  <nav>
+    Welcome, {{ user.name }} |
+    <a href="{{ url_for('logout') }}">Logout</a>
+  </nav>
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}{% for msg in messages %}<p style="color:green">{{ msg }}</p>{% endfor %}{% endif %}
+  {% endwith %}
+  <h2>Post a Tweet</h2>
+  <form method="post" action="{{ url_for('post_tweet') }}">
+    <input type="text" name="tweet" maxlength="140" size="60" placeholder="What's happening?">
+    <input type="submit" value="Tweet">
+  </form>
+  <h2>Timeline</h2>
+  {% if user.timeline %}
+    {% for t in user.timeline | reverse %}
+      <p><strong>{{ t.author }}</strong>: {{ t.text }}
+        <small style="color:#999">— {{ twitterize_date(t.date) }}</small></p>
+    {% endfor %}
+  {% else %}
+    <p>No tweets yet. Follow someone!</p>
+  {% endif %}
+  <h2>Your Tweets ({{ user.num_tweets }})</h2>
+  {% for t in user.tweets[:10] %}
+    <p>{{ t.text }} <small style="color:#999">— {{ twitterize_date(t.date) }}</small></p>
+  {% endfor %}
+  <p>Following {{ user.num_following }} | Followers {{ user.num_followers }}</p>
+</body>
+</html>
