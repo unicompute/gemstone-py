@@ -47,6 +47,8 @@ jobs:
   benchmarks:
     runs-on: ${{ fromJson(inputs.runner-labels) }}
     env:
+      RUNNER_TOOL_CACHE: /Users/tariq/src/actions-runner-gemstone-py/hostedtoolcache
+      AGENT_TOOLSDIRECTORY: /Users/tariq/src/actions-runner-gemstone-py/hostedtoolcache
       GS_LIB: ${{ secrets.GS_LIB != '' && secrets.GS_LIB || '/Users/tariq/GemStone64Bit3.7.5-arm64.Darwin/lib' }}
       GS_LIB_PATH: ${{ secrets.GS_LIB_PATH != '' && secrets.GS_LIB_PATH || '/Users/tariq/GemStone64Bit3.7.5-arm64.Darwin/lib/libgcirpc-3.7.5-64.dylib' }}
       GS_STONE: ${{ secrets.GS_STONE != '' && secrets.GS_STONE || 'gs64stone' }}
