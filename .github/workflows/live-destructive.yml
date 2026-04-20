@@ -3,6 +3,10 @@ name: Destructive Live GemStone Tests
 on:
   workflow_dispatch:
     inputs:
+      runner-labels:
+        description: JSON array of runner labels for the GemStone host
+        required: true
+        default: '["self-hosted","macOS","ARM64"]'
       confirm:
         description: Type DESTROY to run destructive live tests
         required: true
@@ -13,14 +17,14 @@ permissions:
 
 jobs:
   destructive-live:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner-labels) }}
     env:
-      GS_LIB: ${{ secrets.GS_LIB }}
-      GS_LIB_PATH: ${{ secrets.GS_LIB_PATH }}
-      GS_STONE: ${{ secrets.GS_STONE }}
-      GS_HOST: ${{ secrets.GS_HOST }}
-      GS_NETLDI: ${{ secrets.GS_NETLDI }}
-      GS_GEM_SERVICE: ${{ secrets.GS_GEM_SERVICE }}
+      GS_LIB: ${{ secrets.GS_LIB != '' && secrets.GS_LIB || '/Users/tariq/GemStone64Bit3.7.5-arm64.Darwin/lib' }}
+      GS_LIB_PATH: ${{ secrets.GS_LIB_PATH != '' && secrets.GS_LIB_PATH || '/Users/tariq/GemStone64Bit3.7.5-arm64.Darwin/lib/libgcirpc-3.7.5-64.dylib' }}
+      GS_STONE: ${{ secrets.GS_STONE != '' && secrets.GS_STONE || 'gs64stone' }}
+      GS_HOST: ${{ secrets.GS_HOST != '' && secrets.GS_HOST || 'localhost' }}
+      GS_NETLDI: ${{ secrets.GS_NETLDI != '' && secrets.GS_NETLDI || 'netldi' }}
+      GS_GEM_SERVICE: ${{ secrets.GS_GEM_SERVICE != '' && secrets.GS_GEM_SERVICE || 'gemnetobject' }}
       GS_USERNAME: ${{ secrets.GS_USERNAME }}
       GS_PASSWORD: ${{ secrets.GS_PASSWORD }}
       GS_HOST_USERNAME: ${{ secrets.GS_HOST_USERNAME }}
