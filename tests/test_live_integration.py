@@ -577,6 +577,146 @@ class LiveIntegrationTests(unittest.TestCase):
             writer_two.logout()
             self._root_cleanup(key)
 
+    def test_multi_writer_retry_loop_converges(self):
+        key = f"LiveCommitRetry_{uuid.uuid4().hex}"
+        iterations = 3
+        self._root_cleanup(key)
+        conflicts = 0
+        writer_one = GemStoneSession(
+            config=self.config,
+            transaction_policy=TransactionPolicy.MANUAL,
+        )
+        writer_two = GemStoneSession(
+            config=self.config,
+            transaction_policy=TransactionPolicy.MANUAL,
+        )
+        try:
+            def commit_or_retry_increment(session: GemStoneSession) -> int:
+                local_conflicts = 0
+                while True:
+                    root = PersistentRoot(session)
+                    root[key]["count"] = root[key]["count"] + 1
+                    try:
+                        commit_transaction(session)
+                        return local_conflicts
+                    except CommitConflictError:
+                        local_conflicts += 1
+                        session.abort()
+
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.COMMIT_ON_SUCCESS,
+            ) as setup:
+                root = PersistentRoot(setup)
+                root[key] = {"count": 0}
+
+            writer_one.login()
+            writer_two.login()
+
+            for _ in range(iterations):
+                PersistentRoot(writer_one)[key]["count"] = (
+                    PersistentRoot(writer_one)[key]["count"] + 1
+                )
+                PersistentRoot(writer_two)[key]["count"] = (
+                    PersistentRoot(writer_two)[key]["count"] + 1
+                )
+
+                try:
+                    commit_transaction(writer_one)
+                except CommitConflictError:
+                    conflicts += 1
+                    writer_one.abort()
+                    conflicts += commit_or_retry_increment(writer_one)
+
+                try:
+                    commit_transaction(writer_two)
+                except CommitConflictError:
+                    conflicts += 1
+                    writer_two.abort()
+                    conflicts += commit_or_retry_increment(writer_two)
+
+            self.assertGreater(conflicts, 0)
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.ABORT_ON_EXIT,
+            ) as verify:
+                root = PersistentRoot(verify)
+                self.assertEqual(root[key]["count"], iterations * 2)
+        finally:
+            writer_one.logout()
+            writer_two.logout()
+            self._root_cleanup(key)
+
+    def test_write_lock_updates_converge_with_retry(self):
+        key = f"LiveWriteLockRetry_{uuid.uuid4().hex}"
+        iterations = 3
+        self._root_cleanup(key)
+        conflicts = 0
+        writer_one = GemStoneSession(
+            config=self.config,
+            transaction_policy=TransactionPolicy.MANUAL,
+        )
+        writer_two = GemStoneSession(
+            config=self.config,
+            transaction_policy=TransactionPolicy.MANUAL,
+        )
+        try:
+            def commit_locked_increment(session: GemStoneSession) -> int:
+                local_conflicts = 0
+                while True:
+                    counter = PersistentRoot(session)[key]
+                    with lock(session, counter):
+                        counter.increment()
+                    try:
+                        commit_transaction(session)
+                        return local_conflicts
+                    except CommitConflictError:
+                        local_conflicts += 1
+                        session.abort()
+
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.COMMIT_ON_SUCCESS,
+            ) as setup:
+                root = PersistentRoot(setup)
+                root[key] = RCCounter(setup)
+
+            writer_one.login()
+            writer_two.login()
+
+            for _ in range(iterations):
+                counter_one = PersistentRoot(writer_one)[key]
+                counter_two = PersistentRoot(writer_two)[key]
+                with lock(writer_one, counter_one):
+                    counter_one.increment()
+                with lock(writer_two, counter_two):
+                    counter_two.increment()
+
+                try:
+                    commit_transaction(writer_one)
+                except CommitConflictError:
+                    conflicts += 1
+                    writer_one.abort()
+                    conflicts += commit_locked_increment(writer_one)
+
+                try:
+                    commit_transaction(writer_two)
+                except CommitConflictError:
+                    conflicts += 1
+                    writer_two.abort()
+                    conflicts += commit_locked_increment(writer_two)
+
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.ABORT_ON_EXIT,
+            ) as verify:
+                root = PersistentRoot(verify)
+                self.assertEqual(root[key].value, iterations * 2)
+        finally:
+            writer_one.logout()
+            writer_two.logout()
+            self._root_cleanup(key)
+
     @unittest.skipUnless(HAS_FLASK, "Flask is not installed in python3")
     def test_flask_request_session_commits_and_aborts(self):
         from flask import Flask
