@@ -41,10 +41,22 @@ If one global threshold is too blunt, the workflow also accepts:
 Operation thresholds override suite thresholds, which override the global
 `max-regression-pct`.
 
-The committed workflow currently defaults `operation-thresholds` to
-`persistent_root/mapping_keys=25,gstore/snapshot_read=25`, because
-`mapping_keys` is sub-millisecond and `gstore/snapshot_read` has shown
-meaningful host-to-host and run-to-run jitter on otherwise healthy runs.
+The committed self-hosted workflow currently defaults `operation-thresholds`
+to a fuller per-operation set:
+
+- `persistent_root/write_mapping_commit=30`
+- `persistent_root/mapping_keys=40`
+- `gscollection/bulk_insert_and_index_commit=30`
+- `gscollection/indexed_search=25`
+- `gstore/batch_write=35`
+- `gstore/snapshot_read=40`
+- `rchash/populate_commit=25`
+- `rchash/items=35`
+
+Those defaults are intentionally broader than the original single global
+threshold, because repeated samples on the local self-hosted GemStone host have
+shown noticeable run-to-run jitter across multiple write-heavy operations, not
+just `mapping_keys` and `snapshot_read`.
 
 Use the `baseline-report` workflow input only when you need to override the
 manifest selection manually for a one-off comparison.

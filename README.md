@@ -259,9 +259,22 @@ enforcement is skipped when no committed baseline matches the candidate
 metadata, and the workflow can fail on regressions larger than the configured
 percentage. The workflow also accepts `suite-thresholds` and
 `operation-thresholds` inputs for per-suite and per-operation regression
-policies when one global threshold is too blunt. The default workflow input now
-includes `persistent_root/mapping_keys=25,gstore/snapshot_read=25`, because
-both operations have shown noticeable timing jitter on otherwise healthy runs.
+policies when one global threshold is too blunt. On the self-hosted GemStone
+runner, the default workflow input now uses a fuller per-operation threshold
+set:
+
+- `persistent_root/write_mapping_commit=30`
+- `persistent_root/mapping_keys=40`
+- `gscollection/bulk_insert_and_index_commit=30`
+- `gscollection/indexed_search=25`
+- `gstore/batch_write=35`
+- `gstore/snapshot_read=40`
+- `rchash/populate_commit=25`
+- `rchash/items=35`
+
+Those defaults are broader than the original single global threshold because
+repeated local samples on the self-hosted GemStone host showed meaningful
+timing jitter across several write-heavy operations.
 
 Run the opt-in live lane:
 
