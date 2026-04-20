@@ -45,6 +45,13 @@ gemstone-examples hello
 gemstone-examples smalltalk-demo
 ```
 
+Operational helper scripts:
+
+```bash
+./scripts/bootstrap_self_hosted_runner.sh
+./scripts/install_self_hosted_runner_service.sh status
+```
+
 ## Configure
 
 Set explicit GemStone connection settings in the environment:
@@ -285,6 +292,36 @@ GS_RUN_LIVE=1 ./scripts/run_live_checks.sh
 Destructive live coverage is available separately on GitHub through the manual
 `Destructive Live GemStone Tests` workflow, which requires
 `confirm=DESTROY` and runs with `GS_RUN_DESTRUCTIVE_LIVE=1`.
+
+## Self-Hosted Runner
+
+The live GemStone and benchmark workflows now target a repo-specific
+self-hosted label set by default:
+
+- `self-hosted`
+- `macOS`
+- `ARM64`
+- `gemstone-py-local`
+
+The workflows also use the current Node 24-compatible action majors:
+
+- `actions/checkout@v6`
+- `actions/setup-python@v6`
+- `actions/upload-artifact@v7`
+- `actions/download-artifact@v5`
+
+That means the GemStone host should keep its self-hosted runner current.
+
+To bootstrap or repair the runner on the macOS GemStone host:
+
+```bash
+./scripts/bootstrap_self_hosted_runner.sh
+./scripts/install_self_hosted_runner_service.sh install --start
+./scripts/install_self_hosted_runner_service.sh status
+```
+
+See [SELF_HOSTED_RUNNER.md](/Users/tariq/src/gemstone-py/SELF_HOSTED_RUNNER.md:1) for the full bootstrap,
+launchd, log-path, and health-check flow.
 
 Run the live demo against a configured stone:
 

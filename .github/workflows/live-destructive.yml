@@ -6,7 +6,7 @@ on:
       runner-labels:
         description: JSON array of runner labels for the GemStone host
         required: true
-        default: '["self-hosted","macOS","ARM64"]'
+        default: '["self-hosted","macOS","ARM64","gemstone-py-local"]'
       confirm:
         description: Type DESTROY to run destructive live tests
         required: true
@@ -35,7 +35,7 @@ jobs:
       GS_RUN_DESTRUCTIVE_LIVE: "1"
       PYTHON_BIN: python3
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Validate destructive live configuration
         env:

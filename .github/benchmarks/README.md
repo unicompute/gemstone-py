@@ -58,5 +58,14 @@ threshold, because repeated samples on the local self-hosted GemStone host have
 shown noticeable run-to-run jitter across multiple write-heavy operations, not
 just `mapping_keys` and `snapshot_read`.
 
+The manual benchmark workflow also defaults its runner labels to:
+
+- `self-hosted`
+- `macOS`
+- `ARM64`
+- `gemstone-py-local`
+
+That keeps the benchmark lane pinned to the GemStone-capable local runner.
+
 Use the `baseline-report` workflow input only when you need to override the
 manifest selection manually for a one-off comparison.

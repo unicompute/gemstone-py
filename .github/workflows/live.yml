@@ -6,7 +6,7 @@ on:
       runner-labels:
         description: JSON array of runner labels for the GemStone host
         required: true
-        default: '["self-hosted","macOS","ARM64"]'
+        default: '["self-hosted","macOS","ARM64","gemstone-py-local"]'
 
 permissions:
   contents: read
@@ -30,7 +30,7 @@ jobs:
       GS_RUN_LIVE: "1"
       PYTHON_BIN: python3
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Validate live test configuration
         run: |

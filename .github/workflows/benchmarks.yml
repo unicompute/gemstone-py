@@ -6,7 +6,7 @@ on:
       runner-labels:
         description: JSON array of runner labels for the GemStone host
         required: true
-        default: '["self-hosted","macOS","ARM64"]'
+        default: '["self-hosted","macOS","ARM64","gemstone-py-local"]'
       entries:
         description: Benchmark entry count
         required: true
@@ -61,7 +61,7 @@ jobs:
       GS_HOST_PASSWORD: ${{ secrets.GS_HOST_PASSWORD }}
       PYTHON_BIN: python3
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Validate benchmark configuration
         run: |
@@ -214,7 +214,7 @@ jobs:
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Upload benchmark artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gemstone-benchmark-report
           path: benchmark-artifacts/benchmark-report.json
@@ -222,7 +222,7 @@ jobs:
 
       - name: Upload benchmark comparison artifact
         if: steps.baseline.outputs.found == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gemstone-benchmark-compare
           path: |
