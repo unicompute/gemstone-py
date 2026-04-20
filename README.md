@@ -260,8 +260,8 @@ metadata, and the workflow can fail on regressions larger than the configured
 percentage. The workflow also accepts `suite-thresholds` and
 `operation-thresholds` inputs for per-suite and per-operation regression
 policies when one global threshold is too blunt. The default workflow input now
-includes `persistent_root/mapping_keys=25`, because that particular benchmark
-is short enough to show noticeable timing jitter on otherwise healthy runs.
+includes `persistent_root/mapping_keys=25,gstore/snapshot_read=25`, because
+both operations have shown noticeable timing jitter on otherwise healthy runs.
 
 Run the opt-in live lane:
 

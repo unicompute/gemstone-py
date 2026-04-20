@@ -42,8 +42,9 @@ Operation thresholds override suite thresholds, which override the global
 `max-regression-pct`.
 
 The committed workflow currently defaults `operation-thresholds` to
-`persistent_root/mapping_keys=25`, because that microbenchmark is
-sub-millisecond and shows more host-to-host jitter than the other suites.
+`persistent_root/mapping_keys=25,gstore/snapshot_read=25`, because
+`mapping_keys` is sub-millisecond and `gstore/snapshot_read` has shown
+meaningful host-to-host and run-to-run jitter on otherwise healthy runs.
 
 Use the `baseline-report` workflow input only when you need to override the
 manifest selection manually for a one-off comparison.
