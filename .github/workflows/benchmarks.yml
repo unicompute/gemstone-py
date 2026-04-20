@@ -38,7 +38,7 @@ on:
       operation-thresholds:
         description: Optional comma-separated SUITE/OPERATION=PCT regression threshold overrides
         required: false
-        default: ""
+        default: "persistent_root/mapping_keys=25"
 
 permissions:
   contents: read

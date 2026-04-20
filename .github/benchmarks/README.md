@@ -41,5 +41,9 @@ If one global threshold is too blunt, the workflow also accepts:
 Operation thresholds override suite thresholds, which override the global
 `max-regression-pct`.
 
+The committed workflow currently defaults `operation-thresholds` to
+`persistent_root/mapping_keys=25`, because that microbenchmark is
+sub-millisecond and shows more host-to-host jitter than the other suites.
+
 Use the `baseline-report` workflow input only when you need to override the
 manifest selection manually for a one-off comparison.
