@@ -59,23 +59,21 @@ jobs:
       GS_PASSWORD: ${{ secrets.GS_PASSWORD }}
       GS_HOST_USERNAME: ${{ secrets.GS_HOST_USERNAME }}
       GS_HOST_PASSWORD: ${{ secrets.GS_HOST_PASSWORD }}
+      PYTHON_BIN: python3
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
       - name: Validate benchmark configuration
         run: |
+          "${PYTHON_BIN}" --version
           test -n "${GS_USERNAME}" || { echo "Missing GS_USERNAME secret"; exit 1; }
           test -n "${GS_PASSWORD}" || { echo "Missing GS_PASSWORD secret"; exit 1; }
           test -n "${GS_STONE}" || { echo "Missing GS_STONE secret"; exit 1; }
 
       - name: Install package and dev tools
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e .[dev]
+          "${PYTHON_BIN}" -m pip install --upgrade pip
+          "${PYTHON_BIN}" -m pip install -e .[dev]
 
       - name: Run benchmark lane
         shell: bash
@@ -113,7 +111,7 @@ jobs:
               exit 1
             fi
             mkdir -p benchmark-artifacts
-            python - <<'PY'
+            "${PYTHON_BIN}" - <<'PY'
             import json
             import os
             from pathlib import Path
@@ -148,12 +146,12 @@ jobs:
             exit 0
           fi
 
-          python -m gemstone_py.benchmark_baselines \
+          "${PYTHON_BIN}" -m gemstone_py.benchmark_baselines \
             benchmark-artifacts/benchmark-report.json \
             --manifest "${BENCH_BASELINE_MANIFEST}" \
             --json \
             --output benchmark-artifacts/baseline-selection.json
-          python - <<'PY'
+          "${PYTHON_BIN}" - <<'PY'
           import json
           import os
           from pathlib import Path
@@ -196,14 +194,14 @@ jobs:
             threshold_args+=(--operation-threshold "${spec}")
           done < <(printf '%s' "${BENCH_OPERATION_THRESHOLDS}" | tr ',\n' '\n')
           set +e
-          python -m gemstone_py.benchmark_compare \
+          "${PYTHON_BIN}" -m gemstone_py.benchmark_compare \
             "${BENCH_BASELINE_REPORT}" \
             benchmark-artifacts/benchmark-report.json \
             --max-regression-pct "${BENCH_MAX_REGRESSION_PCT}" \
             "${threshold_args[@]}" \
             --output benchmark-artifacts/benchmark-compare.txt
           text_exit=$?
-          python -m gemstone_py.benchmark_compare \
+          "${PYTHON_BIN}" -m gemstone_py.benchmark_compare \
             "${BENCH_BASELINE_REPORT}" \
             benchmark-artifacts/benchmark-report.json \
             --json \
@@ -218,7 +216,7 @@ jobs:
           if [[ "${json_exit}" -ne 0 && "${json_exit}" -ne 2 ]]; then
             exit "${json_exit}"
           fi
-          python - <<'PY'
+          "${PYTHON_BIN}" - <<'PY'
           import json
           import os
           from pathlib import Path

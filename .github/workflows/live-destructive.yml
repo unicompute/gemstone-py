@@ -33,17 +33,15 @@ jobs:
       GS_HOST_PASSWORD: ${{ secrets.GS_HOST_PASSWORD }}
       GS_RUN_LIVE: "1"
       GS_RUN_DESTRUCTIVE_LIVE: "1"
+      PYTHON_BIN: python3
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
 
       - name: Validate destructive live configuration
         env:
           CONFIRM_DESTRUCTIVE: ${{ inputs.confirm }}
         run: |
+          "${PYTHON_BIN}" --version
           test -n "${GS_USERNAME}" || { echo "Missing GS_USERNAME secret"; exit 1; }
           test -n "${GS_PASSWORD}" || { echo "Missing GS_PASSWORD secret"; exit 1; }
           test -n "${GS_STONE}" || { echo "Missing GS_STONE secret"; exit 1; }
@@ -54,8 +52,8 @@ jobs:
 
       - name: Install package and dev tools
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e .[dev]
+          "${PYTHON_BIN}" -m pip install --upgrade pip
+          "${PYTHON_BIN}" -m pip install -e .[dev]
 
       - name: Run destructive live GemStone tests
         run: ./scripts/run_live_checks.sh
