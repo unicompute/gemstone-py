@@ -51,6 +51,19 @@ RUNNER_ROOT=/Users/tariq/src/actions-runner-gemstone-py ./scripts/bootstrap_self
 RUNNER_NAME=gemstone-py-local-arm64 ./scripts/bootstrap_self_hosted_runner.sh
 ```
 
+To inspect the current install without changing it:
+
+```bash
+./scripts/bootstrap_self_hosted_runner.sh --check
+```
+
+To upgrade the runner binaries in place while preserving the registration,
+service metadata, `_work/`, and `hostedtoolcache/`:
+
+```bash
+./scripts/bootstrap_self_hosted_runner.sh --upgrade --runner-version 2.333.1
+```
+
 ## Service Install
 
 The repository includes a hardened launchd template with `KeepAlive` enabled.
@@ -69,6 +82,7 @@ To replace an existing service with the hardened template:
 Useful service commands:
 
 ```bash
+./scripts/install_self_hosted_runner_service.sh check
 ./scripts/install_self_hosted_runner_service.sh status
 ./scripts/install_self_hosted_runner_service.sh restart
 ./scripts/install_self_hosted_runner_service.sh stop
