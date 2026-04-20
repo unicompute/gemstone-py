@@ -14,6 +14,8 @@ Run:
     python magtag_app.py
 """
 
+import sys
+
 PORTING_STATUS = "translated_example"
 RUNTIME_REQUIREMENT = "Runs as translated example code on plain GemStone images or standard Python web stacks"
 
