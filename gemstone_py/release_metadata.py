@@ -13,7 +13,10 @@ from typing import Any, Sequence
 try:
     import tomllib
 except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
-    tomllib = None
+    try:
+        import tomli as tomllib
+    except ModuleNotFoundError:
+        tomllib = None
 
 
 CHANGELOG_VERSION_TEMPLATE = r"^##\s+{version}(?:\s+-|\s*$)"
