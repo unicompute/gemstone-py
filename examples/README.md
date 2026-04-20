@@ -29,6 +29,14 @@ See [PORTING_SCOPE.md](/Users/tariq/src/gemstone-py/PORTING_SCOPE.md) for the fu
 
 Use canonical `gemstone_py.*` imports throughout the examples.
 
+For maintained performance measurement of the core persistence helpers, use
+the real benchmark lane instead of the example scripts:
+
+```bash
+./scripts/run_benchmarks.sh
+gemstone-benchmarks --entries 500 --search-runs 20
+```
+
 The runnable examples no longer patch `sys.path` at startup. Run them as
 modules from the repo root, or use the installed console scripts for the
 packaged demos:

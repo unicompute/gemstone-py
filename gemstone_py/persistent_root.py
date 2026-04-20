@@ -39,14 +39,20 @@ Usage
         print(dict(d))              # {'name': 'Tariq', 'amount': 100, ...}
 """
 
+import ctypes
+from typing import Any, Iterator, cast
+
+import gemstone_py as _gs
+
+from ._smalltalk_batch import (
+    fetch_mapping_string_keys as _fetch_mapping_string_keys,
+)
+from ._smalltalk_batch import (
+    fetch_mapping_string_oop_pairs as _fetch_mapping_string_oop_pairs,
+)
+
 PORTING_STATUS = "plain_gemstone_port"
 RUNTIME_REQUIREMENT = "Works on plain GemStone images over GCI"
-
-import ctypes
-from typing import Any, Iterator
-
-# Re-use OOP constants and GCI primitives from the canonical gemstone_py package.
-import gemstone_py as _gs
 
 
 def _python_name_to_selector(name: str) -> str:
@@ -127,27 +133,23 @@ class GsDict:
     def keys(self) -> list[str]:
         """
         Return string keys for StringKeyValueDictionary objects.
-        Enumerate Associations instead of using #keys, which does not
-        round-trip correctly through GCI for StringKeyValueDictionary.
+        Batch them into one Smalltalk eval instead of per-entry RPCs.
         """
-        s   = object.__getattribute__(self, '_session')
+        s = object.__getattribute__(self, '_session')
         oop = object.__getattribute__(self, '_oop')
-        assoc_arr_oop = s.perform_oop(oop, 'associations')
-        size = s.perform(assoc_arr_oop, 'size')
-        result: list[str] = []
-        for i in range(1, size + 1):
-            assoc_oop = s.perform_oop(assoc_arr_oop, 'at:', _gs._python_to_smallint(i))
-            key_oop = s.perform_oop(assoc_oop, 'key')
-            result.append(str(_from_oop(s, key_oop)))
-        return result
+        return _fetch_mapping_string_keys(s, oop)
 
     def items(self) -> list[tuple[str, Any]]:
-        return [(k, self[k]) for k in self.keys()]
+        s = object.__getattribute__(self, '_session')
+        oop = object.__getattribute__(self, '_oop')
+        return _batched_mapping_items(s, oop)
 
     def values(self) -> list[Any]:
-        return [self[k] for k in self.keys()]
+        s = object.__getattribute__(self, '_session')
+        oop = object.__getattribute__(self, '_oop')
+        return _batched_mapping_values(s, oop)
 
-    def pop(self, key: str, default: Any = ...):
+    def pop(self, key: str, default: Any = ...) -> Any:
         if key in self:
             value = self[key]
             del self[key]
@@ -162,7 +164,7 @@ class GsDict:
         self[key] = default
         return default
 
-    def update(self, other=None, /, **kwargs) -> None:
+    def update(self, other: Any = None, /, **kwargs: Any) -> None:
         if other is not None:
             if hasattr(other, 'items'):
                 iterable = other.items()
@@ -180,31 +182,33 @@ class GsDict:
         return iter(self.keys())
 
     def __len__(self) -> int:
-        return len(self.keys())
+        s = object.__getattribute__(self, '_session')
+        oop = object.__getattribute__(self, '_oop')
+        return cast(int, s.perform(oop, 'size'))
 
-    def _call(self, selector: str, *args) -> Any:
+    def _call(self, selector: str, *args: Any) -> Any:
         """Send an arbitrary Smalltalk message to this dict's OOP."""
         s   = object.__getattribute__(self, '_session')
         oop = object.__getattribute__(self, '_oop')
         raw = [_to_oop(s, a) for a in args]
         return s.perform(oop, selector, *raw)
 
-    def _call_oop(self, selector: str, *args) -> int:
+    def _call_oop(self, selector: str, *args: Any) -> int:
         s   = object.__getattribute__(self, '_session')
         oop = object.__getattribute__(self, '_oop')
         raw = [_to_oop(s, a) for a in args]
-        return s.perform_oop(oop, selector, *raw)
+        return cast(int, s.perform_oop(oop, selector, *raw))
 
-    def send(self, selector: str, *args) -> Any:
+    def send(self, selector: str, *args: Any) -> Any:
         return _from_oop(
             object.__getattribute__(self, '_session'),
             self._call_oop(selector, *args),
         )
 
-    def send_oop(self, selector: str, *args) -> int:
+    def send_oop(self, selector: str, *args: Any) -> int:
         return self._call_oop(selector, *args)
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> Any:
         selector = _python_name_to_selector(name)
 
         def dispatcher(*args: Any) -> Any:
@@ -216,7 +220,7 @@ class GsDict:
 
     @property
     def oop(self) -> int:
-        return object.__getattribute__(self, '_oop')
+        return cast(int, object.__getattribute__(self, '_oop'))
 
     def __repr__(self) -> str:
         oop = object.__getattribute__(self, '_oop')
@@ -240,28 +244,28 @@ class GsObject:
         object.__setattr__(self, '_session', session)
         object.__setattr__(self, '_oop', oop)
 
-    def _call(self, selector: str, *args) -> Any:
+    def _call(self, selector: str, *args: Any) -> Any:
         s   = object.__getattribute__(self, '_session')
         oop = object.__getattribute__(self, '_oop')
         raw = [_to_oop(s, a) for a in args]
         return s.perform(oop, selector, *raw)
 
-    def _call_oop(self, selector: str, *args) -> int:
+    def _call_oop(self, selector: str, *args: Any) -> int:
         s   = object.__getattribute__(self, '_session')
         oop = object.__getattribute__(self, '_oop')
         raw = [_to_oop(s, a) for a in args]
-        return s.perform_oop(oop, selector, *raw)
+        return cast(int, s.perform_oop(oop, selector, *raw))
 
-    def send(self, selector: str, *args) -> Any:
+    def send(self, selector: str, *args: Any) -> Any:
         return _from_oop(
             object.__getattribute__(self, '_session'),
             self._call_oop(selector, *args),
         )
 
-    def send_oop(self, selector: str, *args) -> int:
+    def send_oop(self, selector: str, *args: Any) -> int:
         return self._call_oop(selector, *args)
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> Any:
         selector = _python_name_to_selector(name)
 
         def dispatcher(*args: Any) -> Any:
@@ -273,7 +277,7 @@ class GsObject:
 
     @property
     def oop(self) -> int:
-        return object.__getattribute__(self, '_oop')
+        return cast(int, object.__getattribute__(self, '_oop'))
 
     def __repr__(self) -> str:
         oop = object.__getattribute__(self, '_oop')
@@ -388,27 +392,24 @@ class PersistentRoot:
         """
         Return all symbol-dictionary keys as plain Python strings.
 
-        This avoids the earlier eval-string implementation, which was fragile
-        around quoting and slower than direct message sends over GCI.
+        The batch serializer keeps quoting isolated to one fixed helper while
+        avoiding a per-entry GCI call sequence.
         """
-        s    = object.__getattribute__(self, '_session')
-        ug   = object.__getattribute__(self, '_ug')
-        assoc_arr_oop = s.perform_oop(ug, 'associations')
-        size = s.perform(assoc_arr_oop, 'size')
-        result: list[str] = []
-        for i in range(1, size + 1):
-            assoc_oop = s.perform_oop(assoc_arr_oop, 'at:', _gs._python_to_smallint(i))
-            key_oop = s.perform_oop(assoc_oop, 'key')
-            result.append(s.perform(key_oop, 'asString'))
-        return result
+        s = object.__getattribute__(self, '_session')
+        ug = object.__getattribute__(self, '_ug')
+        return _fetch_mapping_string_keys(s, ug)
 
     def items(self) -> list[tuple[str, Any]]:
-        return [(k, self[k]) for k in self.keys()]
+        s = object.__getattribute__(self, '_session')
+        ug = object.__getattribute__(self, '_ug')
+        return _batched_mapping_items(s, ug)
 
     def values(self) -> list[Any]:
-        return [self[k] for k in self.keys()]
+        s = object.__getattribute__(self, '_session')
+        ug = object.__getattribute__(self, '_ug')
+        return _batched_mapping_values(s, ug)
 
-    def pop(self, key: str, default: Any = ...):
+    def pop(self, key: str, default: Any = ...) -> Any:
         if key in self:
             value = self[key]
             del self[key]
@@ -423,7 +424,7 @@ class PersistentRoot:
         self[key] = default
         return default
 
-    def update(self, other=None, /, **kwargs) -> None:
+    def update(self, other: Any = None, /, **kwargs: Any) -> None:
         if other is not None:
             if hasattr(other, 'items'):
                 iterable = other.items()
@@ -438,7 +439,9 @@ class PersistentRoot:
         return iter(self.keys())
 
     def __len__(self) -> int:
-        return len(self.keys())
+        s = object.__getattribute__(self, '_session')
+        ug = object.__getattribute__(self, '_ug')
+        return cast(int, s.perform(ug, 'size'))
 
     def __repr__(self) -> str:
         name = object.__getattribute__(self, '_name')
@@ -450,14 +453,31 @@ class PersistentRoot:
 # Internal helpers — Python ↔ GemStone OOP conversion
 # ---------------------------------------------------------------------------
 
+
+def _batched_mapping_items(s: _gs.GemStoneSession, oop: int) -> list[tuple[str, Any]]:
+    """Fetch mapping items in one eval and materialise values via OOP lookup."""
+    return [
+        (key, _from_oop(s, value_oop))
+        for key, value_oop in _fetch_mapping_string_oop_pairs(s, oop)
+    ]
+
+
+def _batched_mapping_values(s: _gs.GemStoneSession, oop: int) -> list[Any]:
+    """Fetch mapping values in one eval and materialise them via OOP lookup."""
+    return [
+        _from_oop(s, value_oop)
+        for _, value_oop in _fetch_mapping_string_oop_pairs(s, oop)
+    ]
+
+
 def _to_oop(s: _gs.GemStoneSession, value: Any) -> int:
     """Convert any supported Python value to a GemStone OOP."""
     if value is None:
-        return _gs.OOP_NIL
+        return cast(int, _gs.OOP_NIL)
     if isinstance(value, bool):
-        return _gs.OOP_TRUE if value else _gs.OOP_FALSE
+        return cast(int, _gs.OOP_TRUE if value else _gs.OOP_FALSE)
     if isinstance(value, int):
-        return _gs._python_to_smallint(value)
+        return cast(int, _gs._python_to_smallint(value))
     if isinstance(value, float):
         return s.float_oop(value)
     if isinstance(value, str):
@@ -468,7 +488,7 @@ def _to_oop(s: _gs.GemStoneSession, value: Any) -> int:
         return _list_to_gs(s, value)
     # Any object that already wraps a GemStone OOP (RCCounter, RCHash, GsDict, …)
     if hasattr(value, '_oop'):
-        return object.__getattribute__(value, '_oop')
+        return cast(int, object.__getattribute__(value, '_oop'))
     raise TypeError(f"Cannot persist {type(value).__name__!r} to GemStone")
 
 
@@ -518,7 +538,7 @@ def _from_oop(s: _gs.GemStoneSession, oop: int) -> Any:
 
 def _class_oop(s: _gs.GemStoneSession, name: str) -> int | None:
     """Resolve and cache a GemStone class OOP per session."""
-    cache = getattr(s, '_persistent_root_class_oops', None)
+    cache = cast(dict[str, int | None] | None, getattr(s, '_persistent_root_class_oops', None))
     if cache is None:
         cache = {}
         setattr(s, '_persistent_root_class_oops', cache)
@@ -541,7 +561,7 @@ def _array_from_gs(s: _gs.GemStoneSession, oop: int) -> list[Any]:
     return result
 
 
-def _dict_to_gs(s: _gs.GemStoneSession, d) -> int:
+def _dict_to_gs(s: _gs.GemStoneSession, d: Any) -> int:
     """Build a GemStone StringKeyValueDictionary from a Python dict or GsDict."""
     s._ensure_lib()
     lib = s._lib
@@ -558,7 +578,7 @@ def _dict_to_gs(s: _gs.GemStoneSession, d) -> int:
     return oop
 
 
-def _list_to_gs(s: _gs.GemStoneSession, lst) -> int:
+def _list_to_gs(s: _gs.GemStoneSession, lst: list[Any] | tuple[Any, ...]) -> int:
     """Build a GemStone Array from a Python list or tuple."""
     arr_class = s.resolve('Array')
     size_oop  = _gs._python_to_smallint(len(lst))

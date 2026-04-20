@@ -26,3 +26,6 @@ shared repository state, for example by clearing the ObjectLog:
 ```bash
 GS_RUN_LIVE=1 GS_RUN_DESTRUCTIVE_LIVE=1 python3 -m unittest tests.test_live_integration
 ```
+
+On GitHub, use the separate manual `Destructive Live GemStone Tests` workflow
+for that lane. It requires `confirm=DESTROY` before it will run.

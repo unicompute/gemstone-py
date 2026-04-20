@@ -64,6 +64,16 @@ class OrderedCollectionBridgeTests(unittest.TestCase):
         session.eval.assert_not_called()
         self.assertEqual(from_oop.call_count, 3)
 
+    def test_clear_uses_plain_gemstone_object_for_oop(self):
+        col, session = _make_ordered_collection()
+
+        result = col.clear()
+
+        self.assertIs(result, col)
+        session.eval.assert_called_once_with(
+            "(Object _objectForOop: 111) removeAllSuchThat: [:e | true]."
+        )
+
 
 class ProxyBridgeTests(unittest.TestCase):
     def test_send_dispatches_and_wraps_result(self):

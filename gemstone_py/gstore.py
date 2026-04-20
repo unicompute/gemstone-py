@@ -38,23 +38,35 @@ To abort a transaction without committing, raise GStoreAbortTransaction:
             raise GStoreAbortTransaction   # nothing committed
 """
 
-PORTING_STATUS = "plain_gemstone_port"
-RUNTIME_REQUIREMENT = "Works on plain GemStone images over GCI"
-
-import ctypes
 import json
 from contextlib import contextmanager
-from typing import Any, Iterator
+from typing import Any, Iterator, cast
 
 import gemstone_py as gemstone
-from gemstone_py.persistent_root import PersistentRoot, GsDict, GsObject, _from_oop
-from gemstone_py.concurrency import commit as _concurrency_commit, CommitConflictError
+from gemstone_py._smalltalk_batch import (
+    fetch_mapping_string_keys as _fetch_mapping_string_keys,
+)
+from gemstone_py._smalltalk_batch import (
+    fetch_mapping_string_pairs as _fetch_mapping_string_pairs,
+)
+from gemstone_py.concurrency import CommitConflictError
+from gemstone_py.concurrency import commit as _concurrency_commit
+from gemstone_py.persistent_root import (
+    GsDict,
+    GsObject,
+    PersistentRoot,
+    _from_oop,
+)
+
+PORTING_STATUS = "plain_gemstone_port"
+RUNTIME_REQUIREMENT = "Works on plain GemStone images over GCI"
 
 # Root symbol in UserGlobals that holds all GStore "files"
 _GSTORE_ROOT = 'GStoreRoot'
 
 # Maximum commit attempts before giving up.
 _MAX_RETRIES = 10
+StoreData = dict[str, Any]
 
 
 def _session(
@@ -121,17 +133,9 @@ def _map_remove(gs_map: GsDict | GsObject, key: str) -> None:
 
 
 def _map_keys(gs_map: GsDict | GsObject) -> list[str]:
-    if isinstance(gs_map, GsDict):
-        return gs_map.keys()
     s = object.__getattribute__(gs_map, '_session')
-    assoc_arr_oop = gs_map._call_oop('associations')
-    size = s.perform(assoc_arr_oop, 'size')
-    result = []
-    for i in range(1, size + 1):
-        assoc_oop = s.perform_oop(assoc_arr_oop, 'at:', gemstone._python_to_smallint(i))
-        key_oop = s.perform_oop(assoc_oop, 'key')
-        result.append(s.perform(key_oop, 'asString'))
-    return result
+    oop = object.__getattribute__(gs_map, '_oop')
+    return _fetch_mapping_string_keys(s, oop)
 
 
 def _ensure_root(s: gemstone.GemStoneSession) -> GsDict | GsObject:
@@ -145,7 +149,7 @@ def _ensure_root(s: gemstone.GemStoneSession) -> GsDict | GsObject:
     root = PersistentRoot(s)
     if _GSTORE_ROOT not in root:
         root[_GSTORE_ROOT] = {}          # GsDict backed by StringKeyValueDictionary
-    return root[_GSTORE_ROOT]            # returns GsDict proxy
+    return cast(GsDict | GsObject, root[_GSTORE_ROOT])  # returns GsDict proxy
 
 
 def _ensure_file(gs_root: GsDict | GsObject, filename: str) -> GsDict | GsObject:
@@ -155,10 +159,10 @@ def _ensure_file(gs_root: GsDict | GsObject, filename: str) -> GsDict | GsObject
     """
     if not _map_contains(gs_root, filename):
         _map_set(gs_root, filename, {})
-    return _map_get(gs_root, filename)
+    return cast(GsDict | GsObject, _map_get(gs_root, filename))
 
 
-def _read_file(s: gemstone.GemStoneSession, filename: str) -> dict:
+def _read_file(s: gemstone.GemStoneSession, filename: str) -> StoreData:
     """
     Read all key/value pairs for `filename` from GemStone into a plain
     Python dict.  Values are JSON-deserialised.  Uses GciStrKeyValueDictAt
@@ -166,9 +170,9 @@ def _read_file(s: gemstone.GemStoneSession, filename: str) -> dict:
     """
     gs_root = _ensure_root(s)
     gs_file = _ensure_file(gs_root, filename)
-    data = {}
-    for key in _map_keys(gs_file):
-        raw = _map_get(gs_file, key)
+    data: StoreData = {}
+    file_oop = object.__getattribute__(gs_file, '_oop')
+    for key, raw in _fetch_mapping_string_pairs(s, file_oop):
         try:
             data[key] = json.loads(raw)
         except (json.JSONDecodeError, TypeError):
@@ -176,8 +180,12 @@ def _read_file(s: gemstone.GemStoneSession, filename: str) -> dict:
     return data
 
 
-def _write_file(s: gemstone.GemStoneSession, filename: str,
-                dirty: dict, deletes: set) -> None:
+def _write_file(
+    s: gemstone.GemStoneSession,
+    filename: str,
+    dirty: StoreData,
+    deletes: set[str],
+) -> None:
     """
     Flush `dirty` writes and `deletes` to GemStone for `filename`.
     Uses GciStrKeyValueDictAtPut internally (via GsDict.__setitem__).
@@ -190,8 +198,12 @@ def _write_file(s: gemstone.GemStoneSession, filename: str,
         _map_remove(gs_file, key)
 
 
-def _commit_with_retry(s: gemstone.GemStoneSession, filename: str,
-                       dirty: dict, deletes: set) -> None:
+def _commit_with_retry(
+    s: gemstone.GemStoneSession,
+    filename: str,
+    dirty: StoreData,
+    deletes: set[str],
+) -> None:
     """
     Write dirty/deletes to GemStone and commit, retrying up to _MAX_RETRIES
     times on conflict.
@@ -237,9 +249,9 @@ class GStoreTransaction:
     def __init__(self, store: 'GStore', read_only: bool):
         self._store     = store
         self._read_only = read_only
-        self._data: dict  = {}   # snapshot from GemStone at open time
-        self._dirty: dict = {}   # pending writes
-        self._deletes: set = set()
+        self._data: StoreData = {}   # snapshot from GemStone at open time
+        self._dirty: StoreData = {}  # pending writes
+        self._deletes: set[str] = set()
         self._open = False
 
     # ------------------------------------------------------------------
@@ -287,10 +299,10 @@ class GStoreTransaction:
         except KeyError:
             return default
 
-    def keys(self) -> list:
+    def keys(self) -> list[str]:
         return list((set(self._data) | set(self._dirty)) - self._deletes)
 
-    def items(self) -> list:
+    def items(self) -> list[tuple[str, Any]]:
         return [(k, self[k]) for k in self.keys()]
 
     # ------------------------------------------------------------------

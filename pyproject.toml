@@ -12,6 +12,9 @@ authors = [{name = "gemstone-py contributors"}]
 dependencies = []
 
 [project.scripts]
+gemstone-benchmark-baseline-register = "gemstone_py.benchmark_baseline_register:main_entry"
+gemstone-benchmark-compare = "gemstone_py.benchmark_compare:main_entry"
+gemstone-benchmarks = "gemstone_py.benchmarks:main_entry"
 gemstone-examples = "gemstone_py.cli:main_entry"
 gemstone-hello = "gemstone_py.cli:hello_entry"
 gemstone-smalltalk-demo = "gemstone_py.cli:smalltalk_demo_entry"
@@ -38,6 +41,13 @@ select = ["E", "F", "I", "W"]
 python_version = "3.10"
 files = [
   "gemstone_py/__init__.py",
+  "gemstone_py/api_contract.py",
+  "gemstone_py/benchmark_baseline_register.py",
+  "gemstone_py/benchmark_baselines.py",
+  "gemstone_py/benchmark_compare.py",
+  "gemstone_py/release_metadata.py",
+  "gemstone_py/_smalltalk_batch.py",
+  "gemstone_py/benchmarks.py",
   "gemstone_py/session_facade.py",
   "gemstone_py/example_support.py",
   "gemstone_py/cli.py",
@@ -56,6 +66,13 @@ warn_unused_configs = true
 [[tool.mypy.overrides]]
 module = [
   "gemstone_py",
+  "gemstone_py.api_contract",
+  "gemstone_py.benchmark_baseline_register",
+  "gemstone_py.benchmark_baselines",
+  "gemstone_py.benchmark_compare",
+  "gemstone_py.release_metadata",
+  "gemstone_py._smalltalk_batch",
+  "gemstone_py.benchmarks",
   "gemstone_py.session_facade",
   "gemstone_py.example_support",
   "gemstone_py.cli",
@@ -66,47 +83,33 @@ strict = true
 [[tool.mypy.overrides]]
 module = [
   "gemstone_py.client",
-  "gemstone_py.concurrency",
 ]
-check_untyped_defs = true
-disable_error_code = [
-  "no-any-return",
-  "no-untyped-call",
-  "no-untyped-def",
-  "union-attr",
-]
+strict = true
 
 [[tool.mypy.overrides]]
 module = [
   "gemstone_py.gsquery",
   "gemstone_py.gstore",
 ]
-check_untyped_defs = true
-disable_error_code = [
-  "no-any-return",
-  "no-untyped-call",
-  "no-untyped-def",
-  "type-arg",
-  "union-attr",
+strict = true
+
+[[tool.mypy.overrides]]
+module = [
+  "gemstone_py.concurrency",
 ]
+strict = true
 
 [[tool.mypy.overrides]]
 module = [
   "gemstone_py.web",
 ]
-check_untyped_defs = true
+strict = true
 disable_error_code = [
-  "no-any-return",
-  "no-untyped-call",
-  "no-untyped-def",
+  "untyped-decorator",
 ]
 
 [[tool.mypy.overrides]]
 module = [
   "gemstone_py.persistent_root",
 ]
-check_untyped_defs = true
-disable_error_code = [
-  "no-any-return",
-  "no-untyped-def",
-]
+strict = true

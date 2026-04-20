@@ -9,9 +9,9 @@ from gemstone_py import (
     GemStoneSession,
     GemStoneSessionPool,
     GemStoneThreadLocalSessionProvider,
+    TransactionPolicy,
     close_flask_request_session_provider,
     flask_request_session_provider_metrics,
-    TransactionPolicy,
     flask_request_session_provider_snapshot,
     install_flask_request_session,
     session_scope,
@@ -19,6 +19,7 @@ from gemstone_py import (
 )
 from gemstone_py.concurrency import (
     RCCounter,
+    RCHash,
     list_instances,
     lock,
     nested_transaction,
@@ -29,11 +30,11 @@ from gemstone_py.concurrency import (
     shared_counter_increment,
     shared_counter_set,
 )
-from gemstone_py.gstore import GStore
 from gemstone_py.gsquery import GSCollection
+from gemstone_py.gstore import GStore
 from gemstone_py.objectlog import ObjectLog
+from gemstone_py.ordered_collection import OrderedCollection
 from gemstone_py.persistent_root import PersistentRoot
-
 
 RUN_LIVE = os.environ.get("GS_RUN_LIVE") == "1"
 RUN_DESTRUCTIVE_LIVE = os.environ.get("GS_RUN_DESTRUCTIVE_LIVE") == "1"
@@ -80,6 +81,44 @@ class LiveIntegrationTests(unittest.TestCase):
         finally:
             self._root_cleanup(key)
 
+    def test_persistent_root_and_gsdict_items_values_round_trip(self):
+        dict_key = f"LivePersistentRootDict_{uuid.uuid4().hex}"
+        scalar_key = f"LivePersistentRootScalar_{uuid.uuid4().hex}"
+        payload = {
+            "name": f"Live Root {uuid.uuid4().hex}",
+            "count": 7,
+            "enabled": True,
+        }
+        scalar_value = f"scalar-{uuid.uuid4().hex}"
+        self._root_cleanup(dict_key, scalar_key)
+        try:
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.COMMIT_ON_SUCCESS,
+            ) as session:
+                root = PersistentRoot(session)
+                root[dict_key] = payload
+                root[scalar_key] = scalar_value
+
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.ABORT_ON_EXIT,
+            ) as session:
+                root = PersistentRoot(session)
+                items = {
+                    key: value
+                    for key, value in root.items()
+                    if key in {dict_key, scalar_key}
+                }
+                self.assertEqual(items[scalar_key], scalar_value)
+                self.assertEqual(dict(items[dict_key].items()), payload)
+                self.assertCountEqual(items[dict_key].values(), list(payload.values()))
+
+                root_values = root.values()
+                self.assertIn(scalar_value, root_values)
+        finally:
+            self._root_cleanup(dict_key, scalar_key)
+
     def test_gstore_round_trip(self):
         filename = f"live-gstore-{uuid.uuid4().hex}.db"
         store = GStore(filename, config=self.config)
@@ -111,6 +150,89 @@ class LiveIntegrationTests(unittest.TestCase):
         finally:
             GSCollection.drop(name, config=self.config)
 
+    def test_rchash_round_trip_uses_items_fetch(self):
+        key = f"LiveRCHash_{uuid.uuid4().hex}"
+        self._root_cleanup(key)
+        try:
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.COMMIT_ON_SUCCESS,
+            ) as session:
+                root = PersistentRoot(session)
+                root[key] = RCHash(session)
+                cache = root[key]
+                cache["alpha"] = 1
+                cache["enabled"] = True
+                cache["missing"] = None
+
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.ABORT_ON_EXIT,
+            ) as session:
+                root = PersistentRoot(session)
+                cache = root[key]
+                self.assertEqual(
+                    dict(cache.items()),
+                    {"alpha": 1, "enabled": True, "missing": None},
+                )
+        finally:
+            self._root_cleanup(key)
+
+    def test_rchash_round_trip_uses_batched_non_scalar_fallback(self):
+        key = f"LiveRCHashNonScalar_{uuid.uuid4().hex}"
+        self._root_cleanup(key)
+        try:
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.COMMIT_ON_SUCCESS,
+            ) as session:
+                root = PersistentRoot(session)
+                root[key] = RCHash(session)
+                cache = root[key]
+                counter = RCCounter(session)
+                cache["counter"] = counter
+                cache["label"] = "alpha"
+                counter.increment_by(3)
+
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.ABORT_ON_EXIT,
+            ) as session:
+                root = PersistentRoot(session)
+                cache = root[key]
+                items = dict(cache.items())
+                self.assertEqual(items["label"], "alpha")
+                self.assertEqual(items["counter"].send("value"), 3)
+        finally:
+            self._root_cleanup(key)
+
+    def test_ordered_collection_clear_round_trip(self):
+        key = f"LiveOrderedCollection_{uuid.uuid4().hex}"
+        self._root_cleanup(key)
+        try:
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.COMMIT_ON_SUCCESS,
+            ) as session:
+                root = PersistentRoot(session)
+                root[key] = OrderedCollection(session)
+                col = root[key]
+                col.append("alpha")
+                col.append("beta")
+                self.assertEqual(list(col), ["alpha", "beta"])
+                col.clear()
+                self.assertEqual(list(col), [])
+
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.ABORT_ON_EXIT,
+            ) as session:
+                root = PersistentRoot(session)
+                col = root[key]
+                self.assertEqual(len(col), 0)
+        finally:
+            self._root_cleanup(key)
+
     def test_objectlog_read_snapshot(self):
         log = ObjectLog(config=self.config)
         entries = log.entries()
@@ -126,6 +248,32 @@ class LiveIntegrationTests(unittest.TestCase):
         self.assertIsInstance(warns, list)
         self.assertIsInstance(errors, list)
         self.assertIsInstance(infos, list)
+
+    def test_objectlog_add_with_object_oop(self):
+        key = f"LiveObjectLog_{uuid.uuid4().hex}"
+        root_key = f"LiveObjectLogObj_{uuid.uuid4().hex}"
+        log = ObjectLog(config=self.config)
+        self._root_cleanup(root_key)
+        created_entry = None
+        try:
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.COMMIT_ON_SUCCESS,
+            ) as session:
+                root = PersistentRoot(session)
+                root[root_key] = {"name": "attached"}
+                attached = root[root_key]
+                log.info(key, object_oop=attached.oop, session=session)
+
+            matches = [entry for entry in log.entries() if entry.label == key]
+            self.assertTrue(matches)
+            created_entry = matches[-1]
+            self.assertNotEqual(created_entry.object_repr, "nil")
+            self.assertNotEqual(created_entry.object_repr, "")
+        finally:
+            if created_entry is not None:
+                log.delete(created_entry)
+            self._root_cleanup(root_key)
 
     @unittest.skipUnless(
         RUN_DESTRUCTIVE_LIVE,
@@ -216,7 +364,7 @@ class LiveIntegrationTests(unittest.TestCase):
                 session = provider.acquire()
                 thread_results.append((threading.get_ident(), id(session)))
                 provider.release(session, clean=True)
-            except BaseException as exc:  # pragma: no cover - exercised only on live thread failures
+            except BaseException as exc:  # pragma: no cover - live thread failure path
                 thread_errors.append(exc)
 
         try:

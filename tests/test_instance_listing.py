@@ -8,13 +8,19 @@ class InstanceListingTests(unittest.TestCase):
     def test_repository_list_instances_wraps_results_when_requested(self):
         session = mock.Mock()
         session.resolve.return_value = 999
-        session.eval.return_value = "RcCounter|101,102,\nRcQueue|303,\n"
+        session.eval_oop.return_value = 444
         repo = Repository(session)
 
-        with mock.patch(
-            "gemstone_py.concurrency._wrap_oop",
-            side_effect=lambda _s, oop: f"wrapped:{oop}",
-        ) as wrap_oop:
+        with (
+            mock.patch(
+                "gemstone_py.concurrency.fetch_mapping_string_oop_lists",
+                return_value=[("RcCounter", [101, 102]), ("RcQueue", [303])],
+            ),
+            mock.patch(
+                "gemstone_py.concurrency._wrap_oop",
+                side_effect=lambda _s, oop: f"wrapped:{oop}",
+            ) as wrap_oop,
+        ):
             result = repo.list_instances(["RcCounter", "RcQueue"], wrap=True)
 
         self.assertEqual(
@@ -33,21 +39,31 @@ class InstanceListingTests(unittest.TestCase):
     def test_repository_list_instances_preserves_raw_oops_by_default(self):
         session = mock.Mock()
         session.resolve.return_value = 999
-        session.eval.return_value = "RcCounter|101,102,\n"
+        session.eval_oop.return_value = 444
         repo = Repository(session)
 
-        result = repo.list_instances(["RcCounter"])
+        with mock.patch(
+            "gemstone_py.concurrency.fetch_mapping_string_oop_lists",
+            return_value=[("RcCounter", [101, 102])],
+        ):
+            result = repo.list_instances(["RcCounter"])
 
         self.assertEqual(result, {"RcCounter": [101, 102]})
 
     def test_list_instances_wraps_results_when_requested(self):
         session = mock.Mock()
-        session.eval.return_value = "101|102|"
+        session.eval_oop.return_value = 777
 
-        with mock.patch(
-            "gemstone_py.concurrency._wrap_oop",
-            side_effect=lambda _s, oop: f"wrapped:{oop}",
-        ) as wrap_oop:
+        with (
+            mock.patch(
+                "gemstone_py.concurrency.fetch_collection_oops",
+                return_value=[101, 102],
+            ),
+            mock.patch(
+                "gemstone_py.concurrency._wrap_oop",
+                side_effect=lambda _s, oop: f"wrapped:{oop}",
+            ) as wrap_oop,
+        ):
             result = list_instances(session, "RcCounter", wrap=True)
 
         self.assertEqual(result, ["wrapped:101", "wrapped:102"])
@@ -58,9 +74,13 @@ class InstanceListingTests(unittest.TestCase):
 
     def test_list_instances_preserves_raw_oops_by_default(self):
         session = mock.Mock()
-        session.eval.return_value = "101|102|"
+        session.eval_oop.return_value = 777
 
-        result = list_instances(session, "RcCounter")
+        with mock.patch(
+            "gemstone_py.concurrency.fetch_collection_oops",
+            return_value=[101, 102],
+        ):
+            result = list_instances(session, "RcCounter")
 
         self.assertEqual(result, [101, 102])
 

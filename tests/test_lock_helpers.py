@@ -28,9 +28,9 @@ class LockHelpersTests(unittest.TestCase):
         self.assertEqual(
             session.calls,
             [
-                "System writeLock: (ObjectMemory objectForOop: 123)",
+                "System writeLock: (Object _objectForOop: 123)",
                 "inside",
-                "System removeLock: (ObjectMemory objectForOop: 123)",
+                "System removeLock: (Object _objectForOop: 123)",
             ],
         )
 
@@ -43,9 +43,9 @@ class LockHelpersTests(unittest.TestCase):
         self.assertEqual(
             session.calls,
             [
-                "System readLock: (ObjectMemory objectForOop: 456)",
+                "System readLock: (Object _objectForOop: 456)",
                 "inside",
-                "System removeLock: (ObjectMemory objectForOop: 456)",
+                "System removeLock: (Object _objectForOop: 456)",
             ],
         )
 
@@ -57,7 +57,7 @@ class LockHelpersTests(unittest.TestCase):
 
         self.assertEqual(
             session.calls,
-            ["System removeLock: (ObjectMemory objectForOop: 789)"],
+            ["System removeLock: (Object _objectForOop: 789)"],
         )
 
     def test_lock_rejects_non_proxy_non_oop_values(self):

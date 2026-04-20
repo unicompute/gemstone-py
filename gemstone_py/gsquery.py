@@ -80,14 +80,21 @@ equality index is created on the appropriate key using:
 This is the standard GemStone equality-index operation.
 """
 
-PORTING_STATUS = "plain_gemstone_port"
-RUNTIME_REQUIREMENT = "Works on plain GemStone images over GCI"
-
 import json
-from typing import Any, List
+from typing import Any, ContextManager, Iterable, List, cast
 
 import gemstone_py as gemstone
-from gemstone_py.persistent_root import _to_oop, _from_oop
+from gemstone_py.persistent_root import _from_oop, _to_oop
+
+from ._smalltalk_batch import (
+    fetch_mapping_string_keys,
+    fetch_mapping_string_oop_pairs,
+    json_string_encoder_source,
+    object_for_oop_expr,
+)
+
+PORTING_STATUS = "plain_gemstone_port"
+RUNTIME_REQUIREMENT = "Works on plain GemStone images over GCI"
 
 # GemStone search operator map
 _OPS = {
@@ -101,22 +108,29 @@ _OPS = {
 
 # Root key in UserGlobals that holds all named GSCollections
 _ROOT = 'GSQueryRoot'
+Record = dict[str, Any]
 
 
 def _session(
     session: gemstone.GemStoneSession | None = None,
     config: gemstone.GemStoneConfig | None = None,
-):
+) -> ContextManager[gemstone.GemStoneSession]:
     if session is not None:
-        return gemstone.session_scope(
-            session,
-            transaction_policy=gemstone.TransactionPolicy.COMMIT_ON_SUCCESS,
+        return cast(
+            ContextManager[gemstone.GemStoneSession],
+            gemstone.session_scope(
+                session,
+                transaction_policy=gemstone.TransactionPolicy.COMMIT_ON_SUCCESS,
+            ),
         )
     resolved_config = config or gemstone.GemStoneConfig.from_env()
-    return gemstone.session_scope(
-        session,
-        config=resolved_config,
-        transaction_policy=gemstone.TransactionPolicy.COMMIT_ON_SUCCESS,
+    return cast(
+        ContextManager[gemstone.GemStoneSession],
+        gemstone.session_scope(
+            session,
+            config=resolved_config,
+            transaction_policy=gemstone.TransactionPolicy.COMMIT_ON_SUCCESS,
+        ),
     )
 
 
@@ -178,7 +192,10 @@ class GSCollection:
         return s.eval_oop(self._set_expr())
 
     @staticmethod
-    def _collection_member_oops(s: gemstone.GemStoneSession, collection_oop: int) -> List[int]:
+    def _collection_member_oops(
+        s: gemstone.GemStoneSession,
+        collection_oop: int,
+    ) -> List[int]:
         array_oop = s.perform_oop(collection_oop, 'asArray')
         size = s.perform(array_oop, 'size')
         result = []
@@ -191,25 +208,22 @@ class GSCollection:
     def _path_array_oop(s: gemstone.GemStoneSession, ivar_path: str) -> int:
         segments = ivar_path.split('.')
         array_class_oop = s.resolve('Array')
-        size_oop = gemstone._python_to_smallint(len(segments))
+        size_oop = cast(int, gemstone._python_to_smallint(len(segments)))
         array_oop = s.perform_oop(array_class_oop, 'new:', size_oop)
         for i, segment in enumerate(segments, 1):
-            idx_oop = gemstone._python_to_smallint(i)
+            idx_oop = cast(int, gemstone._python_to_smallint(i))
             segment_oop = s.new_string(segment)
             s.perform_oop(array_oop, 'at:put:', idx_oop, segment_oop)
         return array_oop
 
     @staticmethod
     def _keys_from_dict_oop(s: gemstone.GemStoneSession, dict_oop: int) -> List[str]:
-        keys_oop = s.perform_oop(dict_oop, 'keys')
-        keys_oop = s.perform_oop(keys_oop, 'asArray')
-        size = s.perform(keys_oop, 'size')
-        result = []
-        for i in range(1, size + 1):
-            idx_oop = gemstone._python_to_smallint(i)
-            key_oop = s.perform_oop(keys_oop, 'at:', idx_oop)
-            result.append(str(s._marshal(key_oop)))
-        return result
+        return fetch_mapping_string_keys(
+            s,
+            dict_oop,
+            iterate_header="mapping keysAndValuesDo: [:key :value |",
+            key_expr="key asString",
+        )
 
     @staticmethod
     def _plain_value(value: Any) -> Any:
@@ -217,25 +231,102 @@ class GSCollection:
             return [GSCollection._plain_value(item) for item in value]
         if isinstance(value, dict):
             return {str(k): GSCollection._plain_value(v) for k, v in value.items()}
+        items = getattr(value, 'items', None)
+        if callable(items):
+            return {
+                str(k): GSCollection._plain_value(v)
+                for k, v in items()
+            }
         keys = getattr(value, 'keys', None)
         if callable(keys) and hasattr(value, '__getitem__'):
             return {str(k): GSCollection._plain_value(value[k]) for k in value.keys()}
         return value
 
     @staticmethod
-    def _dict_from_oop(s: gemstone.GemStoneSession, dict_oop: int) -> dict:
-        result = {}
-        for key in GSCollection._keys_from_dict_oop(s, dict_oop):
-            key_oop = s.new_string(key)
-            val_oop = s.perform_oop(dict_oop, 'at:', key_oop)
-            result[key] = GSCollection._plain_value(_from_oop(s, val_oop))
-        return result
+    def _dict_from_oop(s: gemstone.GemStoneSession, dict_oop: int) -> Record:
+        return {
+            key: GSCollection._plain_value(_from_oop(s, value_oop))
+            for key, value_oop in fetch_mapping_string_oop_pairs(
+                s,
+                dict_oop,
+                iterate_header="mapping keysAndValuesDo: [:key :value |",
+                key_expr="key asString",
+                value_expr="value asOop asString",
+            )
+        }
 
-    def _all_records(self, s: gemstone.GemStoneSession) -> List[dict]:
-        oops = self._collection_member_oops(s, self._set_oop(s))
-        return [self._dict_from_oop(s, oop) for oop in oops]
+    def _all_records(self, s: gemstone.GemStoneSession) -> List[Record]:
+        return self._records_from_collection_oop(s, self._set_oop(s))
 
-    def _record_oop(self, s: gemstone.GemStoneSession, element: dict) -> int:
+    @staticmethod
+    def _records_from_collection_oop(
+        s: gemstone.GemStoneSession,
+        collection_oop: int,
+    ) -> List[Record]:
+        """
+        Materialize a collection of record dictionaries in one eval/fetch.
+
+        Elements inserted through GSCollection are limited to JSON-friendly
+        scalars, arrays, and dictionaries, so we serialize them to one JSON
+        line per record on the GemStone side and decode them in Python.
+        """
+        raw = s.eval(
+            f"| collection encodeString encodeValue encodeMap encodeSequence stream |\n"
+            f"collection := {object_for_oop_expr(collection_oop)}.\n"
+            f"{json_string_encoder_source('encodeString')}"
+            "encodeValue := nil.\n"
+            "encodeMap := nil.\n"
+            "encodeSequence := nil.\n"
+            "encodeSequence := [:seq | | out first |\n"
+            "  out := '['.\n"
+            "  first := true.\n"
+            "  seq do: [:each |\n"
+            "    first ifFalse: [ out := out, ',' ].\n"
+            "    out := out, (encodeValue value: each).\n"
+            "    first := false\n"
+            "  ].\n"
+            "  out, ']'\n"
+            "].\n"
+            "encodeMap := [:map | | out first |\n"
+            "  out := '{'.\n"
+            "  first := true.\n"
+            "  map keysAndValuesDo: [:key :value |\n"
+            "    first ifFalse: [ out := out, ',' ].\n"
+            "    out := out,\n"
+            "      '\"', (encodeString value: key), '\":', (encodeValue value: value).\n"
+            "    first := false\n"
+            "  ].\n"
+            "  out, '}'\n"
+            "].\n"
+            "encodeValue := [:value |\n"
+            "  value isNil ifTrue: [ 'null' ] ifFalse: [\n"
+            "    value == true ifTrue: [ 'true' ] ifFalse: [\n"
+            "      value == false ifTrue: [ 'false' ] ifFalse: [\n"
+            "        ((value isKindOf: String) or: [ value class == Symbol ]) ifTrue: [\n"
+            "          '\"', (encodeString value: value), '\"'\n"
+            "        ] ifFalse: [\n"
+            "          (value respondsTo: #keysAndValuesDo:) ifTrue: [\n"
+            "            encodeMap value: value\n"
+            "          ] ifFalse: [\n"
+            "            ((value isKindOf: SequenceableCollection)\n"
+            "              and: [(value isKindOf: String) not])\n"
+            "              ifTrue: [ encodeSequence value: value ]\n"
+            "              ifFalse: [ value printString ]\n"
+            "          ]\n"
+            "        ]\n"
+            "      ]\n"
+            "    ]\n"
+            "  ]\n"
+            "].\n"
+            "stream := ''.\n"
+            "collection do: [:record |\n"
+            "  stream := stream, (encodeMap value: record), String lf asString\n"
+            "].\n"
+            "stream"
+        )
+        return [cast(Record, json.loads(line)) for line in raw.splitlines() if line.strip()]
+
+    def _record_oop(self, s: gemstone.GemStoneSession, element: Record) -> int:
         dict_oop = s.perform_oop(s.resolve('Dictionary'), 'new')
         for k, v in element.items():
             key_oop = s.new_string(str(k))
@@ -243,24 +334,34 @@ class GSCollection:
             s.perform_oop(dict_oop, 'at:put:', key_oop, val_oop)
         return dict_oop
 
-    def _insert_into_set_oop(self, s: gemstone.GemStoneSession, set_oop: int, element: dict) -> None:
+    def _insert_into_set_oop(
+        self,
+        s: gemstone.GemStoneSession,
+        set_oop: int,
+        element: Record,
+    ) -> None:
         s.perform_oop(set_oop, 'add:', self._record_oop(s, element))
 
-    def _remove_member_oops(self, s: gemstone.GemStoneSession, set_oop: int, member_oops: List[int]) -> int:
+    def _remove_member_oops(
+        self,
+        s: gemstone.GemStoneSession,
+        set_oop: int,
+        member_oops: List[int],
+    ) -> int:
         for member_oop in member_oops:
             s.perform_oop(set_oop, 'remove:', member_oop)
         return len(member_oops)
 
-    def _insert_with_session(self, s: gemstone.GemStoneSession, element: dict) -> None:
+    def _insert_with_session(self, s: gemstone.GemStoneSession, element: Record) -> None:
         self._insert_into_set_oop(s, self._set_oop(s), element)
 
-    def _search_oops(
+    def _search_result_oop(
         self,
         s: gemstone.GemStoneSession,
         ivar_path: str,
         op: str,
         value: Any,
-    ) -> List[int]:
+    ) -> int:
         if op not in _OPS:
             raise ValueError(f"Unknown operator {op!r}. Use one of: {list(_OPS)}")
 
@@ -290,6 +391,16 @@ class GSCollection:
                 f"result"
             )
 
+        return result_oop
+
+    def _search_oops(
+        self,
+        s: gemstone.GemStoneSession,
+        ivar_path: str,
+        op: str,
+        value: Any,
+    ) -> List[int]:
+        result_oop = self._search_result_oop(s, ivar_path, op, value)
         if result_oop == gemstone.OOP_NIL:
             return []
         return self._collection_member_oops(s, result_oop)
@@ -382,7 +493,7 @@ class GSCollection:
 
     def insert(
         self,
-        element: dict,
+        element: Record,
         session: gemstone.GemStoneSession | None = None,
     ) -> None:
         """
@@ -397,7 +508,7 @@ class GSCollection:
 
     def bulk_insert(
         self,
-        elements,
+        elements: Iterable[Record],
         session: gemstone.GemStoneSession | None = None,
     ) -> int:
         """
@@ -427,7 +538,7 @@ class GSCollection:
         op: str,
         value: Any,
         session: gemstone.GemStoneSession | None = None,
-    ) -> List[dict]:
+    ) -> List[Record]:
         """
         Search the collection on an indexed (or non-indexed) ivar path.
 
@@ -449,10 +560,12 @@ class GSCollection:
             Matching elements as Python dicts (same structure as insert()).
         """
         with _session(session, self._config) as s:
-            oops = self._search_oops(s, ivar_path, op, value)
-            return [self._dict_from_oop(s, oop) for oop in oops]
+            result_oop = self._search_result_oop(s, ivar_path, op, value)
+            if result_oop == gemstone.OOP_NIL:
+                return []
+            return self._records_from_collection_oop(s, result_oop)
 
-    def all(self, session: gemstone.GemStoneSession | None = None) -> List[dict]:
+    def all(self, session: gemstone.GemStoneSession | None = None) -> List[Record]:
         """Return every element in the collection."""
         with _session(session, self._config) as s:
             return self._all_records(s)
@@ -460,11 +573,11 @@ class GSCollection:
     def size(self, session: gemstone.GemStoneSession | None = None) -> int:
         """Return the number of elements in the collection."""
         with _session(session, self._config) as s:
-            return s.perform(self._set_oop(s), 'size')
+            return cast(int, s.perform(self._set_oop(s), 'size'))
 
     def replace_all(
         self,
-        elements: List[dict],
+        elements: List[Record],
         session: gemstone.GemStoneSession | None = None,
     ) -> None:
         """
@@ -498,7 +611,7 @@ class GSCollection:
     def bulk_delete_where(
         self,
         ivar_path: str,
-        values,
+        values: Iterable[Any],
         session: gemstone.GemStoneSession | None = None,
     ) -> int:
         """
@@ -510,7 +623,7 @@ class GSCollection:
         with _session(session, self._config) as s:
             set_oop = self._set_oop(s)
             total = 0
-            seen = set()
+            seen: set[Any] = set()
             for value in values:
                 if value in seen:
                     continue
@@ -525,7 +638,7 @@ class GSCollection:
     def upsert_unique(
         self,
         ivar_path: str,
-        element: dict,
+        element: Record,
         session: gemstone.GemStoneSession | None = None,
     ) -> None:
         """
@@ -537,7 +650,7 @@ class GSCollection:
     def bulk_upsert_unique(
         self,
         ivar_path: str,
-        elements,
+        elements: Iterable[Record],
         session: gemstone.GemStoneSession | None = None,
     ) -> int:
         """
@@ -548,8 +661,8 @@ class GSCollection:
         If multiple input elements have the same key, the last one wins.
         Returns the number of inserted records.
         """
-        keyed = {}
-        order = []
+        keyed: dict[Any, Record] = {}
+        order: list[Any] = []
         for element in elements:
             if ivar_path not in element:
                 raise KeyError(ivar_path)
@@ -574,7 +687,7 @@ class GSCollection:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def intersect(a: List[dict], b: List[dict]) -> List[dict]:
+    def intersect(a: List[Record], b: List[Record]) -> List[Record]:
         """
         Return elements in both `a` and `b`.
 
@@ -626,14 +739,14 @@ class GSCollection:
 # Row parsing helpers
 # ------------------------------------------------------------------
 
-def _parse_rows(raw: str) -> List[dict]:
+def _parse_rows(raw: str) -> list[Record]:
     """Parse the serialised row format produced by our Smalltalk queries."""
-    results = []
+    results: list[Record] = []
     for line in raw.splitlines():
         line = line.strip()
         if not line:
             continue
-        row = {}
+        row: Record = {}
         for pair in line.split(';'):
             pair = pair.strip()
             if not pair or '=' not in pair:

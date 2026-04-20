@@ -38,21 +38,62 @@ class GSCollectionHelpersTests(unittest.TestCase):
             mock.call(800, 'at:put:', gemstone._python_to_smallint(2), 902),
         ])
 
-    def test_keys_from_dict_oop_reads_keys_without_serializing_oops(self):
+    def test_keys_from_dict_oop_reads_keys_via_batched_eval(self):
         session = mock.Mock()
-        session.perform_oop.side_effect = [600, 600, 701, 702]
-        session.perform.return_value = 2
-        session._marshal.side_effect = ['People', 'Jobs']
+        session.eval.return_value = "People\nJobs\\pArchive\n"
 
         result = GSCollection._keys_from_dict_oop(session, 123)
 
-        self.assertEqual(result, ['People', 'Jobs'])
-        self.assertEqual(session.perform_oop.call_args_list, [
-            mock.call(123, 'keys'),
-            mock.call(600, 'asArray'),
-            mock.call(600, 'at:', gemstone._python_to_smallint(1)),
-            mock.call(600, 'at:', gemstone._python_to_smallint(2)),
-        ])
+        self.assertEqual(result, ['People', 'Jobs|Archive'])
+        session.eval.assert_called_once()
+
+    def test_dict_from_oop_materializes_values_via_batched_oops(self):
+        session = mock.Mock()
+        session.eval.return_value = "People|101\nJobs\\pArchive|202\n"
+
+        with mock.patch(
+            "gemstone_py.gsquery._from_oop",
+            side_effect=["Alice", {"active": True}],
+        ) as from_oop:
+            result = GSCollection._dict_from_oop(session, 123)
+
+        self.assertEqual(
+            result,
+            {"People": "Alice", "Jobs|Archive": {"active": True}},
+        )
+        self.assertEqual(
+            from_oop.call_args_list,
+            [mock.call(session, 101), mock.call(session, 202)],
+        )
+        session.eval.assert_called_once()
+
+    def test_plain_value_prefers_items_for_mapping_like_values(self):
+        mapping = mock.Mock()
+        mapping.items.return_value = [("alpha", 1), ("beta", 2)]
+
+        result = GSCollection._plain_value(mapping)
+
+        self.assertEqual(result, {"alpha": 1, "beta": 2})
+        mapping.items.assert_called_once_with()
+        mapping.keys.assert_not_called()
+
+    def test_records_from_collection_oop_decodes_json_lines(self):
+        session = mock.Mock()
+        session.eval.return_value = (
+            '{"@name":"Alice","@age":30}\n'
+            '{"@name":"Bob","@tags":["staff","remote"]}\n'
+        )
+
+        result = GSCollection._records_from_collection_oop(session, 4321)
+
+        self.assertEqual(
+            result,
+            [
+                {'@name': 'Alice', '@age': 30},
+                {'@name': 'Bob', '@tags': ['staff', 'remote']},
+            ],
+        )
+        session.eval.assert_called_once()
 
 
 class GSCollectionQueryTests(unittest.TestCase):
@@ -63,9 +104,24 @@ class GSCollectionQueryTests(unittest.TestCase):
         session.perform_oop.return_value = 555
 
         with mock.patch.object(GSCollection, '_ensure_root', autospec=True):
-            with mock.patch.object(GSCollection, '_set_oop', autospec=True, return_value=111):
-                with mock.patch.object(GSCollection, '_path_array_oop', autospec=True, return_value=222):
-                    with mock.patch.object(GSCollection, '_collection_member_oops', autospec=True, return_value=[7, 8]) as member_oops:
+            with mock.patch.object(
+                GSCollection,
+                '_set_oop',
+                autospec=True,
+                return_value=111,
+            ):
+                with mock.patch.object(
+                    GSCollection,
+                    '_path_array_oop',
+                    autospec=True,
+                    return_value=222,
+                ):
+                    with mock.patch.object(
+                        GSCollection,
+                        '_collection_member_oops',
+                        autospec=True,
+                        return_value=[7, 8],
+                    ) as member_oops:
                         with mock.patch('gemstone_py.gsquery._to_oop', return_value=333):
                             result = col._search_oops(session, '@age', 'lt', 25)
 
@@ -83,9 +139,24 @@ class GSCollectionQueryTests(unittest.TestCase):
         session.eval_oop.return_value = 666
 
         with mock.patch.object(GSCollection, '_ensure_root', autospec=True):
-            with mock.patch.object(GSCollection, '_set_oop', autospec=True, return_value=111):
-                with mock.patch.object(GSCollection, '_path_array_oop', autospec=True, return_value=222):
-                    with mock.patch.object(GSCollection, '_collection_member_oops', autospec=True, return_value=[9]) as member_oops:
+            with mock.patch.object(
+                GSCollection,
+                '_set_oop',
+                autospec=True,
+                return_value=111,
+            ):
+                with mock.patch.object(
+                    GSCollection,
+                    '_path_array_oop',
+                    autospec=True,
+                    return_value=222,
+                ):
+                    with mock.patch.object(
+                        GSCollection,
+                        '_collection_member_oops',
+                        autospec=True,
+                        return_value=[9],
+                    ) as member_oops:
                         with mock.patch('gemstone_py.gsquery._to_oop', return_value=333):
                             result = col._search_oops(session, '@age', 'lt', 25)
 
@@ -93,6 +164,32 @@ class GSCollectionQueryTests(unittest.TestCase):
         session.eval_oop.assert_called_once()
         self.assertIn("select: [:e |", session.eval_oop.call_args.args[0])
         member_oops.assert_called_once_with(session, 666)
+
+    def test_search_materializes_records_from_result_collection(self):
+        col = GSCollection('People')
+        session = mock.Mock()
+
+        with mock.patch(
+            'gemstone_py.gsquery._session',
+            return_value=contextlib.nullcontext(session),
+        ):
+            with mock.patch.object(
+                GSCollection,
+                '_search_result_oop',
+                autospec=True,
+                return_value=777,
+            ) as search_result:
+                with mock.patch.object(
+                    GSCollection,
+                    '_records_from_collection_oop',
+                    autospec=True,
+                    return_value=[{'@name': 'Bob', '@age': 24}],
+                ) as records:
+                    result = col.search('@age', 'lt', 25)
+
+        self.assertEqual(result, [{'@name': 'Bob', '@age': 24}])
+        search_result.assert_called_once_with(col, session, '@age', 'lt', 25)
+        records.assert_called_once_with(session, 777)
 
     def test_list_reads_root_keys_without_pipe_serialization(self):
         session = mock.Mock()
@@ -103,7 +200,12 @@ class GSCollectionQueryTests(unittest.TestCase):
             'gemstone_py.gsquery._session',
             return_value=contextlib.nullcontext(session),
         ):
-            with mock.patch.object(GSCollection, '_keys_from_dict_oop', autospec=True, return_value=['People', 'Jobs']) as keys:
+            with mock.patch.object(
+                GSCollection,
+                '_keys_from_dict_oop',
+                autospec=True,
+                return_value=['People', 'Jobs'],
+            ) as keys:
                 result = GSCollection.list()
 
         self.assertEqual(result, ['People', 'Jobs'])

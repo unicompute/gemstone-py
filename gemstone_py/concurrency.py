@@ -70,15 +70,24 @@ Usage
         instances = list_instances(s, 'RcCounter', wrap=True)
 """
 
-PORTING_STATUS = "plain_gemstone_port"
-RUNTIME_REQUIREMENT = "Works on plain GemStone images over GCI"
-
 import ctypes
+import json
 from contextlib import contextmanager
-from datetime import datetime, timezone, timedelta
-from typing import Any, Iterator
+from datetime import datetime, timedelta, timezone
+from typing import Any, Callable, Iterator, cast
 
 import gemstone_py as _gs
+
+from ._smalltalk_batch import (
+    fetch_collection_oops,
+    fetch_mapping_oop_pairs,
+    fetch_mapping_string_oop_lists,
+    json_string_encoder_source,
+    object_for_oop_expr,
+)
+
+PORTING_STATUS = "plain_gemstone_port"
+RUNTIME_REQUIREMENT = "Works on plain GemStone images over GCI"
 
 
 # ---------------------------------------------------------------------------
@@ -93,27 +102,27 @@ def _python_name_to_selector(name: str) -> str:
         return name
     return name.replace('_', ':')
 
-def _oop(s, v) -> int:
+def _oop(s: _gs.GemStoneSession, v: Any) -> int:
     """Convert a Python value to a GemStone OOP for use as a perform argument."""
     if isinstance(v, bool):
-        return _gs.OOP_TRUE if v else _gs.OOP_FALSE
+        return cast(int, _gs.OOP_TRUE if v else _gs.OOP_FALSE)
     if v is None:
-        return _gs.OOP_NIL
+        return cast(int, _gs.OOP_NIL)
     if isinstance(v, int):
-        return _gs._python_to_smallint(v)
+        return cast(int, _gs._python_to_smallint(v))
     if isinstance(v, str):
         return s.new_string(v)
     if isinstance(v, _GsProxy):
-        return object.__getattribute__(v, '_oop')
+        return cast(int, object.__getattribute__(v, '_oop'))
     raise TypeError(f"Cannot pass {type(v).__name__!r} as a GemStone argument")
 
 
-def _py(s, oop: int) -> Any:
+def _py(s: _gs.GemStoneSession, oop: int) -> Any:
     """Marshal a GemStone OOP to a Python value."""
-    return s._marshal(oop)
+    return cast(Any, s._marshal(oop))
 
 
-def _wrap_oop(s, oop: int) -> Any:
+def _wrap_oop(s: _gs.GemStoneSession, oop: int) -> Any:
     """Convert a GemStone OOP to the richer proxy/value model used by persistent_root."""
     from gemstone_py.persistent_root import _from_oop
 
@@ -126,9 +135,9 @@ def _coerce_oop(value: Any) -> int:
         return value
     oop = getattr(value, 'oop', None)
     if oop is not None:
-        return oop
+        return cast(int, oop)
     try:
-        return object.__getattribute__(value, '_oop')
+        return cast(int, object.__getattribute__(value, '_oop'))
     except AttributeError as exc:
         raise TypeError(
             f"Expected a GemStone OOP or proxy object, got {type(value).__name__!r}"
@@ -142,24 +151,27 @@ class _GsProxy:
         object.__setattr__(self, '_session', session)
         object.__setattr__(self, '_oop',     oop)
 
-    def _s(self): return object.__getattribute__(self, '_session')
-    def _o(self): return object.__getattribute__(self, '_oop')
+    def _s(self) -> _gs.GemStoneSession:
+        return cast(_gs.GemStoneSession, object.__getattribute__(self, '_session'))
 
-    def _call(self, selector: str, *args) -> Any:
+    def _o(self) -> int:
+        return cast(int, object.__getattribute__(self, '_oop'))
+
+    def _call(self, selector: str, *args: Any) -> Any:
         raw = [_oop(self._s(), a) for a in args]
         return self._s().perform(self._o(), selector, *raw)
 
-    def _call_oop(self, selector: str, *args) -> int:
+    def _call_oop(self, selector: str, *args: Any) -> int:
         raw = [_oop(self._s(), a) for a in args]
         return self._s().perform_oop(self._o(), selector, *raw)
 
-    def send(self, selector: str, *args) -> Any:
+    def send(self, selector: str, *args: Any) -> Any:
         return _py(self._s(), self._call_oop(selector, *args))
 
-    def send_oop(self, selector: str, *args) -> int:
+    def send_oop(self, selector: str, *args: Any) -> int:
         return self._call_oop(selector, *args)
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> Callable[..., Any]:
         selector = _python_name_to_selector(name)
 
         def dispatcher(*args: Any) -> Any:
@@ -173,7 +185,7 @@ class _GsProxy:
     def oop(self) -> int:
         return self._o()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{type(self).__name__} oop=0x{self._o():X}>"
 
 
@@ -201,7 +213,7 @@ class RCCounter(_GsProxy):
 
     @property
     def value(self) -> int:
-        return self._call('value')
+        return cast(int, self._call('value'))
 
     def increment(self) -> 'RCCounter':
         self._call('increment')
@@ -219,7 +231,7 @@ class RCCounter(_GsProxy):
         self,
         n: int,
         guard: int | None = None,
-        callback=None,
+        callback: Callable[[], Any] | None = None,
     ) -> 'RCCounter':
         """
         Decrement by `n`.
@@ -243,7 +255,7 @@ class RCCounter(_GsProxy):
             fired = s.eval(
                 f"| counter fired |\n"
                 f"fired := false.\n"
-                f"counter := ObjectMemory objectForOop: {oop}.\n"
+                f"counter := {object_for_oop_expr(oop)}.\n"
                 f"counter\n"
                 f"  decrementBy: {n}\n"
                 f"  ifLessThan: {guard}\n"
@@ -295,49 +307,104 @@ class RCHash(_GsProxy):
             oop = session.eval_oop('RcKeyValueDictionary new')
         super().__init__(session, oop)
 
-    def __setitem__(self, key, value) -> None:
+    def __setitem__(self, key: Any, value: Any) -> None:
         self._call('at:put:', key, value)
 
-    def __getitem__(self, key) -> Any:
+    def __getitem__(self, key: Any) -> Any:
         result = self._call('at:otherwise:', key, None)
         if result is None and not self.__contains__(key):
             raise KeyError(key)
         return result
 
-    def get(self, key, default=None) -> Any:
+    def get(self, key: Any, default: Any = None) -> Any:
         return self._call('at:otherwise:', key, default)
 
-    def __delitem__(self, key) -> None:
+    def __delitem__(self, key: Any) -> None:
         self._call('removeKey:ifAbsent:', key, None)
 
-    def __contains__(self, key) -> bool:
+    def __contains__(self, key: Any) -> bool:
         return bool(self._call('includesKey:', key))
 
     @property
     def size(self) -> int:
-        return self._call('size')
+        return cast(int, self._call('size'))
 
     def __len__(self) -> int:
         return self.size
 
     def _fetch_all(self) -> list[tuple[Any, Any]]:
         """
-        Fetch all key/value pairs by traversing RcKeyValueDictionary
-        associations directly.
+        Fetch all key/value pairs.
 
-        Returns a list of (key, value) tuples with Python values.
+        Fast-paths the common scalar-key/scalar-value case through one
+        serialized Smalltalk eval. Falls back to batched OOP fetches for
+        non-scalar objects so semantics stay intact without per-entry RPCs.
         """
-        s   = self._s()
+        fast_pairs = self._fetch_scalar_pairs_fast()
+        if fast_pairs is not None:
+            return fast_pairs
+
+        return self._fetch_oop_pairs_fallback()
+
+    def _fetch_scalar_pairs_fast(self) -> list[tuple[Any, Any]] | None:
+        """
+        Return all pairs in one eval when every key/value is JSON-scalar-safe.
+
+        RcKeyValueDictionary is commonly used for str/int/bool/None values.
+        If any key or value falls outside that subset we return None and let
+        the slower association traversal preserve the full object semantics.
+        """
+        s = self._s()
         oop = self._o()
-        pairs: list[tuple[Any, Any]] = []
-        assoc_arr_oop = s.perform_oop(oop, 'associations')
-        size = s.perform(assoc_arr_oop, 'size')
-        for i in range(1, size + 1):
-            assoc_oop = s.perform_oop(assoc_arr_oop, 'at:', _gs._python_to_smallint(i))
-            key_oop = s.perform_oop(assoc_oop, 'key')
-            value_oop = s.perform_oop(assoc_oop, 'value')
-            pairs.append((_py(s, key_oop), _py(s, value_oop)))
-        return pairs
+        raw = s.eval(
+            f"| mapping encodeString encodeScalar stream supported |\n"
+            f"mapping := {object_for_oop_expr(oop)}.\n"
+            f"{json_string_encoder_source('encodeString')}"
+            "encodeScalar := [:value |\n"
+            "  value isNil ifTrue: [ 'null' ] ifFalse: [\n"
+            "    value == true ifTrue: [ 'true' ] ifFalse: [\n"
+            "      value == false ifTrue: [ 'false' ] ifFalse: [\n"
+            "        (value isInteger) ifTrue: [ value printString ] ifFalse: [\n"
+            "          ((value isKindOf: String) or: [ value class == Symbol ])\n"
+            "            ifTrue: [ '\"', (encodeString value: value), '\"' ]\n"
+            "            ifFalse: [ nil ]\n"
+            "        ]\n"
+            "      ]\n"
+            "    ]\n"
+            "  ]\n"
+            "].\n"
+            "stream := ''.\n"
+            "supported := true.\n"
+            "mapping associationsDo: [:assoc |\n"
+            "  | keyJson valueJson |\n"
+            "  supported ifTrue: [\n"
+            "    keyJson := encodeScalar value: assoc key.\n"
+            "    valueJson := encodeScalar value: assoc value.\n"
+            "    (keyJson isNil or: [ valueJson isNil ])\n"
+            "      ifTrue: [ supported := false ]\n"
+            "      ifFalse: [\n"
+            "        stream := stream, '[', keyJson, ',', valueJson, ']', String lf asString\n"
+            "      ]\n"
+            "  ]\n"
+            "].\n"
+            "supported ifTrue: [ stream ] ifFalse: [ nil ]"
+        )
+        if raw is None:
+            return None
+        return [
+            tuple(json.loads(line))
+            for line in raw.splitlines()
+            if line.strip()
+        ]
+
+    def _fetch_oop_pairs_fallback(self) -> list[tuple[Any, Any]]:
+        """Fetch all pairs in one eval as raw OOPs, then marshal in Python."""
+        s = self._s()
+        oop = self._o()
+        return [
+            (_py(s, key_oop), _py(s, value_oop))
+            for key_oop, value_oop in fetch_mapping_oop_pairs(s, oop)
+        ]
 
     def keys(self) -> list[Any]:
         """Return all keys in a single round-trip via keysAndValuesDo:."""
@@ -396,22 +463,22 @@ class RCQueue(_GsProxy):
             oop = session.eval_oop('RcQueue new')
         super().__init__(session, oop)
 
-    def push(self, value) -> 'RCQueue':
+    def push(self, value: Any) -> 'RCQueue':
         """Add an item to the back of the queue."""
         self._call('add:', value)
         return self
 
     # aliases
-    def add(self, value): return self.push(value)
-    def enq(self, value): return self.push(value)
-    def __lshift__(self, value): return self.push(value)
+    def add(self, value: Any) -> 'RCQueue': return self.push(value)
+    def enq(self, value: Any) -> 'RCQueue': return self.push(value)
+    def __lshift__(self, value: Any) -> 'RCQueue': return self.push(value)
 
     def pop(self) -> Any:
         """Remove and return the front item."""
         return self._call('remove')
 
-    def shift(self): return self.pop()
-    def deq(self):   return self.pop()
+    def shift(self) -> Any: return self.pop()
+    def deq(self) -> Any: return self.pop()
 
     @property
     def first(self) -> Any:
@@ -420,7 +487,7 @@ class RCQueue(_GsProxy):
 
     @property
     def size(self) -> int:
-        return self._call('size')
+        return cast(int, self._call('size'))
 
     def __len__(self) -> int:
         return self.size
@@ -490,8 +557,11 @@ def commit(session: _gs.GemStoneSession) -> None:
             print(e.report)
             s.abort()
     """
+    session._require_login()
+    lib = session._lib
+    assert lib is not None
     err = _gs.GciErrSType()
-    ok  = session._lib.GciCommit(ctypes.byref(err))
+    ok = lib.GciCommit(ctypes.byref(err))
     if ok:
         return
     # GciCommit returned FALSE — either conflict or hard error
@@ -506,10 +576,8 @@ def commit(session: _gs.GemStoneSession) -> None:
 
 def _collect_conflict_oops(session: _gs.GemStoneSession, selector: str) -> list[int]:
     try:
-        raw = session.eval(
-            f"| ids | ids := ''. System {selector} do: [:o | ids := ids, o asOop printString, '|']. ids"
-        )
-        return [int(x) for x in raw.rstrip('|').split('|') if x.strip()]
+        conflicts_oop = session.eval_oop(f"System {selector}")
+        return fetch_collection_oops(session, conflicts_oop)
     except Exception:
         return []
 
@@ -519,7 +587,7 @@ def _collect_conflict_oops(session: _gs.GemStoneSession, selector: str) -> list[
 # ---------------------------------------------------------------------------
 
 @contextmanager
-def nested_transaction(session: _gs.GemStoneSession):
+def nested_transaction(session: _gs.GemStoneSession) -> Iterator[_gs.GemStoneSession]:
     """
     Context manager for a GemStone nested transaction (up to 16 levels).
 
@@ -588,7 +656,7 @@ def datetime_to_gs(session: _gs.GemStoneSession, dt: datetime) -> int:
 # ---------------------------------------------------------------------------
 
 @contextmanager
-def lock(session: _gs.GemStoneSession, obj: Any):
+def lock(session: _gs.GemStoneSession, obj: Any) -> Iterator[None]:
     """
     Acquire an exclusive write lock on a GemStone object, release on exit.
 
@@ -599,15 +667,15 @@ def lock(session: _gs.GemStoneSession, obj: Any):
             ...   # other sessions cannot write-lock this object
     """
     obj_oop = _coerce_oop(obj)
-    session.eval(f'System writeLock: (ObjectMemory objectForOop: {obj_oop})')
+    session.eval(f'System writeLock: ({object_for_oop_expr(obj_oop)})')
     try:
         yield
     finally:
-        session.eval(f'System removeLock: (ObjectMemory objectForOop: {obj_oop})')
+        session.eval(f'System removeLock: ({object_for_oop_expr(obj_oop)})')
 
 
 @contextmanager
-def read_lock(session: _gs.GemStoneSession, obj: Any):
+def read_lock(session: _gs.GemStoneSession, obj: Any) -> Iterator[None]:
     """
     Acquire a shared read lock on a GemStone object, release on exit.
 
@@ -618,17 +686,17 @@ def read_lock(session: _gs.GemStoneSession, obj: Any):
             ...   # other sessions can also read-lock but not write-lock
     """
     obj_oop = _coerce_oop(obj)
-    session.eval(f'System readLock: (ObjectMemory objectForOop: {obj_oop})')
+    session.eval(f'System readLock: ({object_for_oop_expr(obj_oop)})')
     try:
         yield
     finally:
-        session.eval(f'System removeLock: (ObjectMemory objectForOop: {obj_oop})')
+        session.eval(f'System removeLock: ({object_for_oop_expr(obj_oop)})')
 
 
 def unlock(session: _gs.GemStoneSession, obj: Any) -> None:
     """Release any lock held on `obj` by this session."""
     obj_oop = _coerce_oop(obj)
-    session.eval(f'System removeLock: (ObjectMemory objectForOop: {obj_oop})')
+    session.eval(f'System removeLock: ({object_for_oop_expr(obj_oop)})')
 
 
 # ---------------------------------------------------------------------------
@@ -644,7 +712,7 @@ def shared_counter_get(session: _gs.GemStoneSession, index: int) -> int:
 
         v = shared_counter_get(s, 1)
     """
-    return session.eval(f'System sharedCounter: {index}')
+    return cast(int, session.eval(f'System sharedCounter: {index}'))
 
 
 def shared_counter_set(session: _gs.GemStoneSession, index: int, value: int) -> None:
@@ -664,7 +732,7 @@ def shared_counter_decrement(session: _gs.GemStoneSession, index: int, by: int =
 
 def shared_counter_count(session: _gs.GemStoneSession) -> int:
     """Return the total number of shared counters available."""
-    return session.eval('System numSharedCounters')
+    return cast(int, session.eval('System numSharedCounters'))
 
 
 # ---------------------------------------------------------------------------
@@ -707,7 +775,7 @@ def transaction_level(session: _gs.GemStoneSession) -> int:
         with nested_transaction(s):
             assert transaction_level(s) == 2
     """
-    return session.eval('System transactionLevel')
+    return cast(int, session.eval('System transactionLevel'))
 
 
 def session_id(session: _gs.GemStoneSession) -> int:
@@ -719,7 +787,7 @@ def session_id(session: _gs.GemStoneSession) -> int:
 
         print(f"Connected as session {session_id(s)}")
     """
-    return session.eval('System session')
+    return cast(int, session.eval('System session'))
 
 
 def session_count(session: _gs.GemStoneSession) -> int:
@@ -728,7 +796,7 @@ def session_count(session: _gs.GemStoneSession) -> int:
 
         print(f"{session_count(s)} sessions active")
     """
-    return session.eval('System currentSessionCount')
+    return cast(int, session.eval('System currentSessionCount'))
 
 
 # ---------------------------------------------------------------------------
@@ -759,10 +827,10 @@ class Repository:
         object.__setattr__(self, '_oop', session.resolve('SystemRepository'))
 
     def _s(self) -> _gs.GemStoneSession:
-        return object.__getattribute__(self, '_session')
+        return cast(_gs.GemStoneSession, object.__getattribute__(self, '_session'))
 
     def _o(self) -> int:
-        return object.__getattribute__(self, '_oop')
+        return cast(int, object.__getattribute__(self, '_oop'))
 
     def full_backup_to(self, path: str) -> bool:
         """
@@ -782,7 +850,9 @@ class Repository:
         p   = path if path.endswith('.gz') else path + '.gz'
         path_oop = s.new_string(p)
         result   = s.perform_oop(oop, 'fullBackupCompressedTo:', path_oop)
-        return result != _gs.OOP_FALSE and result != _gs.OOP_NIL
+        false_oop = int(_gs.OOP_FALSE)
+        nil_oop = int(_gs.OOP_NIL)
+        return result not in {false_oop, nil_oop}
 
     def restore_from_backup(self, path: str) -> None:
         """
@@ -834,40 +904,24 @@ class Repository:
         for batch_start in range(0, len(unique), _BATCH):
             batch = unique[batch_start: batch_start + _BATCH]
 
-            # Build a Smalltalk Array of class objects, one per name in the batch.
-            # We resolve each name via Smalltalk at: #ClassName.
-            cls_array_expr = ' '.join(
-                f"(Smalltalk at: #{name})," for name in batch
-            )
-            # Build as: (OrderedCollection new add: cls1; add: cls2; ...; yourself) asArray
             adds = ''.join(f" add: (Smalltalk at: #{n});" for n in batch)
-            # All temp vars in a single | ... | declaration — Smalltalk only
-            # allows one temp-var section per method/block.
-            st = (
-                f"| clsArray arr stream ids |\n"
+            batch_map_oop = s.eval_oop(
+                f"| clsArray arr byName |\n"
                 f"clsArray := (OrderedCollection new{adds} yourself) asArray.\n"
                 f"arr := SystemRepository listInstances: clsArray.\n"
-                f"stream := ''.\n"
+                f"byName := Dictionary new.\n"
                 f"1 to: clsArray size do: [:i |\n"
-                f"  ids := ''.\n"
-                f"  (arr at: i) do: [:o | ids := ids, o asOop printString, ','].\n"
-                f"  stream := stream, (clsArray at: i) name, '|', ids, (String with: Character nl)\n"
+                f"  byName at: (clsArray at: i) name put: (arr at: i)\n"
                 f"].\n"
-                f"stream"
+                f"byName"
             )
-            raw = s.eval(st)
-            for line in raw.splitlines():
-                line = line.strip()
-                if not line or '|' not in line:
+            for cls_name, oops in fetch_mapping_string_oop_lists(s, batch_map_oop):
+                if cls_name not in result:
                     continue
-                cls_name, _, oops_str = line.partition('|')
-                cls_name = cls_name.strip()
-                if cls_name in result:
-                    oops = [int(x) for x in oops_str.split(',') if x.strip()]
-                    if wrap:
-                        result[cls_name].extend(_wrap_oop(s, oop) for oop in oops)
-                    else:
-                        result[cls_name].extend(oops)
+                if wrap:
+                    result[cls_name].extend(_wrap_oop(s, oop) for oop in oops)
+                else:
+                    result[cls_name].extend(oops)
         return result
 
     def __repr__(self) -> str:
@@ -897,17 +951,15 @@ def list_instances(session: _gs.GemStoneSession, class_name: str, wrap: bool = F
         sendable proxy used by `PersistentRoot`. When False, return raw
         OOP integers for compatibility.
     """
-    raw = session.eval(
-        f"| cls result ids |"
+    result_collection_oop = session.eval_oop(
+        f"| cls result |"
         f"cls := Smalltalk at: #{class_name}."
         f"result := SystemRepository listInstances: (Array with: cls)."
-        f"ids := ''."
-        f"result first do: [:o | ids := ids, o asOop printString, '|']."
-        f"ids"
+        f"result first"
     )
-    if not raw:
+    oops = fetch_collection_oops(session, result_collection_oop)
+    if not oops:
         return []
-    oops = [int(x) for x in raw.rstrip('|').split('|') if x.strip()]
     if wrap:
         return [_wrap_oop(session, oop) for oop in oops]
-    return oops
+    return cast(list[Any], oops)

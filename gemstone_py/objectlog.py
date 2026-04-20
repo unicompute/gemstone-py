@@ -55,6 +55,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import gemstone_py as gemstone
+from ._smalltalk_batch import decode_escaped_field, escaped_field_encoder_source, object_for_oop_expr
 
 # Priority constants — match GemStone ObjectLogEntry class
 TRACE = 6
@@ -100,37 +101,7 @@ def _escape(s: str) -> str:
 
 
 def _decode_log_field(value: str) -> str:
-    if "\\" not in value:
-        return value
-
-    decoded: list[str] = []
-    i = 0
-    while i < len(value):
-        ch = value[i]
-        if ch != "\\":
-            decoded.append(ch)
-            i += 1
-            continue
-
-        i += 1
-        if i >= len(value):
-            decoded.append("\\")
-            break
-
-        escaped = value[i]
-        if escaped == "n":
-            decoded.append("\n")
-        elif escaped == "r":
-            decoded.append("\r")
-        elif escaped == "p":
-            decoded.append("|")
-        elif escaped == "\\":
-            decoded.append("\\")
-        else:
-            decoded.append("\\")
-            decoded.append(escaped)
-        i += 1
-    return "".join(decoded)
+    return decode_escaped_field(value)
 
 
 @dataclass
@@ -184,14 +155,7 @@ def _fetch_log_entries(s: gemstone.GemStoneSession) -> list[ObjectLogEntry]:
     """
     raw = s.eval(
         "| encode stream log |\n"
-        "encode := [:value | | text |\n"
-        "  text := value isNil ifTrue: [''] ifFalse: [value asString].\n"
-        "  text := text copyReplaceAll: '\\' with: '\\\\'.\n"
-        "  text := text copyReplaceAll: String cr with: '\\r'.\n"
-        "  text := text copyReplaceAll: String lf with: '\\n'.\n"
-        "  text := text copyReplaceAll: '|' with: '\\p'.\n"
-        "  text\n"
-        "].\n"
+        f"{escaped_field_encoder_source('encode')}"
         "log := ObjectLogEntry objectLog.\n"
         "stream := ''.\n"
         "0 to: log size - 1 do: [:i |\n"
@@ -299,7 +263,7 @@ class ObjectLog:
             # Attach a live GemStone object: look it up by OOP then pass it
             smalltalk = (
                 f"(ObjectLogEntry {kw1}: '{escaped_label}'"
-                f"  object: (ObjectMemory objectForOop: {object_oop})) addToLog."
+                f"  object: ({object_for_oop_expr(object_oop)})) addToLog."
             )
         else:
             smalltalk = (

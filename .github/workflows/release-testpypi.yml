@@ -1,0 +1,122 @@
+name: Release TestPyPI
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-tag:
+        description: Optional release tag to validate against project.version
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  build-testpypi:
+    runs-on: ubuntu-latest
+    outputs:
+      package-version: ${{ steps.release-metadata.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package and dev tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .[dev]
+
+      - name: Validate release metadata
+        id: release-metadata
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.inputs['release-tag'] }}
+        run: |
+          args=()
+          if [[ -n "${RELEASE_TAG}" ]]; then
+            args+=(--tag "${RELEASE_TAG}")
+          fi
+          python -m gemstone_py.release_metadata "${args[@]}" --json > release-metadata.json
+          cat release-metadata.json
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads(Path("release-metadata.json").read_text(encoding="utf-8"))
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as stream:
+              stream.write(f"version={payload['version']}\n")
+          PY
+
+      - name: Run release verification lane
+        run: ./scripts/run_ci_checks.sh
+
+      - name: Build release artifacts
+        run: python -m build --sdist --wheel
+
+      - name: Upload TestPyPI artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemstone-py-release-testpypi-dist
+          path: dist/*
+          if-no-files-found: error
+
+  publish-testpypi:
+    needs: build-testpypi
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    environment:
+      name: testpypi
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: gemstone-py-release-testpypi-dist
+          path: dist
+
+      - name: Publish to TestPyPI with trusted publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  verify-testpypi-install:
+    needs:
+      - build-testpypi
+      - publish-testpypi
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_VERSION: ${{ needs.build-testpypi.outputs.package-version }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install published package from TestPyPI
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          installed=0
+          for attempt in 1 2 3 4 5 6; do
+            if python -m pip install \
+              --index-url https://test.pypi.org/simple/ \
+              --extra-index-url https://pypi.org/simple/ \
+              "gemstone-py==${RELEASE_VERSION}"; then
+              installed=1
+              break
+            fi
+            echo "TestPyPI package not available yet; retrying (${attempt}/6)..."
+            python -m pip uninstall -y gemstone-py >/dev/null 2>&1 || true
+            sleep 30
+          done
+          if [[ "${installed}" != "1" ]]; then
+            echo "Failed to install gemstone-py==${RELEASE_VERSION} from TestPyPI."
+            exit 1
+          fi
+
+      - name: Verify published artifact behavior
+        run: |
+          python -m gemstone_py.api_contract --json
+          gemstone-hello >/dev/null
+          gemstone-examples hello >/dev/null

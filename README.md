@@ -37,6 +37,8 @@ python3 -m pip install -e .
 Installed demo commands:
 
 ```bash
+gemstone-benchmark-baseline-register
+gemstone-benchmarks
 gemstone-hello
 gemstone-smalltalk-demo
 gemstone-examples hello
@@ -174,17 +176,100 @@ python3 -m pip install -e .[dev]
 ./scripts/run_ci_checks.sh
 ```
 
+Run the maintained benchmark lane against a configured stone:
+
+```bash
+./scripts/run_benchmarks.sh
+gemstone-benchmarks --entries 500 --search-runs 20
+```
+
+To capture a benchmark artifact locally:
+
+```bash
+./scripts/run_benchmarks.sh --json --output benchmark-report.json
+```
+
+Benchmark artifacts now include a `schema_version` field. To compare two saved
+reports:
+
+```bash
+gemstone-benchmark-compare baseline.json candidate.json
+gemstone-benchmark-compare baseline.json candidate.json --json --output benchmark-compare.json
+gemstone-benchmark-compare baseline.json candidate.json --max-regression-pct 10
+gemstone-benchmark-compare baseline.json candidate.json --suite-threshold persistent_root=7.5
+gemstone-benchmark-compare baseline.json candidate.json --operation-threshold persistent_root/mapping_keys=5
+```
+
+To select the committed environment-specific baseline for a generated report:
+
+```bash
+python -m gemstone_py.benchmark_baselines benchmark-report.json
+python -m gemstone_py.benchmark_baselines benchmark-report.json --manifest .github/benchmarks/index.json --json
+```
+
+To register a new accepted benchmark artifact in the committed manifest:
+
+```bash
+gemstone-benchmark-baseline-register benchmark-report.json
+gemstone-benchmark-baseline-register benchmark-report.json --copy-to baseline-macos-arm64.json
+```
+
 Run the build/install artifact smoke lane directly:
 
 ```bash
 ./scripts/run_build_smoke.sh
 ```
 
+That smoke lane now validates the installed package API contract directly from
+the built wheel and sdist via `python -m gemstone_py.api_contract`, including
+non-live behavior checks for release metadata, benchmark baseline lifecycle,
+benchmark baseline selection, and benchmark threshold comparison.
+
+For release prep, use [RELEASE_CHECKLIST.md](/Users/tariq/src/gemstone-py/RELEASE_CHECKLIST.md:1)
+and keep [CHANGELOG.md](/Users/tariq/src/gemstone-py/CHANGELOG.md:1) updated. GitHub also provides a
+`Release` workflow for tagged/manual artifact builds and optional PyPI publish.
+It validates the release tag against `project.version` and requires the same
+version to appear in [CHANGELOG.md](/Users/tariq/src/gemstone-py/CHANGELOG.md:1)
+before artifacts are built or published. Manual PyPI publish now uses PyPI
+trusted publishing via GitHub OIDC in the `pypi` environment rather than a
+long-lived API token.
+
+For rehearsal without creating a GitHub release or publishing to PyPI, use the
+manual `Release Dry Run` workflow. It validates release metadata, runs
+`./scripts/run_ci_checks.sh`, builds sdist/wheel artifacts, and uploads the
+resulting `dist/` contents for inspection.
+
+For an end-to-end publish rehearsal, use the manual `Release TestPyPI`
+workflow. It runs the same verification/build steps and then publishes the
+artifacts to TestPyPI via GitHub OIDC trusted publishing in the `testpypi`
+environment, then installs the just-published version back from TestPyPI and
+runs `python -m gemstone_py.api_contract --json` plus the public CLI smoke
+checks against that published artifact.
+
+On GitHub, use the manual `Benchmarks` workflow to run the same lane against a
+configured stone and upload `benchmark-report.json` as an artifact. If the
+repository contains [.github/benchmarks/index.json](/Users/tariq/src/gemstone-py/.github/benchmarks/index.json:1),
+the workflow selects the committed baseline whose metadata matches the
+candidate report, then runs `gemstone-benchmark-compare`, uploads selection and
+comparison artifacts, and writes the selection/comparison tables into the
+workflow summary. The repository already includes a committed baseline at
+[.github/benchmarks/baseline.json](/Users/tariq/src/gemstone-py/.github/benchmarks/baseline.json:1)
+registered in the manifest for the default benchmark parameters. Threshold
+enforcement is skipped when no committed baseline matches the candidate
+metadata, and the workflow can fail on regressions larger than the configured
+percentage. The workflow also accepts `suite-thresholds` and
+`operation-thresholds` inputs for per-suite and per-operation regression
+policies when one global threshold is too blunt.
+
 Run the opt-in live lane:
 
 ```bash
 GS_RUN_LIVE=1 ./scripts/run_live_checks.sh
 ```
+
+Destructive live coverage is available separately on GitHub through the manual
+`Destructive Live GemStone Tests` workflow, which requires
+`confirm=DESTROY` and runs with `GS_RUN_DESTRUCTIVE_LIVE=1`.
 
 Run the live demo against a configured stone:
 

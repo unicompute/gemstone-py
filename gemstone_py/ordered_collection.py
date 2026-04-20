@@ -43,6 +43,7 @@ RUNTIME_REQUIREMENT = "Works on plain GemStone images over GCI"
 from typing import Any, Iterator
 
 import gemstone_py as _gs
+from gemstone_py._smalltalk_batch import object_for_oop_expr
 from gemstone_py.persistent_root import _to_oop, _from_oop
 
 
@@ -165,7 +166,7 @@ class OrderedCollection:
         s = self._s()
         oop = self._o()
         s.eval(
-            f"(ObjectMemory objectForOop: {oop}) removeAllSuchThat: [:e | true]."
+            f"({object_for_oop_expr(oop)}) removeAllSuchThat: [:e | true]."
         )
         return self
 

@@ -93,6 +93,54 @@ class GsDictMappingTests(unittest.TestCase):
 
         call.assert_called_once_with(gs_dict, "removeAll")
 
+    def test_keys_use_batched_eval_and_decode_escaped_rows(self):
+        gs_dict, session = _make_gs_dict()
+        session.eval.return_value = "alpha\nbeta\\ppipe\n"
+
+        result = gs_dict.keys()
+
+        self.assertEqual(result, ["alpha", "beta|pipe"])
+        session.eval.assert_called_once()
+
+    def test_items_use_batched_eval_and_wrap_oops(self):
+        gs_dict, session = _make_gs_dict()
+        session.eval.return_value = "alpha|101\nbeta\\ppipe|202\n"
+
+        with mock.patch.object(
+            mod,
+            "_from_oop",
+            side_effect=lambda current_session, oop: f"{current_session is session}:{oop}",
+        ) as from_oop:
+            result = gs_dict.items()
+
+        self.assertEqual(result, [("alpha", "True:101"), ("beta|pipe", "True:202")])
+        self.assertEqual(
+            from_oop.call_args_list,
+            [mock.call(session, 101), mock.call(session, 202)],
+        )
+        session.eval.assert_called_once()
+
+    def test_values_use_batched_eval_and_wrap_oops(self):
+        gs_dict, session = _make_gs_dict()
+        session.eval.return_value = "alpha|101\nbeta|202\n"
+
+        with mock.patch.object(mod, "_from_oop", side_effect=["first", "second"]) as from_oop:
+            result = gs_dict.values()
+
+        self.assertEqual(result, ["first", "second"])
+        self.assertEqual(
+            from_oop.call_args_list,
+            [mock.call(session, 101), mock.call(session, 202)],
+        )
+        session.eval.assert_called_once()
+
+    def test_len_uses_size_directly(self):
+        gs_dict, session = _make_gs_dict()
+        session.perform.return_value = 7
+
+        self.assertEqual(len(gs_dict), 7)
+        session.perform.assert_called_once_with(123, "size")
+
     def test_gs_dict_send_dispatches_and_wraps_result(self):
         gs_dict, session = _make_gs_dict()
         session.perform_oop.return_value = 999
@@ -199,6 +247,50 @@ class PersistentRootMappingTests(unittest.TestCase):
                 mock.call(root, "Beta", 2),
             ],
         )
+
+    def test_keys_use_batched_eval_and_decode_escaped_rows(self):
+        root, session = _make_persistent_root()
+        session.eval.return_value = "Alpha\nBeta\\pPipe\n"
+
+        result = root.keys()
+
+        self.assertEqual(result, ["Alpha", "Beta|Pipe"])
+        session.eval.assert_called_once()
+
+    def test_items_use_batched_eval_and_wrap_oops(self):
+        root, session = _make_persistent_root()
+        session.eval.return_value = "Alpha|301\nBeta\\pPipe|302\n"
+
+        with mock.patch.object(mod, "_from_oop", side_effect=["value-a", "value-b"]) as from_oop:
+            result = root.items()
+
+        self.assertEqual(result, [("Alpha", "value-a"), ("Beta|Pipe", "value-b")])
+        self.assertEqual(
+            from_oop.call_args_list,
+            [mock.call(session, 301), mock.call(session, 302)],
+        )
+        session.eval.assert_called_once()
+
+    def test_values_use_batched_eval_and_wrap_oops(self):
+        root, session = _make_persistent_root()
+        session.eval.return_value = "Alpha|401\nBeta|402\n"
+
+        with mock.patch.object(mod, "_from_oop", side_effect=["first", "second"]) as from_oop:
+            result = root.values()
+
+        self.assertEqual(result, ["first", "second"])
+        self.assertEqual(
+            from_oop.call_args_list,
+            [mock.call(session, 401), mock.call(session, 402)],
+        )
+        session.eval.assert_called_once()
+
+    def test_len_uses_size_directly(self):
+        root, session = _make_persistent_root()
+        session.perform.return_value = 4
+
+        self.assertEqual(len(root), 4)
+        session.perform.assert_called_once_with(456, "size")
 
 
 if __name__ == "__main__":

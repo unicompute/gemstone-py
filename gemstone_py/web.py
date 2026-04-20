@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import atexit
-from contextlib import contextmanager
-from dataclasses import asdict, dataclass
 import queue
 import threading
 import time
-from typing import Any, Callable, Optional
+from contextlib import contextmanager
+from dataclasses import asdict, dataclass
+from typing import Any, Callable, Iterator, Optional
 
 from .client import GemStoneSession, TransactionPolicy
 
@@ -116,22 +116,22 @@ class GemStoneSessionProvider:
         self,
         *,
         name: Optional[str] = None,
-        session_factory=GemStoneSession,
+        session_factory: Callable[..., GemStoneSession] = GemStoneSession,
         session_healthcheck: Optional[Callable[[GemStoneSession], bool]] = None,
         acquire_timeout: Optional[float] = None,
         max_session_age: Optional[float] = None,
         max_session_uses: Optional[int] = None,
         metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
         event_listener: Optional[Callable[[GemStoneSessionProviderEvent], None]] = None,
-        logger=None,
-        **session_kwargs,
+        logger: Any = None,
+        **session_kwargs: Any,
     ) -> None:
         if max_session_age is not None and max_session_age <= 0:
             raise ValueError("GemStone session max_session_age must be > 0.")
         if max_session_uses is not None and max_session_uses < 1:
             raise ValueError("GemStone session max_session_uses must be >= 1.")
         self._name = name or type(self).__name__
-        self._session_factory = session_factory
+        self._session_factory: Callable[..., GemStoneSession] = session_factory
         self._session_kwargs = dict(session_kwargs)
         self._session_healthcheck = session_healthcheck
         self._acquire_timeout = acquire_timeout
@@ -226,7 +226,9 @@ class GemStoneSessionProvider:
                         "gemstone_provider_name": snapshot.name,
                         "gemstone_provider_type": snapshot.provider_type,
                         "gemstone_provider_reason": reason,
-                        "gemstone_provider_session_id": id(session) if session is not None else None,
+                        "gemstone_provider_session_id": (
+                            id(session) if session is not None else None
+                        ),
                     },
                 )
             except Exception:
@@ -327,17 +329,17 @@ class GemStoneSessionPool(GemStoneSessionProvider):
         self,
         *,
         maxsize: int = 4,
-        session_factory=GemStoneSession,
+        session_factory: Callable[..., GemStoneSession] = GemStoneSession,
         session_healthcheck: Optional[Callable[[GemStoneSession], bool]] = None,
         acquire_timeout: Optional[float] = None,
         max_session_age: Optional[float] = None,
         max_session_uses: Optional[int] = None,
         metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
         event_listener: Optional[Callable[[GemStoneSessionProviderEvent], None]] = None,
-        logger=None,
+        logger: Any = None,
         name: Optional[str] = None,
-        **session_kwargs,
-    ):
+        **session_kwargs: Any,
+    ) -> None:
         if maxsize < 1:
             raise ValueError("GemStoneSessionPool maxsize must be at least 1.")
         self._maxsize = maxsize
@@ -430,7 +432,9 @@ class GemStoneSessionPool(GemStoneSessionProvider):
             except queue.Empty as exc:
                 self._record_stat("_timeout_calls")
                 self._emit_observation("acquire_timeout", reason="timeout")
-                raise TimeoutError("Timed out waiting for a GemStone session from the pool.") from exc
+                raise TimeoutError(
+                    "Timed out waiting for a GemStone session from the pool."
+                ) from exc
             ready, reason = self._prepare_session_for_checkout(session)
             if ready:
                 self._record_acquire_wait(started_at)
@@ -515,7 +519,7 @@ class GemStoneSessionPool(GemStoneSessionProvider):
         return warmed
 
     @contextmanager
-    def lease(self):
+    def lease(self) -> Iterator[GemStoneSession]:
         session = self.acquire()
         discard = False
         clean = False
@@ -573,16 +577,16 @@ class GemStoneThreadLocalSessionProvider(GemStoneSessionProvider):
     def __init__(
         self,
         *,
-        session_factory=GemStoneSession,
+        session_factory: Callable[..., GemStoneSession] = GemStoneSession,
         session_healthcheck: Optional[Callable[[GemStoneSession], bool]] = None,
         max_session_age: Optional[float] = None,
         max_session_uses: Optional[int] = None,
         metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
         event_listener: Optional[Callable[[GemStoneSessionProviderEvent], None]] = None,
-        logger=None,
+        logger: Any = None,
         name: Optional[str] = None,
-        **session_kwargs,
-    ):
+        **session_kwargs: Any,
+    ) -> None:
         self._initialize_provider(
             name=name,
             session_factory=session_factory,
@@ -605,7 +609,7 @@ class GemStoneThreadLocalSessionProvider(GemStoneSessionProvider):
         with self._lock:
             if self._closed:
                 raise RuntimeError("GemStoneThreadLocalSessionProvider is closed.")
-        session = getattr(self._local, "session", None)
+        session: Optional[GemStoneSession] = getattr(self._local, "session", None)
         if session is not None:
             ready, reason = self._prepare_session_for_checkout(session)
             if ready:
@@ -712,7 +716,7 @@ class GemStoneThreadLocalSessionProvider(GemStoneSessionProvider):
         )
 
 
-def _flask_request_state():
+def _flask_request_state() -> tuple[Any | None, Any | None]:
     try:
         from flask import current_app, g, has_request_context
     except ImportError:
@@ -730,15 +734,21 @@ def current_flask_request_session() -> Optional[GemStoneSession]:
     return getattr(flask_g, _FLASK_REQUEST_SESSION_ATTR, None)
 
 
-def flask_request_session_provider(app=None) -> Optional[GemStoneSessionProvider]:
+def flask_request_session_provider(app: Any | None = None) -> Optional[GemStoneSessionProvider]:
     """Return the configured Flask request-session provider, if any."""
     if app is None:
         app, _flask_g = _flask_request_state()
-    extension = getattr(app, "extensions", {}).get(_FLASK_REQUEST_SESSION_EXTENSION, {}) if app else {}
+    extension = (
+        getattr(app, "extensions", {}).get(_FLASK_REQUEST_SESSION_EXTENSION, {})
+        if app
+        else {}
+    )
     return extension.get("session_provider") or extension.get("session_pool")
 
 
-def flask_request_session_provider_snapshot(app=None) -> Optional[GemStoneSessionProviderSnapshot]:
+def flask_request_session_provider_snapshot(
+    app: Any | None = None,
+) -> Optional[GemStoneSessionProviderSnapshot]:
     """Return an operational snapshot for the configured Flask provider."""
     provider = flask_request_session_provider(app)
     if provider is None:
@@ -746,7 +756,7 @@ def flask_request_session_provider_snapshot(app=None) -> Optional[GemStoneSessio
     return provider.snapshot()
 
 
-def flask_request_session_provider_metrics(app=None) -> Optional[dict[str, Any]]:
+def flask_request_session_provider_metrics(app: Any | None = None) -> Optional[dict[str, Any]]:
     """Return a metrics-friendly dict for the configured Flask provider."""
     snapshot = flask_request_session_provider_snapshot(app)
     if snapshot is None:
@@ -754,7 +764,7 @@ def flask_request_session_provider_metrics(app=None) -> Optional[dict[str, Any]]
     return snapshot.metrics()
 
 
-def warm_flask_request_session_provider(app=None, count: Optional[int] = None) -> int:
+def warm_flask_request_session_provider(app: Any | None = None, count: Optional[int] = None) -> int:
     """Warm the configured Flask provider, returning the number of sessions prepared."""
     provider = flask_request_session_provider(app)
     if provider is None:
@@ -762,7 +772,7 @@ def warm_flask_request_session_provider(app=None, count: Optional[int] = None) -
     return provider.warm(count)
 
 
-def close_flask_request_session_provider(app=None) -> None:
+def close_flask_request_session_provider(app: Any | None = None) -> None:
     """Close and detach the configured Flask request-session provider."""
     provider = flask_request_session_provider(app)
     if provider is None:
@@ -792,8 +802,8 @@ def _resolve_session_provider(
     max_session_uses: Optional[int] = None,
     metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
     event_listener: Optional[Callable[[GemStoneSessionProviderEvent], None]] = None,
-    logger=None,
-    **kwargs,
+    logger: Any = None,
+    **kwargs: Any,
 ) -> Optional[GemStoneSessionProvider]:
     if session_provider is not None and session_pool is not None:
         raise ValueError("Pass either session_provider or session_pool, not both.")
@@ -833,14 +843,18 @@ def _resolve_session_provider(
     return None
 
 
-def _get_or_create_flask_request_session(**kwargs) -> Optional[GemStoneSession]:
+def _get_or_create_flask_request_session(**kwargs: Any) -> Optional[GemStoneSession]:
     app, flask_g = _flask_request_state()
     if app is None or flask_g is None:
         return None
     config = app.extensions.get(_FLASK_REQUEST_SESSION_EXTENSION)
     if config is None:
         return None
-    session = getattr(flask_g, _FLASK_REQUEST_SESSION_ATTR, None)
+    session: Optional[GemStoneSession] = getattr(
+        flask_g,
+        _FLASK_REQUEST_SESSION_ATTR,
+        None,
+    )
     if session is not None:
         return session
 
@@ -915,7 +929,7 @@ def finalize_flask_request_session(exc: Optional[BaseException] = None) -> None:
 
 
 def install_flask_request_session(
-    app,
+    app: Any,
     *,
     session_provider: Optional[GemStoneSessionProvider] = None,
     session_pool: Optional[GemStoneSessionProvider] = None,
@@ -928,12 +942,12 @@ def install_flask_request_session(
     max_session_uses: Optional[int] = None,
     metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
     event_listener: Optional[Callable[[GemStoneSessionProviderEvent], None]] = None,
-    logger=None,
+    logger: Any = None,
     warmup_sessions: int = 0,
     close_at_exit: bool = False,
     close_on_after_serving: bool = False,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> Any:
     """
     Register lazy request-scoped GemStone session handling for a Flask app.
 
@@ -971,21 +985,21 @@ def install_flask_request_session(
         atexit.register(close_flask_request_session_provider, app)
     if provider is not None and warmup_sessions and hasattr(app, "before_serving"):
         @app.before_serving
-        def _warm_request_session_provider():
+        def _warm_request_session_provider() -> None:
             warm_flask_request_session_provider(app, warmup_sessions)
     if provider is not None and close_on_after_serving and hasattr(app, "after_serving"):
         @app.after_serving
-        def _close_request_session_provider():
+        def _close_request_session_provider() -> None:
             close_flask_request_session_provider(app)
 
     @app.after_request
-    def _commit_request_session(response):
+    def _commit_request_session(response: Any) -> Any:
         if not getattr(app.session_interface, "_gemstone_request_session_finalizes", False):
             finalize_flask_request_session()
         return response
 
     @app.teardown_request
-    def _cleanup_request_session(exc):
+    def _cleanup_request_session(exc: BaseException | None) -> None:
         if exc is not None:
             finalize_flask_request_session(exc)
 
@@ -1006,9 +1020,9 @@ def session_scope(
     max_session_uses: Optional[int] = None,
     metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
     event_listener: Optional[Callable[[GemStoneSessionProviderEvent], None]] = None,
-    logger=None,
-    **kwargs,
-):
+    logger: Any = None,
+    **kwargs: Any,
+) -> Iterator[GemStoneSession]:
     """
     Yield a usable GemStone session.
 

@@ -41,6 +41,10 @@ fi
 "${pybin}" -m venv "${wheel_venv}"
 "${wheel_venv}/bin/python" -m pip install "${wheel_path}"
 "${wheel_venv}/bin/python" -c "import gemstone_py; print(gemstone_py.__file__)"
+"${wheel_venv}/bin/python" -m gemstone_py.api_contract >/dev/null
+"${wheel_venv}/bin/gemstone-benchmark-baseline-register" --help >/dev/null
+"${wheel_venv}/bin/gemstone-benchmark-compare" --help >/dev/null
+"${wheel_venv}/bin/gemstone-benchmarks" --help >/dev/null
 "${wheel_venv}/bin/gemstone-hello"
 "${wheel_venv}/bin/gemstone-examples" hello
 test -x "${wheel_venv}/bin/gemstone-smalltalk-demo"
@@ -48,6 +52,10 @@ test -x "${wheel_venv}/bin/gemstone-smalltalk-demo"
 "${pybin}" -m venv --system-site-packages "${sdist_venv}"
 "${sdist_venv}/bin/python" -m pip install --no-build-isolation "${sdist_path}"
 "${sdist_venv}/bin/python" -c "import gemstone_py; print(gemstone_py.__file__)"
+"${sdist_venv}/bin/python" -m gemstone_py.api_contract >/dev/null
+"${sdist_venv}/bin/gemstone-benchmark-baseline-register" --help >/dev/null
+"${sdist_venv}/bin/gemstone-benchmark-compare" --help >/dev/null
+"${sdist_venv}/bin/gemstone-benchmarks" --help >/dev/null
 "${sdist_venv}/bin/gemstone-hello"
 "${sdist_venv}/bin/gemstone-examples" hello
 test -x "${sdist_venv}/bin/gemstone-smalltalk-demo"

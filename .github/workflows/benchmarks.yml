@@ -1,0 +1,273 @@
+name: Benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      entries:
+        description: Benchmark entry count
+        required: true
+        default: "200"
+      search-runs:
+        description: Indexed search repetitions for GSCollection
+        required: true
+        default: "10"
+      suites:
+        description: Comma-separated suites (persistent_root,gscollection,gstore,rchash)
+        required: true
+        default: "persistent_root,gscollection,gstore,rchash"
+      baseline-report:
+        description: Optional repository-relative path to a committed baseline benchmark JSON report override
+        required: false
+        default: ""
+      baseline-manifest:
+        description: Repository-relative path to the committed benchmark baseline manifest
+        required: true
+        default: ".github/benchmarks/index.json"
+      max-regression-pct:
+        description: Maximum allowed regression percentage before the workflow fails
+        required: true
+        default: "10"
+      suite-thresholds:
+        description: Optional comma-separated SUITE=PCT regression threshold overrides
+        required: false
+        default: ""
+      operation-thresholds:
+        description: Optional comma-separated SUITE/OPERATION=PCT regression threshold overrides
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  benchmarks:
+    runs-on: ubuntu-latest
+    env:
+      GS_LIB: ${{ secrets.GS_LIB }}
+      GS_LIB_PATH: ${{ secrets.GS_LIB_PATH }}
+      GS_STONE: ${{ secrets.GS_STONE }}
+      GS_HOST: ${{ secrets.GS_HOST }}
+      GS_NETLDI: ${{ secrets.GS_NETLDI }}
+      GS_GEM_SERVICE: ${{ secrets.GS_GEM_SERVICE }}
+      GS_USERNAME: ${{ secrets.GS_USERNAME }}
+      GS_PASSWORD: ${{ secrets.GS_PASSWORD }}
+      GS_HOST_USERNAME: ${{ secrets.GS_HOST_USERNAME }}
+      GS_HOST_PASSWORD: ${{ secrets.GS_HOST_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate benchmark configuration
+        run: |
+          test -n "${GS_USERNAME}" || { echo "Missing GS_USERNAME secret"; exit 1; }
+          test -n "${GS_PASSWORD}" || { echo "Missing GS_PASSWORD secret"; exit 1; }
+          test -n "${GS_STONE}" || { echo "Missing GS_STONE secret"; exit 1; }
+
+      - name: Install package and dev tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .[dev]
+
+      - name: Run benchmark lane
+        shell: bash
+        env:
+          BENCH_ENTRIES: ${{ inputs.entries }}
+          BENCH_SEARCH_RUNS: ${{ inputs.search-runs }}
+          BENCH_SUITES: ${{ inputs.suites }}
+        run: |
+          mkdir -p benchmark-artifacts
+          suite_args=()
+          IFS=',' read -ra suites <<< "${BENCH_SUITES}"
+          for suite in "${suites[@]}"; do
+            suite="$(echo "${suite}" | xargs)"
+            [[ -n "${suite}" ]] || continue
+            suite_args+=(--suite "${suite}")
+          done
+          ./scripts/run_benchmarks.sh \
+            --json \
+            --output benchmark-artifacts/benchmark-report.json \
+            --entries "${BENCH_ENTRIES}" \
+            --search-runs "${BENCH_SEARCH_RUNS}" \
+            "${suite_args[@]}"
+          cat benchmark-artifacts/benchmark-report.json
+
+      - name: Select environment-specific baseline
+        id: baseline
+        shell: bash
+        env:
+          BENCH_BASELINE_REPORT: ${{ inputs.baseline-report }}
+          BENCH_BASELINE_MANIFEST: ${{ inputs.baseline-manifest }}
+        run: |
+          if [[ -n "${BENCH_BASELINE_REPORT}" ]]; then
+            if [[ ! -f "${BENCH_BASELINE_REPORT}" ]]; then
+              echo "Override baseline not found at \`${BENCH_BASELINE_REPORT}\`." >> "${GITHUB_STEP_SUMMARY}"
+              exit 1
+            fi
+            mkdir -p benchmark-artifacts
+            python - <<'PY'
+            import json
+            import os
+            from pathlib import Path
+
+            payload = {
+                "schema_version": 1,
+                "candidate_path": "benchmark-artifacts/benchmark-report.json",
+                "manifest_path": "",
+                "selected_path": ".github/benchmarks/baseline.json",
+                "comparable": True,
+                "message": "Using explicit benchmark baseline override.",
+                "candidate_metadata": {},
+                "selected_metadata": None,
+            }
+            payload["selected_path"] = Path(os.environ["BENCH_BASELINE_REPORT"]).as_posix()
+            Path("benchmark-artifacts/baseline-selection.json").write_text(
+                json.dumps(payload, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            PY
+            echo "found=true" >> "${GITHUB_OUTPUT}"
+            echo "selected_path=${BENCH_BASELINE_REPORT}" >> "${GITHUB_OUTPUT}"
+            echo "source=override" >> "${GITHUB_OUTPUT}"
+            echo "Using explicit benchmark baseline override \`${BENCH_BASELINE_REPORT}\`." >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+
+          if [[ ! -f "${BENCH_BASELINE_MANIFEST}" ]]; then
+            echo "found=false" >> "${GITHUB_OUTPUT}"
+            echo "source=manifest" >> "${GITHUB_OUTPUT}"
+            echo "Benchmark baseline manifest not found at \`${BENCH_BASELINE_MANIFEST}\`; skipping compare." >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+
+          python -m gemstone_py.benchmark_baselines \
+            benchmark-artifacts/benchmark-report.json \
+            --manifest "${BENCH_BASELINE_MANIFEST}" \
+            --json \
+            --output benchmark-artifacts/baseline-selection.json
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads(Path("benchmark-artifacts/baseline-selection.json").read_text())
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as stream:
+              stream.write(
+                  f"found={'true' if payload.get('selected_path') else 'false'}\n"
+              )
+              stream.write(f"selected_path={payload.get('selected_path') or ''}\n")
+              stream.write("source=manifest\n")
+          with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as stream:
+              stream.write("## Baseline Selection\n\n")
+              stream.write(f"Manifest: `{os.environ['BENCH_BASELINE_MANIFEST']}`\n\n")
+              stream.write(f"{payload['message']}\n\n")
+              if payload.get("selected_path"):
+                  stream.write(f"Selected baseline: `{payload['selected_path']}`\n\n")
+          PY
+
+      - name: Compare benchmark report to baseline
+        id: compare
+        if: steps.baseline.outputs.found == 'true'
+        shell: bash
+        env:
+          BENCH_BASELINE_REPORT: ${{ steps.baseline.outputs.selected_path }}
+          BENCH_MAX_REGRESSION_PCT: ${{ inputs.max-regression-pct }}
+          BENCH_SUITE_THRESHOLDS: ${{ inputs.suite-thresholds }}
+          BENCH_OPERATION_THRESHOLDS: ${{ inputs.operation-thresholds }}
+        run: |
+          echo "found=true" >> "${GITHUB_OUTPUT}"
+          threshold_args=()
+          while IFS= read -r spec; do
+            spec="$(echo "${spec}" | xargs)"
+            [[ -n "${spec}" ]] || continue
+            threshold_args+=(--suite-threshold "${spec}")
+          done < <(printf '%s' "${BENCH_SUITE_THRESHOLDS}" | tr ',\n' '\n')
+          while IFS= read -r spec; do
+            spec="$(echo "${spec}" | xargs)"
+            [[ -n "${spec}" ]] || continue
+            threshold_args+=(--operation-threshold "${spec}")
+          done < <(printf '%s' "${BENCH_OPERATION_THRESHOLDS}" | tr ',\n' '\n')
+          set +e
+          python -m gemstone_py.benchmark_compare \
+            "${BENCH_BASELINE_REPORT}" \
+            benchmark-artifacts/benchmark-report.json \
+            --max-regression-pct "${BENCH_MAX_REGRESSION_PCT}" \
+            "${threshold_args[@]}" \
+            --output benchmark-artifacts/benchmark-compare.txt
+          text_exit=$?
+          python -m gemstone_py.benchmark_compare \
+            "${BENCH_BASELINE_REPORT}" \
+            benchmark-artifacts/benchmark-report.json \
+            --json \
+            --max-regression-pct "${BENCH_MAX_REGRESSION_PCT}" \
+            "${threshold_args[@]}" \
+            --output benchmark-artifacts/benchmark-compare.json
+          json_exit=$?
+          set -e
+          if [[ "${text_exit}" -ne 0 && "${text_exit}" -ne 2 ]]; then
+            exit "${text_exit}"
+          fi
+          if [[ "${json_exit}" -ne 0 && "${json_exit}" -ne 2 ]]; then
+            exit "${json_exit}"
+          fi
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads(Path("benchmark-artifacts/benchmark-compare.json").read_text())
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as stream:
+              stream.write(
+                  f"comparable={'true' if payload.get('comparable') else 'false'}\n"
+              )
+              stream.write(
+                  "threshold_exceeded="
+                  f"{'true' if payload.get('threshold_exceeded') else 'false'}\n"
+              )
+          PY
+          cat benchmark-artifacts/benchmark-compare.txt
+          {
+            echo "## Benchmark Comparison"
+            echo
+            echo "Baseline: \`${BENCH_BASELINE_REPORT}\`"
+            echo "Default Threshold: ${BENCH_MAX_REGRESSION_PCT}%"
+            if [[ -n "${BENCH_SUITE_THRESHOLDS}" ]]; then
+              echo "Suite Thresholds: \`${BENCH_SUITE_THRESHOLDS}\`"
+            fi
+            if [[ -n "${BENCH_OPERATION_THRESHOLDS}" ]]; then
+              echo "Operation Thresholds: \`${BENCH_OPERATION_THRESHOLDS}\`"
+            fi
+            echo
+            echo '```text'
+            cat benchmark-artifacts/benchmark-compare.txt
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemstone-benchmark-report
+          path: benchmark-artifacts/benchmark-report.json
+          if-no-files-found: error
+
+      - name: Upload benchmark comparison artifact
+        if: steps.baseline.outputs.found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemstone-benchmark-compare
+          path: |
+            benchmark-artifacts/baseline-selection.json
+            benchmark-artifacts/benchmark-compare.json
+            benchmark-artifacts/benchmark-compare.txt
+          if-no-files-found: error
+
+      - name: Enforce benchmark regression threshold
+        if: |
+          steps.baseline.outputs.found == 'true' &&
+          steps.compare.outputs.comparable == 'true' &&
+          steps.compare.outputs.threshold_exceeded == 'true'
+        run: |
+          echo "Benchmark regression threshold exceeded; see benchmark comparison artifacts."
+          exit 1

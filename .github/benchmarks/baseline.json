@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-04-20T09:56:45.074515Z",
+  "python_version": "3.14.3",
+  "python_implementation": "CPython",
+  "platform": "macOS-26.3.1-arm64-arm-64bit-Mach-O",
+  "stone": "gs64stone",
+  "host": "localhost",
+  "entries": 200,
+  "search_runs": 10,
+  "suites": [
+    "persistent_root",
+    "gscollection",
+    "gstore",
+    "rchash"
+  ],
+  "results": [
+    {
+      "suite": "persistent_root",
+      "operation": "write_mapping_commit",
+      "count": 200,
+      "elapsed_seconds": 0.10994629212655127,
+      "ops_per_second": 1819.0699852778516,
+      "note": null
+    },
+    {
+      "suite": "persistent_root",
+      "operation": "mapping_keys",
+      "count": 200,
+      "elapsed_seconds": 0.0005929158069193363,
+      "ops_per_second": 337316.019687782,
+      "note": null
+    },
+    {
+      "suite": "gscollection",
+      "operation": "bulk_insert_and_index_commit",
+      "count": 200,
+      "elapsed_seconds": 0.0980391250923276,
+      "ops_per_second": 2040.0018850805893,
+      "note": null
+    },
+    {
+      "suite": "gscollection",
+      "operation": "indexed_search",
+      "count": 10,
+      "elapsed_seconds": 0.012630959041416645,
+      "ops_per_second": 791.7055203179912,
+      "note": "matched=540"
+    },
+    {
+      "suite": "gstore",
+      "operation": "batch_write",
+      "count": 200,
+      "elapsed_seconds": 0.09287591697648168,
+      "ops_per_second": 2153.4107711759616,
+      "note": null
+    },
+    {
+      "suite": "gstore",
+      "operation": "snapshot_read",
+      "count": 200,
+      "elapsed_seconds": 0.06888845795765519,
+      "ops_per_second": 2903.2439675589385,
+      "note": null
+    },
+    {
+      "suite": "rchash",
+      "operation": "populate_commit",
+      "count": 200,
+      "elapsed_seconds": 0.015896915923804045,
+      "ops_per_second": 12581.056662727891,
+      "note": null
+    },
+    {
+      "suite": "rchash",
+      "operation": "items",
+      "count": 200,
+      "elapsed_seconds": 0.0012932908721268177,
+      "ops_per_second": 154644.25235685756,
+      "note": null
+    }
+  ]
+}

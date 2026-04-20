@@ -7,7 +7,7 @@ import os
 from dataclasses import dataclass
 from enum import Enum
 from types import TracebackType
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, cast
 
 from ._gci import (
     GCI_ENCRYPT_BUF_SIZE,
@@ -215,14 +215,25 @@ class GemStoneSession:
     def _ensure_lib(self) -> None:
         if self._lib is not None:
             return
-        self._lib = _load_library(self._lib_path)
-        _bind(self._lib)
-        self._lib.GciInit()
+        lib = _load_library(self._lib_path)
+        self._lib = lib
+        _bind(lib)
+        lib.GciInit()
+
+    def _require_lib(self) -> ctypes.CDLL:
+        lib = self._lib
+        if lib is None:
+            raise GemStoneError("GCI library is not loaded. Call login() first.")
+        return lib
 
     def login(self) -> None:
         self.config.require_credentials()
         self._ensure_lib()
-        lib = self._lib
+        lib = self._require_lib()
+        username = self.username
+        password = self.password
+        assert username is not None
+        assert password is not None
 
         host = self.host or ""
         if host and host not in ("localhost", "127.0.0.1"):
@@ -244,8 +255,8 @@ class GemStoneSession:
         )
 
         ok = lib.GciLoginEx(
-            self.username.encode("utf-8"),
-            self.password.encode("utf-8"),
+            username.encode("utf-8"),
+            password.encode("utf-8"),
             0,
             0,
         )
@@ -261,118 +272,125 @@ class GemStoneSession:
     def logout(self) -> None:
         if not self._logged_in or self._lib is None:
             return
-        self._activate_session()
-        self._lib.GciLogout()
+        lib = self._activate_session()
+        lib.GciLogout()
         self._logged_in = False
         self._session_id = GCI_INVALID_SESSION
 
     def commit(self) -> None:
-        self._require_login()
+        lib = self._require_login()
         err = GciErrSType()
-        ok = self._lib.GciCommit(ctypes.byref(err))
+        ok = lib.GciCommit(ctypes.byref(err))
         if not ok:
             raise GemStoneError.from_err_struct(err)
 
     def abort(self) -> None:
-        self._require_login()
+        lib = self._require_login()
         err = GciErrSType()
-        ok = self._lib.GciAbort(ctypes.byref(err))
+        ok = lib.GciAbort(ctypes.byref(err))
         if ok:
             return
         if err.number != 0:
             raise GemStoneError.from_err_struct(err)
-        oop = self._lib.GciExecuteStr(
+        oop = int(
+            lib.GciExecuteStr(
             b"System abortTransaction",
             ctypes.c_uint64(OOP_NIL),
+        )
         )
         self._check_result(oop)
 
     def needs_commit(self) -> bool:
-        self._require_login()
-        return bool(self._lib.GciNeedsCommit())
+        lib = self._require_login()
+        return bool(lib.GciNeedsCommit())
 
     def in_transaction(self) -> bool:
-        self._require_login()
-        return bool(self._lib.GciInTransaction())
+        lib = self._require_login()
+        return bool(lib.GciInTransaction())
 
     def eval(self, source: str) -> Any:
-        self._require_login()
-        oop = self._lib.GciExecuteStr(source.encode("utf-8"), ctypes.c_uint64(OOP_NIL))
+        lib = self._require_login()
+        oop = int(lib.GciExecuteStr(source.encode("utf-8"), ctypes.c_uint64(OOP_NIL)))
         self._check_result(oop)
         return self._marshal(oop)
 
     def eval_oop(self, source: str) -> int:
-        self._require_login()
-        oop = self._lib.GciExecuteStr(source.encode("utf-8"), ctypes.c_uint64(OOP_NIL))
+        lib = self._require_login()
+        oop = int(lib.GciExecuteStr(source.encode("utf-8"), ctypes.c_uint64(OOP_NIL)))
         self._check_result(oop)
         return oop
 
     def perform(self, receiver: int, selector: str, *args: int) -> Any:
-        self._require_login()
+        lib = self._require_login()
         arg_arr = (ctypes.c_uint64 * len(args))(*args)
-        oop = self._lib.GciPerform(
+        oop = int(
+            lib.GciPerform(
             ctypes.c_uint64(receiver),
             selector.encode("utf-8"),
             arg_arr,
             ctypes.c_int(len(args)),
+        )
         )
         self._check_result(oop)
         return self._marshal(oop)
 
     def perform_oop(self, receiver: int, selector: str, *args: int) -> int:
-        self._require_login()
+        lib = self._require_login()
         arg_arr = (ctypes.c_uint64 * len(args))(*args)
-        oop = self._lib.GciPerform(
+        oop = int(
+            lib.GciPerform(
             ctypes.c_uint64(receiver),
             selector.encode("utf-8"),
             arg_arr,
             ctypes.c_int(len(args)),
         )
+        )
         self._check_result(oop)
         return oop
 
     def new_string(self, value: str) -> int:
-        self._require_login()
-        return self._lib.GciNewString(value.encode("utf-8"))
+        lib = self._require_login()
+        return int(lib.GciNewString(value.encode("utf-8")))
 
     def new_symbol(self, value: str) -> int:
-        self._require_login()
-        return self._lib.GciNewSymbol(value.encode("utf-8"))
+        lib = self._require_login()
+        return int(lib.GciNewSymbol(value.encode("utf-8")))
 
     def new_object(self, class_oop: int) -> int:
-        self._require_login()
-        return self._lib.GciNewOop(ctypes.c_uint64(class_oop))
+        lib = self._require_login()
+        return int(lib.GciNewOop(ctypes.c_uint64(class_oop)))
 
     def resolve(self, name: str) -> int:
-        self._require_login()
-        oop = self._lib.GciResolveSymbol(name.encode("utf-8"), ctypes.c_uint64(OOP_NIL))
+        lib = self._require_login()
+        oop = int(lib.GciResolveSymbol(name.encode("utf-8"), ctypes.c_uint64(OOP_NIL)))
         if oop == OOP_ILLEGAL:
             raise GemStoneError(f"Cannot resolve global: {name!r}")
         return oop
 
     def int_oop(self, value: int) -> int:
-        return _python_to_smallint(value)
+        return cast(int, _python_to_smallint(value))
 
     def float_oop(self, value: float) -> int:
-        self._require_login()
-        oop = self._lib.GciFltToOop(ctypes.c_double(value))
+        lib = self._require_login()
+        oop = int(lib.GciFltToOop(ctypes.c_double(value)))
         if oop in (OOP_ILLEGAL, OOP_NIL):
             raise GemStoneError(f"Cannot convert Python float {value!r} to GemStone OOP")
         return oop
 
     def try_oop_to_float(self, oop: int) -> Optional[float]:
-        self._require_login()
+        lib = self._require_login()
         value = ctypes.c_double()
-        ok = self._lib.GciOopToFlt_(ctypes.c_uint64(oop), ctypes.byref(value))
+        ok = lib.GciOopToFlt_(ctypes.c_uint64(oop), ctypes.byref(value))
         if ok:
             return value.value
         return None
 
     def dict_to_gs(self, d: dict[str, object]) -> int:
         dict_oop = self.new_object(self.resolve("StringKeyValueDictionary"))
+        lib = self._require_login()
         for k, v in d.items():
             v_oop = self._python_value_to_oop(v)
-            self._lib.GciStrKeyValueDictAtPut(
+            lib.GciStrKeyValueDictAtPut(
                 ctypes.c_uint64(dict_oop),
                 str(k).encode("utf-8"),
                 ctypes.c_uint64(v_oop),
@@ -383,7 +401,8 @@ class GemStoneSession:
         dict_oop = self.dict_to_gs(d)
         user_globals = self.resolve("UserGlobals")
         sym_oop = self.new_symbol(symbol_name)
-        self._lib.GciSymDictAtObjPut(
+        lib = self._require_login()
+        lib.GciSymDictAtObjPut(
             ctypes.c_uint64(user_globals),
             ctypes.c_uint64(sym_oop),
             ctypes.c_uint64(dict_oop),
@@ -393,7 +412,8 @@ class GemStoneSession:
         user_globals = self.resolve("UserGlobals")
         value = ctypes.c_uint64(OOP_ILLEGAL)
         assoc = ctypes.c_uint64(OOP_ILLEGAL)
-        self._lib.GciSymDictAt(
+        lib = self._require_login()
+        lib.GciSymDictAt(
             ctypes.c_uint64(user_globals),
             symbol_name.encode("utf-8"),
             ctypes.byref(value),
@@ -403,18 +423,19 @@ class GemStoneSession:
 
     def str_dict_get(self, dict_oop: int, key: str) -> Any:
         value = ctypes.c_uint64(OOP_ILLEGAL)
-        self._lib.GciStrKeyValueDictAt(
+        lib = self._require_login()
+        lib.GciStrKeyValueDictAt(
             ctypes.c_uint64(dict_oop),
             key.encode("utf-8"),
             ctypes.byref(value),
         )
         return self._marshal(value.value)
 
-    def _python_value_to_oop(self, value) -> int:
+    def _python_value_to_oop(self, value: object) -> int:
         if value is None:
-            return OOP_NIL
+            return int(OOP_NIL)
         if isinstance(value, bool):
-            return OOP_TRUE if value else OOP_FALSE
+            return int(OOP_TRUE if value else OOP_FALSE)
         if isinstance(value, int):
             return self.int_oop(value)
         if isinstance(value, float):
@@ -426,37 +447,42 @@ class GemStoneSession:
         raise TypeError(f"Cannot convert {type(value).__name__!r} to GemStone OOP")
 
     def fetch_string(self, oop: int) -> str:
-        self._require_login()
-        size = self._lib.GciFetchSize_(ctypes.c_uint64(oop))
+        lib = self._require_login()
+        size = int(lib.GciFetchSize_(ctypes.c_uint64(oop)))
         if size <= 0:
             return ""
         buf = ctypes.create_string_buffer(size + 1)
-        fetched = self._lib.GciFetchBytes_(
+        fetched = int(
+            lib.GciFetchBytes_(
             ctypes.c_uint64(oop),
             ctypes.c_int64(1),
             buf,
             ctypes.c_int64(size),
         )
+        )
         return buf.raw[:fetched].decode("utf-8", errors="replace")
 
     def fetch_class(self, oop: int) -> int:
-        self._require_login()
-        return self._lib.GciFetchClass(ctypes.c_uint64(oop))
+        lib = self._require_login()
+        return int(lib.GciFetchClass(ctypes.c_uint64(oop)))
 
-    def _require_login(self) -> None:
+    def _require_login(self) -> ctypes.CDLL:
         if not self._logged_in:
             raise GemStoneError("Not logged in. Call login() first.")
-        self._activate_session()
+        return self._activate_session()
 
-    def _activate_session(self) -> None:
-        if self._lib is None or self._session_id == GCI_INVALID_SESSION:
+    def _activate_session(self) -> ctypes.CDLL:
+        lib = self._require_lib()
+        if self._session_id == GCI_INVALID_SESSION:
             raise GemStoneError("Not logged in. Call login() first.")
-        self._lib.GciSetSessionId(self._session_id)
+        lib.GciSetSessionId(self._session_id)
+        return lib
 
     def _check_result(self, oop: int) -> None:
         if oop == OOP_ILLEGAL:
             err = GciErrSType()
-            self._lib.GciErr(ctypes.byref(err))
+            lib = self._require_lib()
+            lib.GciErr(ctypes.byref(err))
             if err.number != 0:
                 raise GemStoneError.from_err_struct(err)
             raise GemStoneError("GCI call returned OOP_ILLEGAL")
@@ -464,8 +490,9 @@ class GemStoneSession:
     def _string_class_oops(self) -> frozenset[int]:
         if self.__string_class_oops_cache is not None:
             return self.__string_class_oops_cache
-        string_oop = self._lib.GciResolveSymbol(b"String", ctypes.c_uint64(OOP_NIL))
-        symbol_oop = self._lib.GciResolveSymbol(b"Symbol", ctypes.c_uint64(OOP_NIL))
+        lib = self._require_login()
+        string_oop = int(lib.GciResolveSymbol(b"String", ctypes.c_uint64(OOP_NIL)))
+        symbol_oop = int(lib.GciResolveSymbol(b"Symbol", ctypes.c_uint64(OOP_NIL)))
         cache: set[int] = set()
         if string_oop not in (OOP_ILLEGAL, 0):
             cache.add(string_oop)
@@ -476,7 +503,8 @@ class GemStoneSession:
 
     def _is_string_oop(self, oop: int) -> bool:
         try:
-            cls_oop = self._lib.GciFetchClass(ctypes.c_uint64(oop))
+            lib = self._require_login()
+            cls_oop = int(lib.GciFetchClass(ctypes.c_uint64(oop)))
             return cls_oop in self._string_class_oops()
         except Exception:
             return False
@@ -517,22 +545,22 @@ class OopRef:
     def __repr__(self) -> str:
         return f"<OopRef 0x{self.oop:016X}>"
 
-    def send(self, selector: str, *args) -> Any:
-        raw = []
+    def send(self, selector: str, *args: object) -> Any:
+        raw: list[int] = []
         for arg in args:
             if isinstance(arg, OopRef):
                 raw.append(arg.oop)
             elif isinstance(arg, int) and not _is_smallint(arg):
-                raw.append(_python_to_smallint(arg))
+                raw.append(cast(int, _python_to_smallint(arg)))
             else:
-                raw.append(arg)
+                raw.append(cast(int, arg))
         return self._session.perform(self.oop, selector, *raw)
 
     def gs_class(self) -> int:
         return self._session.fetch_class(self.oop)
 
     def print_string(self) -> str:
-        return self._session.perform(self.oop, "printString")
+        return cast(str, self._session.perform(self.oop, "printString"))
 
 
 def connect(
@@ -545,7 +573,7 @@ def connect(
     *,
     config: Optional[GemStoneConfig] = None,
     transaction_policy: TransactionPolicy | str = TransactionPolicy.MANUAL,
-    **kwargs,
+    **kwargs: Any,
 ) -> GemStoneSession:
     """Open and return a logged-in GemStoneSession."""
 

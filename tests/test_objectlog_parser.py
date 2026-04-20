@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
 
-from gemstone_py.objectlog import _decode_log_field, _fetch_log_entries
+from gemstone_py.objectlog import ObjectLog, _decode_log_field, _fetch_log_entries
 
 
 class ObjectLogParserTests(unittest.TestCase):
@@ -28,6 +28,16 @@ class ObjectLogParserTests(unittest.TestCase):
         self.assertEqual(entries[0].timestamp, "2026-04-19\r12:00")
         self.assertTrue(entries[0].tagged)
         self.assertEqual(entries[0].tag, "tag|value")
+
+    def test_add_uses_plain_gemstone_object_for_oop_attachment(self):
+        session = mock.Mock()
+        log = ObjectLog()
+
+        log.info("attached", object_oop=123, session=session)
+
+        session.eval.assert_called_once_with(
+            "(ObjectLogEntry info: 'attached'  object: (Object _objectForOop: 123)) addToLog."
+        )
 
 
 if __name__ == "__main__":
