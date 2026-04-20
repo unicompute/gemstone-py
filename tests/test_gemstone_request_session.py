@@ -134,13 +134,18 @@ class GemStoneRequestSessionTests(unittest.TestCase):
 
     def test_install_flask_request_session_registers_commit_and_abort_hooks(self):
         app = _FakeApp()
+        flask_g = type("FlaskG", (), {})()
+        response = type("Response", (), {"status_code": 200})()
 
         with mock.patch.object(gemstone_web, "finalize_flask_request_session") as finalize:
-            returned = gemstone.install_flask_request_session(app, stone="demo")
-            response = object()
-
-            result = app.after_request_funcs[0](response)
-            app.teardown_request_funcs[0](RuntimeError("boom"))
+            with mock.patch.object(
+                gemstone_web,
+                "_flask_request_state",
+                return_value=(object(), flask_g),
+            ):
+                returned = gemstone.install_flask_request_session(app, stone="demo")
+                result = app.after_request_funcs[0](response)
+                app.teardown_request_funcs[0](None)
 
         self.assertIs(returned, app)
         self.assertEqual(
@@ -152,12 +157,54 @@ class GemStoneRequestSessionTests(unittest.TestCase):
         )
         self.assertIs(result, response)
         self.assertEqual(
-            finalize.call_args_list,
-            [
-                mock.call(),
-                mock.call(mock.ANY),
-            ],
+            getattr(flask_g, gemstone_web._FLASK_REQUEST_SESSION_RESPONSE_STATUS_ATTR),
+            200,
         )
+        finalize.assert_called_once_with()
+
+    def test_install_flask_request_session_aborts_server_error_response(self):
+        app = _FakeApp()
+        flask_g = type("FlaskG", (), {})()
+        response = type("Response", (), {"status_code": 500})()
+
+        with mock.patch.object(gemstone_web, "finalize_flask_request_session") as finalize:
+            with mock.patch.object(
+                gemstone_web,
+                "_flask_request_state",
+                return_value=(object(), flask_g),
+            ):
+                gemstone.install_flask_request_session(app, stone="demo")
+                result = app.after_request_funcs[0](response)
+                app.teardown_request_funcs[0](None)
+
+        self.assertIs(result, response)
+        self.assertEqual(
+            getattr(flask_g, gemstone_web._FLASK_REQUEST_SESSION_RESPONSE_STATUS_ATTR),
+            500,
+        )
+        finalize.assert_called_once()
+        self.assertIsInstance(finalize.call_args.args[0], RuntimeError)
+        self.assertIn("500", str(finalize.call_args.args[0]))
+
+    def test_install_flask_request_session_prefers_exception_abort_over_response_status(self):
+        app = _FakeApp()
+        flask_g = type("FlaskG", (), {})()
+        response = type("Response", (), {"status_code": 200})()
+        exc = RuntimeError("boom")
+
+        with mock.patch.object(gemstone_web, "finalize_flask_request_session") as finalize:
+            returned = gemstone.install_flask_request_session(app, stone="demo")
+            with mock.patch.object(
+                gemstone_web,
+                "_flask_request_state",
+                return_value=(object(), flask_g),
+            ):
+                result = app.after_request_funcs[0](response)
+                app.teardown_request_funcs[0](exc)
+
+        self.assertIs(returned, app)
+        self.assertIs(result, response)
+        finalize.assert_called_once_with(exc)
 
     def test_install_flask_request_session_skips_after_request_finalize_for_custom_session_interface(self):
         app = _FakeApp()

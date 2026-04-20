@@ -34,6 +34,7 @@ _FLASK_REQUEST_SESSION_EXTENSION = "gemstone_request_session"
 _FLASK_REQUEST_SESSION_ATTR = "_gemstone_request_session"
 _FLASK_REQUEST_SESSION_PROVIDER_ATTR = "_gemstone_request_session_provider"
 _FLASK_REQUEST_SESSION_POOL_ATTR = _FLASK_REQUEST_SESSION_PROVIDER_ATTR
+_FLASK_REQUEST_SESSION_RESPONSE_STATUS_ATTR = "_gemstone_request_session_response_status"
 
 
 @dataclass(frozen=True)
@@ -726,6 +727,19 @@ def _flask_request_state() -> tuple[Any | None, Any | None]:
     return current_app._get_current_object(), g
 
 
+def _clear_flask_request_session_state(flask_g: Any) -> None:
+    for attr_name in (
+        _FLASK_REQUEST_SESSION_ATTR,
+        _FLASK_REQUEST_SESSION_PROVIDER_ATTR,
+        _FLASK_REQUEST_SESSION_POOL_ATTR,
+        _FLASK_REQUEST_SESSION_RESPONSE_STATUS_ATTR,
+    ):
+        try:
+            delattr(flask_g, attr_name)
+        except AttributeError:
+            pass
+
+
 def current_flask_request_session() -> Optional[GemStoneSession]:
     """Return the current Flask request's shared GemStone session, if any."""
     _app, flask_g = _flask_request_state()
@@ -876,14 +890,16 @@ def finalize_flask_request_session(exc: Optional[BaseException] = None) -> None:
     """
     Commit or abort the current Flask request's shared GemStone session.
 
-    Successful requests commit; failing requests abort. Sessions created from a
-    pool are returned to it. Ad-hoc request sessions are logged out.
+    Requests that finish without an exception or server-error response commit;
+    failing requests abort. Sessions created from a pool are returned to it.
+    Ad-hoc request sessions are logged out.
     """
     _app, flask_g = _flask_request_state()
     if flask_g is None:
         return
     session = getattr(flask_g, _FLASK_REQUEST_SESSION_ATTR, None)
     if session is None:
+        _clear_flask_request_session_state(flask_g)
         return
 
     session_provider = (
@@ -917,15 +933,7 @@ def finalize_flask_request_session(exc: Optional[BaseException] = None) -> None:
             else:
                 session.logout()
         finally:
-            for attr_name in (
-                _FLASK_REQUEST_SESSION_ATTR,
-                _FLASK_REQUEST_SESSION_PROVIDER_ATTR,
-                _FLASK_REQUEST_SESSION_POOL_ATTR,
-            ):
-                try:
-                    delattr(flask_g, attr_name)
-                except AttributeError:
-                    pass
+            _clear_flask_request_session_state(flask_g)
 
 
 def install_flask_request_session(
@@ -993,15 +1001,37 @@ def install_flask_request_session(
             close_flask_request_session_provider(app)
 
     @app.after_request
-    def _commit_request_session(response: Any) -> Any:
+    def _record_request_session_outcome(response: Any) -> Any:
         if not getattr(app.session_interface, "_gemstone_request_session_finalizes", False):
-            finalize_flask_request_session()
+            _app, flask_g = _flask_request_state()
+            if flask_g is not None:
+                setattr(
+                    flask_g,
+                    _FLASK_REQUEST_SESSION_RESPONSE_STATUS_ATTR,
+                    getattr(response, "status_code", None),
+                )
         return response
 
     @app.teardown_request
     def _cleanup_request_session(exc: BaseException | None) -> None:
+        if getattr(app.session_interface, "_gemstone_request_session_finalizes", False):
+            if exc is not None:
+                finalize_flask_request_session(exc)
+            return
+        _app, flask_g = _flask_request_state()
+        response_status = (
+            getattr(flask_g, _FLASK_REQUEST_SESSION_RESPONSE_STATUS_ATTR, None)
+            if flask_g is not None
+            else None
+        )
         if exc is not None:
             finalize_flask_request_session(exc)
+        elif response_status is not None and int(response_status) >= 500:
+            finalize_flask_request_session(
+                RuntimeError(f"request failed with status {response_status}")
+            )
+        else:
+            finalize_flask_request_session()
 
     return app
 

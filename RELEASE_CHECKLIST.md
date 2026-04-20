@@ -73,3 +73,16 @@ For GitHub automation:
 - configure PyPI trusted publishing for the repository's `pypi` GitHub environment
 - configure TestPyPI trusted publishing for the repository's `testpypi` GitHub environment
 - run the manual `Release` workflow and set `publish-to-pypi=true` with a matching `release-tag` to publish to PyPI without an API token
+
+Trusted publisher values for this repository:
+
+- PyPI/TestPyPI owner: `unicompute`
+- PyPI/TestPyPI repository: `gemstone-py`
+- PyPI workflow: `.github/workflows/release.yml`
+- PyPI environment: `pypi`
+- TestPyPI workflow: `.github/workflows/release-testpypi.yml`
+- TestPyPI environment: `testpypi`
+
+The failed TestPyPI claim that must match is:
+
+- subject: `repo:unicompute/gemstone-py:environment:testpypi`
