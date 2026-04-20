@@ -9,7 +9,9 @@ description = "Direct Python-to-GemStone GCI bridge and translated persistence h
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{name = "gemstone-py contributors"}]
-dependencies = []
+dependencies = [
+  "tomli>=2.0.1; python_version < '3.11'",
+]
 
 [project.scripts]
 gemstone-benchmark-baseline-register = "gemstone_py.benchmark_baseline_register:main_entry"
