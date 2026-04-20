@@ -1,6 +1,7 @@
 import importlib.util
 import os
 import threading
+import time
 import unittest
 import uuid
 
@@ -18,8 +19,10 @@ from gemstone_py import (
     warm_flask_request_session_provider,
 )
 from gemstone_py.concurrency import (
+    CommitConflictError,
     RCCounter,
     RCHash,
+    commit as commit_transaction,
     list_instances,
     lock,
     nested_transaction,
@@ -351,6 +354,50 @@ class LiveIntegrationTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             provider.acquire()
 
+    def test_session_pool_blocks_under_thread_contention(self):
+        provider = GemStoneSessionPool(
+            maxsize=1,
+            config=self.config,
+            acquire_timeout=1.0,
+        )
+        worker_started = threading.Event()
+        worker_acquired = threading.Event()
+        worker_done = threading.Event()
+        worker_errors: list[BaseException] = []
+        worker_session_ids: list[int] = []
+
+        def worker() -> None:
+            worker_started.set()
+            try:
+                session = provider.acquire()
+                worker_session_ids.append(session_id(session))
+                worker_acquired.set()
+                provider.release(session, clean=True)
+            except BaseException as exc:  # pragma: no cover - live thread failure path
+                worker_errors.append(exc)
+            finally:
+                worker_done.set()
+
+        main_session = provider.acquire()
+        main_session_id = session_id(main_session)
+        thread = threading.Thread(target=worker)
+        thread.start()
+        self.assertTrue(worker_started.wait(1.0))
+        time.sleep(0.1)
+        self.assertFalse(worker_acquired.is_set())
+
+        provider.release(main_session, clean=True)
+
+        self.assertTrue(worker_done.wait(2.0))
+        thread.join()
+        self.assertEqual(worker_errors, [])
+        self.assertEqual(len(worker_session_ids), 1)
+        self.assertEqual(worker_session_ids[0], main_session_id)
+        snapshot = provider.snapshot()
+        self.assertGreaterEqual(snapshot.acquire_calls, 2)
+        self.assertGreater(snapshot.acquire_wait_seconds, 0.0)
+        provider.close()
+
     def test_thread_local_provider_recycles_and_closes(self):
         provider = GemStoneThreadLocalSessionProvider(
             config=self.config,
@@ -393,6 +440,35 @@ class LiveIntegrationTests(unittest.TestCase):
         self.assertTrue(closed_snapshot.closed)
         with self.assertRaises(RuntimeError):
             provider.acquire()
+
+    def test_thread_local_provider_uses_distinct_sessions_per_thread(self):
+        provider = GemStoneThreadLocalSessionProvider(config=self.config)
+        barrier = threading.Barrier(3)
+        results: list[tuple[int, int]] = []
+        errors: list[BaseException] = []
+
+        def worker() -> None:
+            try:
+                session = provider.acquire()
+                results.append((threading.get_ident(), session_id(session)))
+                barrier.wait(timeout=2.0)
+                provider.release(session, clean=True)
+            except BaseException as exc:  # pragma: no cover - live thread failure path
+                errors.append(exc)
+
+        threads = [threading.Thread(target=worker) for _ in range(2)]
+        for thread in threads:
+            thread.start()
+
+        barrier.wait(timeout=2.0)
+        for thread in threads:
+            thread.join()
+
+        self.assertEqual(errors, [])
+        self.assertEqual(len(results), 2)
+        self.assertNotEqual(results[0][0], results[1][0])
+        self.assertNotEqual(results[0][1], results[1][1])
+        provider.close()
 
     def test_concurrency_helpers_cross_session(self):
         key = f"LiveConcurrency_{uuid.uuid4().hex}"
@@ -457,6 +533,48 @@ class LiveIntegrationTests(unittest.TestCase):
                 root = PersistentRoot(verify)
                 self.assertEqual(root[key]["state"], "outer")
         finally:
+            self._root_cleanup(key)
+
+    def test_commit_conflict_detected_across_sessions(self):
+        key = f"LiveCommitConflict_{uuid.uuid4().hex}"
+        self._root_cleanup(key)
+        writer_one = GemStoneSession(
+            config=self.config,
+            transaction_policy=TransactionPolicy.MANUAL,
+        )
+        writer_two = GemStoneSession(
+            config=self.config,
+            transaction_policy=TransactionPolicy.MANUAL,
+        )
+        try:
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.COMMIT_ON_SUCCESS,
+            ) as setup:
+                root = PersistentRoot(setup)
+                root[key] = {"state": "base"}
+
+            writer_one.login()
+            writer_two.login()
+            root_one = PersistentRoot(writer_one)
+            root_two = PersistentRoot(writer_two)
+            root_one[key]["state"] = "writer-one"
+            root_two[key]["state"] = "writer-two"
+
+            commit_transaction(writer_one)
+            with self.assertRaises(CommitConflictError):
+                commit_transaction(writer_two)
+            writer_two.abort()
+
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.ABORT_ON_EXIT,
+            ) as verify:
+                root = PersistentRoot(verify)
+                self.assertEqual(root[key]["state"], "writer-one")
+        finally:
+            writer_one.logout()
+            writer_two.logout()
             self._root_cleanup(key)
 
     @unittest.skipUnless(HAS_FLASK, "Flask is not installed in python3")

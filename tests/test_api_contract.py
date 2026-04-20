@@ -24,6 +24,9 @@ class ApiContractTests(unittest.TestCase):
         self.assertGreater(payload["count"], 0)
         self.assertIn("GemStoneSession", payload["validated_exports"])
         self.assertIn("benchmark_compare_thresholds", payload["validated_behaviors"])
+        self.assertIn("benchmark_compare_cli_json", payload["validated_behaviors"])
+        self.assertIn("benchmark_baseline_register_cli_json", payload["validated_behaviors"])
+        self.assertIn("benchmark_baseline_selection_cli_json", payload["validated_behaviors"])
         self.assertIn("benchmark_baseline_selection", payload["validated_behaviors"])
         self.assertIn("benchmark_baseline_lifecycle", payload["validated_behaviors"])
 

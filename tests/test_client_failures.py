@@ -1,12 +1,13 @@
 import ctypes
 import unittest
+from typing import Any
 from unittest import mock
 
 import gemstone_py as gemstone
 
 
 def _populate_error(
-    err_ptr: object,
+    err_ptr: Any,
     *,
     number: int,
     message: str,
@@ -123,6 +124,29 @@ class GemStoneClientFailureTests(unittest.TestCase):
         self.assertEqual(str(ctx.exception), "GCI call returned OOP_ILLEGAL")
         lib.GciErr.assert_called_once_with(mock.ANY)
 
+    def test_check_result_raises_structured_error_when_gci_err_is_present(self) -> None:
+        session = gemstone.GemStoneSession(username="alice", password="secret")
+        lib = mock.Mock()
+        session._lib = lib
+
+        def fill_error(err_ptr: object) -> None:
+            _populate_error(
+                err_ptr,
+                number=19,
+                message="Fetch failed",
+                reason="Repository error",
+                fatal=True,
+            )
+
+        lib.GciErr.side_effect = fill_error
+
+        with self.assertRaises(gemstone.GemStoneError) as ctx:
+            session._check_result(gemstone.OOP_ILLEGAL)
+
+        self.assertIn("Fetch failed", str(ctx.exception))
+        self.assertEqual(ctx.exception.number, 19)
+        self.assertTrue(ctx.exception.fatal)
+
     def test_activate_session_raises_when_session_id_is_invalid(self) -> None:
         session = gemstone.GemStoneSession(username="alice", password="secret")
         session._lib = mock.Mock()
@@ -133,6 +157,44 @@ class GemStoneClientFailureTests(unittest.TestCase):
             session._activate_session()
 
         self.assertIn("Not logged in", str(ctx.exception))
+
+    def test_resolve_raises_when_symbol_cannot_be_resolved(self) -> None:
+        session, lib = self._logged_in_session()
+        lib.GciResolveSymbol.return_value = gemstone.OOP_ILLEGAL
+
+        with self.assertRaises(gemstone.GemStoneError) as ctx:
+            session.resolve("MissingGlobal")
+
+        self.assertIn("Cannot resolve global", str(ctx.exception))
+
+    def test_fetch_string_returns_empty_for_non_positive_size(self) -> None:
+        session, lib = self._logged_in_session()
+        lib.GciFetchSize_.return_value = 0
+
+        self.assertEqual(session.fetch_string(123), "")
+        lib.GciFetchBytes_.assert_not_called()
+
+    def test_fetch_string_decodes_fetched_bytes(self) -> None:
+        session, lib = self._logged_in_session()
+        lib.GciFetchSize_.return_value = 5
+
+        def fetch_bytes(_oop: object, _start: object, buf: Any, _size: object) -> int:
+            buf.value = b"hello"
+            return 5
+
+        lib.GciFetchBytes_.side_effect = fetch_bytes
+
+        self.assertEqual(session.fetch_string(123), "hello")
+
+    def test_logout_is_noop_when_not_logged_in(self) -> None:
+        session = gemstone.GemStoneSession(username="alice", password="secret")
+        lib = mock.Mock()
+        session._lib = lib
+        session._logged_in = False
+
+        session.logout()
+
+        lib.GciLogout.assert_not_called()
 
 
 if __name__ == "__main__":

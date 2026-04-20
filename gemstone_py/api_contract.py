@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
+from contextlib import redirect_stdout
 from importlib import import_module
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -192,6 +194,51 @@ def validate_public_api_behaviors() -> list[str]:
 
     with TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
+        report_path = temp_path / "candidate.json"
+        manifest_path = temp_path / "benchmarks" / "index.json"
+        report_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "generated_at": "2026-04-20T12:00:00Z",
+                    "stone": "gs64stone",
+                    "host": "localhost",
+                    "platform": "macOS-26-arm64",
+                    "python_version": "3.14.3",
+                    "python_implementation": "CPython",
+                    "entries": 200,
+                    "search_runs": 10,
+                    "suites": ["persistent_root"],
+                    "results": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+        stream = io.StringIO()
+        with redirect_stdout(stream):
+            exit_code = baseline_register.main(
+                [
+                    str(report_path),
+                    "--manifest",
+                    str(manifest_path),
+                    "--copy-to",
+                    "accepted.json",
+                    "--drop-path",
+                    "accepted.json",
+                    "--json",
+                ]
+            )
+        if exit_code != 0:
+            raise AssertionError("benchmark baseline register CLI returned a non-zero exit code")
+        payload = json.loads(stream.getvalue())
+        if sorted(payload.keys()) != ["maintenance", "registration"]:
+            raise AssertionError(
+                "benchmark baseline register CLI did not emit the combined JSON shape"
+            )
+    validated.append("benchmark_baseline_register_cli_json")
+
+    with TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
         baseline_path = temp_path / "baseline.json"
         candidate_path = temp_path / "candidate.json"
         manifest_path = temp_path / "benchmarks" / "index.json"
@@ -273,6 +320,165 @@ def validate_public_api_behaviors() -> list[str]:
             raise AssertionError("operation threshold did not override suite/global thresholds")
     validated.append("benchmark_compare_thresholds")
     validated.append("benchmark_baseline_selection")
+
+    with TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        baseline_path = temp_path / "baseline.json"
+        candidate_path = temp_path / "candidate.json"
+        manifest_path = temp_path / "benchmarks" / "index.json"
+        baseline_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "generated_at": "2026-04-20T12:00:00Z",
+                    "stone": "gs64stone",
+                    "platform": "macOS-26-arm64",
+                    "python_version": "3.14.3",
+                    "python_implementation": "CPython",
+                    "entries": 200,
+                    "search_runs": 10,
+                    "suites": ["persistent_root"],
+                    "results": [
+                        {
+                            "suite": "persistent_root",
+                            "operation": "mapping_keys",
+                            "count": 10,
+                            "elapsed_seconds": 1.0,
+                            "ops_per_second": 10.0,
+                            "note": None,
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        candidate_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "generated_at": "2026-04-20T12:05:00Z",
+                    "stone": "otherStone",
+                    "platform": "Linux-x86_64",
+                    "python_version": "3.14.3",
+                    "python_implementation": "CPython",
+                    "entries": 200,
+                    "search_runs": 10,
+                    "suites": ["persistent_root"],
+                    "results": [
+                        {
+                            "suite": "persistent_root",
+                            "operation": "mapping_keys",
+                            "count": 10,
+                            "elapsed_seconds": 1.0,
+                            "ops_per_second": 9.0,
+                            "note": None,
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        baseline_register.register_baseline(
+            report_path=str(baseline_path),
+            manifest_path=str(manifest_path),
+            copy_to="accepted.json",
+        )
+        stream = io.StringIO()
+        with redirect_stdout(stream):
+            exit_code = benchmark_baselines.main(
+                [
+                    str(candidate_path),
+                    "--manifest",
+                    str(manifest_path),
+                    "--json",
+                ]
+            )
+        if exit_code != 0:
+            raise AssertionError("benchmark baseline selection CLI returned a non-zero exit code")
+        payload = json.loads(stream.getvalue())
+        if payload["selected_path"] is not None or payload["comparable"]:
+            raise AssertionError(
+                "benchmark baseline selection CLI did not report a metadata mismatch"
+            )
+    validated.append("benchmark_baseline_selection_cli_json")
+
+    with TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        baseline_path = temp_path / "baseline.json"
+        candidate_path = temp_path / "candidate.json"
+        baseline_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "generated_at": "2026-04-20T12:00:00Z",
+                    "stone": "gs64stone",
+                    "platform": "macOS-26-arm64",
+                    "python_version": "3.14.3",
+                    "python_implementation": "CPython",
+                    "entries": 200,
+                    "search_runs": 10,
+                    "suites": ["persistent_root"],
+                    "results": [
+                        {
+                            "suite": "persistent_root",
+                            "operation": "mapping_keys",
+                            "count": 10,
+                            "elapsed_seconds": 1.0,
+                            "ops_per_second": 10.0,
+                            "note": None,
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        candidate_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "generated_at": "2026-04-20T12:05:00Z",
+                    "stone": "gs64stone",
+                    "platform": "macOS-26-arm64",
+                    "python_version": "3.14.3",
+                    "python_implementation": "CPython",
+                    "entries": 200,
+                    "search_runs": 10,
+                    "suites": ["persistent_root"],
+                    "results": [
+                        {
+                            "suite": "persistent_root",
+                            "operation": "mapping_keys",
+                            "count": 10,
+                            "elapsed_seconds": 1.0,
+                            "ops_per_second": 9.0,
+                            "note": None,
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        stream = io.StringIO()
+        with redirect_stdout(stream):
+            exit_code = benchmark_compare.main(
+                [
+                    str(baseline_path),
+                    str(candidate_path),
+                    "--json",
+                    "--max-regression-pct",
+                    "20",
+                    "--suite-threshold",
+                    "persistent_root=15",
+                    "--operation-threshold",
+                    "persistent_root/mapping_keys=5",
+                ]
+            )
+        payload = json.loads(stream.getvalue())
+        if exit_code != 2 or not payload["threshold_exceeded"]:
+            raise AssertionError("benchmark compare CLI did not surface the thresholded regression")
+        if payload["rows"][0]["threshold_scope"] != "operation":
+            raise AssertionError("benchmark compare CLI JSON omitted the operation threshold scope")
+    validated.append("benchmark_compare_cli_json")
 
     with TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
