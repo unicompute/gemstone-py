@@ -7,6 +7,10 @@ on:
         description: JSON array of runner labels for the GemStone host
         required: true
         default: '["self-hosted","macOS","ARM64","gemstone-py-local"]'
+      run-soak:
+        description: Set to true to include the longer live soak tests
+        required: true
+        default: "false"
 
 permissions:
   contents: read
@@ -28,6 +32,7 @@ jobs:
       GS_HOST_USERNAME: ${{ secrets.GS_HOST_USERNAME }}
       GS_HOST_PASSWORD: ${{ secrets.GS_HOST_PASSWORD }}
       GS_RUN_LIVE: "1"
+      GS_RUN_LIVE_SOAK: ${{ inputs.run-soak == 'true' && '1' || '0' }}
       PYTHON_BIN: python3
     steps:
       - uses: actions/checkout@v6

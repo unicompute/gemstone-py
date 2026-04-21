@@ -1,0 +1,102 @@
+name: Runner Health
+
+on:
+  schedule:
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+    inputs:
+      fail-on-version-drift:
+        description: Set to true to fail when the pinned runner version differs from the latest GitHub runner release
+        required: true
+        default: "true"
+      required-runner-label:
+        description: Runner label that must be present on at least one online runner
+        required: true
+        default: "gemstone-py-local"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REQUIRED_RUNNER_LABEL: ${{ github.event.inputs['required-runner-label'] || 'gemstone-py-local' }}
+      FAIL_ON_VERSION_DRIFT: ${{ github.event.inputs['fail-on-version-drift'] || 'true' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Resolve latest GitHub Actions runner version
+        id: latest
+        run: |
+          latest_version="$(./scripts/bootstrap_self_hosted_runner.sh --latest-version)"
+          echo "version=${latest_version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Compare pinned runner version
+        id: pinned
+        shell: bash
+        env:
+          LATEST_VERSION: ${{ steps.latest.outputs.version }}
+        run: |
+          pinned_version="$(python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          content = Path("scripts/bootstrap_self_hosted_runner.sh").read_text(encoding="utf-8")
+          match = re.search(r'RUNNER_VERSION="\$\{RUNNER_VERSION:-([^}]+)\}"', content)
+          if match is None:
+              raise SystemExit(1)
+          print(match.group(1))
+          PY
+          )"
+          echo "version=${pinned_version}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "## Runner Version Drift"
+            echo
+            echo "- pinned: \`${pinned_version}\`"
+            echo "- latest: \`${LATEST_VERSION}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+          if [[ "${pinned_version}" != "${LATEST_VERSION}" ]]; then
+            echo "drift=true" >> "${GITHUB_OUTPUT}"
+            if [[ "${FAIL_ON_VERSION_DRIFT}" == "true" ]]; then
+              echo "Pinned runner version is behind the latest release." >&2
+              exit 1
+            fi
+          else
+            echo "drift=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Check repository self-hosted runner status
+        shell: bash
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runners" > runner-status.json
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          label = os.environ["REQUIRED_RUNNER_LABEL"]
+          payload = json.loads(Path("runner-status.json").read_text(encoding="utf-8"))
+          online = []
+          for runner in payload.get("runners", []):
+              labels = {entry.get("name", "") for entry in runner.get("labels", [])}
+              if label in labels and runner.get("status") == "online":
+                  online.append(runner.get("name", "<unknown>"))
+          summary = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          with summary.open("a", encoding="utf-8") as stream:
+              stream.write("\n## Runner Availability\n\n")
+              if online:
+                  stream.write(f"- online `{label}` runners: {', '.join(online)}\n")
+              else:
+                  stream.write(f"- no online runners found with label `{label}`\n")
+          if not online:
+              raise SystemExit(1)
+          PY

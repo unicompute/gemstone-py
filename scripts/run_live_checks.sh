@@ -12,4 +12,5 @@ fi
 
 export GS_RUN_LIVE="${GS_RUN_LIVE:-1}"
 export GS_RUN_DESTRUCTIVE_LIVE="${GS_RUN_DESTRUCTIVE_LIVE:-0}"
+export GS_RUN_LIVE_SOAK="${GS_RUN_LIVE_SOAK:-0}"
 "${pybin}" -m unittest tests.test_live_smoke tests.test_live_integration

@@ -7,6 +7,10 @@ on:
         description: JSON array of runner labels for the GemStone host
         required: true
         default: '["self-hosted","macOS","ARM64","gemstone-py-local"]'
+      profile:
+        description: Benchmark policy profile (smoke uses broader thresholds, regression is stricter)
+        required: true
+        default: "smoke"
       entries:
         description: Benchmark entry count
         required: true
@@ -28,17 +32,17 @@ on:
         required: true
         default: ".github/benchmarks/index.json"
       max-regression-pct:
-        description: Maximum allowed regression percentage before the workflow fails
-        required: true
-        default: "10"
+        description: Optional global regression threshold override; leave empty to use the selected profile default
+        required: false
+        default: ""
       suite-thresholds:
-        description: Optional comma-separated SUITE=PCT regression threshold overrides
+        description: Optional comma-separated SUITE=PCT regression threshold overrides; leave empty to use the selected profile defaults
         required: false
         default: ""
       operation-thresholds:
-        description: Optional comma-separated SUITE/OPERATION=PCT regression threshold overrides
+        description: Optional comma-separated SUITE/OPERATION=PCT regression threshold overrides; leave empty to use the selected profile defaults
         required: false
-        default: "persistent_root/write_mapping_commit=30,persistent_root/mapping_keys=40,gscollection/bulk_insert_and_index_commit=30,gscollection/indexed_search=50,gstore/batch_write=35,gstore/snapshot_read=40,rchash/populate_commit=80,rchash/items=35"
+        default: ""
 
 permissions:
   contents: read
@@ -140,28 +144,46 @@ jobs:
         if: steps.baseline.outputs.found == 'true'
         shell: bash
         env:
+          BENCH_PROFILE: ${{ inputs.profile }}
           BENCH_BASELINE_REPORT: ${{ steps.baseline.outputs.selected_path }}
           BENCH_MAX_REGRESSION_PCT: ${{ inputs.max-regression-pct }}
           BENCH_SUITE_THRESHOLDS: ${{ inputs.suite-thresholds }}
           BENCH_OPERATION_THRESHOLDS: ${{ inputs.operation-thresholds }}
         run: |
           echo "found=true" >> "${GITHUB_OUTPUT}"
+          effective_max_regression_pct="${BENCH_MAX_REGRESSION_PCT}"
+          effective_suite_thresholds="${BENCH_SUITE_THRESHOLDS}"
+          effective_operation_thresholds="${BENCH_OPERATION_THRESHOLDS}"
+          case "${BENCH_PROFILE}" in
+            smoke)
+              [[ -n "${effective_max_regression_pct}" ]] || effective_max_regression_pct="10"
+              [[ -n "${effective_operation_thresholds}" ]] || effective_operation_thresholds="persistent_root/write_mapping_commit=30,persistent_root/mapping_keys=40,gscollection/bulk_insert_and_index_commit=30,gscollection/indexed_search=50,gstore/batch_write=35,gstore/snapshot_read=40,rchash/populate_commit=80,rchash/items=35"
+              ;;
+            regression)
+              [[ -n "${effective_max_regression_pct}" ]] || effective_max_regression_pct="7.5"
+              [[ -n "${effective_operation_thresholds}" ]] || effective_operation_thresholds="persistent_root/write_mapping_commit=20,persistent_root/mapping_keys=25,gscollection/bulk_insert_and_index_commit=20,gscollection/indexed_search=25,gstore/batch_write=25,gstore/snapshot_read=25,rchash/populate_commit=60,rchash/items=20"
+              ;;
+            *)
+              echo "Unknown benchmark profile: ${BENCH_PROFILE}" >&2
+              exit 1
+              ;;
+          esac
           threshold_args=()
           while IFS= read -r spec; do
             spec="$(echo "${spec}" | xargs)"
             [[ -n "${spec}" ]] || continue
             threshold_args+=(--suite-threshold "${spec}")
-          done < <(printf '%s\n' "${BENCH_SUITE_THRESHOLDS}" | tr ',\n' '\n')
+          done < <(printf '%s\n' "${effective_suite_thresholds}" | tr ',\n' '\n')
           while IFS= read -r spec; do
             spec="$(echo "${spec}" | xargs)"
             [[ -n "${spec}" ]] || continue
             threshold_args+=(--operation-threshold "${spec}")
-          done < <(printf '%s\n' "${BENCH_OPERATION_THRESHOLDS}" | tr ',\n' '\n')
+          done < <(printf '%s\n' "${effective_operation_thresholds}" | tr ',\n' '\n')
           set +e
           "${PYTHON_BIN}" -m gemstone_py.benchmark_compare \
             "${BENCH_BASELINE_REPORT}" \
             benchmark-artifacts/benchmark-report.json \
-            --max-regression-pct "${BENCH_MAX_REGRESSION_PCT}" \
+            --max-regression-pct "${effective_max_regression_pct}" \
             "${threshold_args[@]}" \
             --output benchmark-artifacts/benchmark-compare.txt
           text_exit=$?
@@ -169,7 +191,7 @@ jobs:
             "${BENCH_BASELINE_REPORT}" \
             benchmark-artifacts/benchmark-report.json \
             --json \
-            --max-regression-pct "${BENCH_MAX_REGRESSION_PCT}" \
+            --max-regression-pct "${effective_max_regression_pct}" \
             "${threshold_args[@]}" \
             --output benchmark-artifacts/benchmark-compare.json
           json_exit=$?
@@ -199,13 +221,14 @@ jobs:
           {
             echo "## Benchmark Comparison"
             echo
+            echo "Profile: \`${BENCH_PROFILE}\`"
             echo "Baseline: \`${BENCH_BASELINE_REPORT}\`"
-            echo "Default Threshold: ${BENCH_MAX_REGRESSION_PCT}%"
-            if [[ -n "${BENCH_SUITE_THRESHOLDS}" ]]; then
-              echo "Suite Thresholds: \`${BENCH_SUITE_THRESHOLDS}\`"
+            echo "Default Threshold: ${effective_max_regression_pct}%"
+            if [[ -n "${effective_suite_thresholds}" ]]; then
+              echo "Suite Thresholds: \`${effective_suite_thresholds}\`"
             fi
-            if [[ -n "${BENCH_OPERATION_THRESHOLDS}" ]]; then
-              echo "Operation Thresholds: \`${BENCH_OPERATION_THRESHOLDS}\`"
+            if [[ -n "${effective_operation_thresholds}" ]]; then
+              echo "Operation Thresholds: \`${effective_operation_thresholds}\`"
             fi
             echo
             echo '```text'

@@ -41,6 +41,7 @@ from gemstone_py.persistent_root import PersistentRoot
 
 RUN_LIVE = os.environ.get("GS_RUN_LIVE") == "1"
 RUN_DESTRUCTIVE_LIVE = os.environ.get("GS_RUN_DESTRUCTIVE_LIVE") == "1"
+RUN_SOAK_LIVE = os.environ.get("GS_RUN_LIVE_SOAK") == "1"
 HAS_FLASK = importlib.util.find_spec("flask") is not None
 
 
@@ -712,6 +713,111 @@ class LiveIntegrationTests(unittest.TestCase):
             ) as verify:
                 root = PersistentRoot(verify)
                 self.assertEqual(root[key].value, iterations * 2)
+        finally:
+            writer_one.logout()
+            writer_two.logout()
+            self._root_cleanup(key)
+
+    @unittest.skipUnless(
+        RUN_SOAK_LIVE,
+        "set GS_RUN_LIVE_SOAK=1 to run longer live soak tests",
+    )
+    def test_session_pool_soak_reuses_sessions_cleanly(self):
+        provider = GemStoneSessionPool(
+            maxsize=2,
+            config=self.config,
+            max_session_age=300,
+            max_session_uses=50,
+            acquire_timeout=1.0,
+        )
+        try:
+            iterations = 12
+            seen_session_ids: set[int] = set()
+            for _ in range(iterations):
+                with session_scope(
+                    session_provider=provider,
+                    transaction_policy=TransactionPolicy.ABORT_ON_EXIT,
+                ) as session:
+                    seen_session_ids.add(session_id(session))
+                    self.assertEqual(session.eval("3 + 4"), 7)
+
+            snapshot = provider.snapshot()
+            self.assertGreaterEqual(snapshot.acquire_calls, iterations)
+            self.assertGreaterEqual(snapshot.release_calls, iterations)
+            self.assertGreaterEqual(snapshot.available, 1)
+            self.assertLessEqual(len(seen_session_ids), 2)
+        finally:
+            provider.close()
+
+    @unittest.skipUnless(
+        RUN_SOAK_LIVE,
+        "set GS_RUN_LIVE_SOAK=1 to run longer live soak tests",
+    )
+    def test_multi_writer_retry_loop_soak_converges(self):
+        key = f"LiveCommitRetrySoak_{uuid.uuid4().hex}"
+        iterations = 10
+        self._root_cleanup(key)
+        conflicts = 0
+        writer_one = GemStoneSession(
+            config=self.config,
+            transaction_policy=TransactionPolicy.MANUAL,
+        )
+        writer_two = GemStoneSession(
+            config=self.config,
+            transaction_policy=TransactionPolicy.MANUAL,
+        )
+        try:
+            def commit_or_retry_increment(session: GemStoneSession) -> int:
+                local_conflicts = 0
+                while True:
+                    root = PersistentRoot(session)
+                    root[key]["count"] = root[key]["count"] + 1
+                    try:
+                        commit_transaction(session)
+                        return local_conflicts
+                    except CommitConflictError:
+                        local_conflicts += 1
+                        session.abort()
+
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.COMMIT_ON_SUCCESS,
+            ) as setup:
+                root = PersistentRoot(setup)
+                root[key] = {"count": 0}
+
+            writer_one.login()
+            writer_two.login()
+
+            for _ in range(iterations):
+                PersistentRoot(writer_one)[key]["count"] = (
+                    PersistentRoot(writer_one)[key]["count"] + 1
+                )
+                PersistentRoot(writer_two)[key]["count"] = (
+                    PersistentRoot(writer_two)[key]["count"] + 1
+                )
+
+                try:
+                    commit_transaction(writer_one)
+                except CommitConflictError:
+                    conflicts += 1
+                    writer_one.abort()
+                    conflicts += commit_or_retry_increment(writer_one)
+
+                try:
+                    commit_transaction(writer_two)
+                except CommitConflictError:
+                    conflicts += 1
+                    writer_two.abort()
+                    conflicts += commit_or_retry_increment(writer_two)
+
+            self.assertGreaterEqual(conflicts, 1)
+            with GemStoneSession(
+                config=self.config,
+                transaction_policy=TransactionPolicy.ABORT_ON_EXIT,
+            ) as verify:
+                root = PersistentRoot(verify)
+                self.assertEqual(root[key]["count"], iterations * 2)
         finally:
             writer_one.logout()
             writer_two.logout()

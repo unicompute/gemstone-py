@@ -123,6 +123,31 @@ Check the runner registration from GitHub:
 gh api repos/unicompute/gemstone-py/actions/runners
 ```
 
+The repository also includes a scheduled/manual `Runner Health` workflow. It:
+
+- resolves the latest available GitHub Actions runner release
+- compares that to the pinned default in `bootstrap_self_hosted_runner.sh`
+- checks that at least one runner with label `gemstone-py-local` is online
+
+Use that workflow to detect runner drift before it breaks the live or benchmark lanes.
+
+## Recovery And Redundancy
+
+The fastest recovery path is to provision a second Mac host with a distinct
+runner root and runner name, then apply the same repository labels:
+
+```bash
+RUNNER_ROOT=/Users/tariq/src/actions-runner-gemstone-py-backup \
+RUNNER_NAME=gemstone-py-backup-arm64 \
+./scripts/bootstrap_self_hosted_runner.sh --use-latest
+./scripts/install_self_hosted_runner_service.sh install --runner-root /Users/tariq/src/actions-runner-gemstone-py-backup --start
+```
+
+If you want workflows to keep targeting either host automatically, give the
+backup runner the same `gemstone-py-local` label set. If you want to direct
+workflows to the backup runner only during recovery, register it under a
+different label and override the `runner-labels` workflow input manually.
+
 ## Workflow Defaults
 
 The `Benchmarks`, `Live GemStone Tests`, and `Destructive Live GemStone Tests`

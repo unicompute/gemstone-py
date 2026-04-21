@@ -63,7 +63,12 @@ gemstone-smalltalk-demo
 
 10. Use the manual `Release TestPyPI` workflow if you want a full publish rehearsal against TestPyPI. It now publishes to TestPyPI and then installs the published version back into a clean runner for post-publish API/CLI verification.
 
-11. Tag and publish only after the checks above are green.
+11. Run the optional live soak lane if you want higher confidence before a production release:
+```bash
+GS_RUN_LIVE=1 GS_RUN_LIVE_SOAK=1 ./scripts/run_live_checks.sh
+```
+
+12. Tag and publish only after the checks above are green.
 
 For GitHub automation:
 

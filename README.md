@@ -168,6 +168,17 @@ Use `warm_flask_request_session_provider(app)` to pre-create pool sessions
 manually, and `close_flask_request_session_provider(app)` during server
 shutdown when you manage lifecycle explicitly.
 
+## Production Flask Guidance
+
+For production Flask usage:
+
+- use `pool_size=` or `thread_local=True` instead of sharing one logged-in session
+- set `max_session_age` and `max_session_uses` so pooled sessions are recycled before they go stale
+- use `close_on_after_serving=True` when Flask owns the process lifecycle
+- use `metrics_exporter=` or `event_listener=` so session-pool behavior is visible outside request code
+- keep request handlers inside `session_scope()` and let teardown own the final commit/abort decision
+- use `warm_flask_request_session_provider(app, count)` during startup if cold request latency matters
+
 ## Verification
 
 Run the unit tests:
@@ -181,6 +192,12 @@ Run the local CI/static-check lane:
 ```bash
 python3 -m pip install -e .[dev]
 ./scripts/run_ci_checks.sh
+```
+
+Run the live lane with the optional longer soak coverage:
+
+```bash
+GS_RUN_LIVE=1 GS_RUN_LIVE_SOAK=1 ./scripts/run_live_checks.sh
 ```
 
 Run the maintained benchmark lane against a configured stone:
@@ -254,7 +271,13 @@ runs `python -m gemstone_py.api_contract --json` plus the public CLI smoke
 checks against that published artifact.
 
 On GitHub, use the manual `Benchmarks` workflow to run the same lane against a
-configured stone and upload `benchmark-report.json` as an artifact. If the
+configured stone and upload `benchmark-report.json` as an artifact. The
+workflow now supports named policy profiles:
+
+- `smoke`: broader per-operation thresholds intended for routine runner health checks
+- `regression`: stricter thresholds intended for deliberate performance review
+
+If the
 repository contains [.github/benchmarks/index.json](/Users/tariq/src/gemstone-py/.github/benchmarks/index.json:1),
 the workflow selects the committed baseline whose metadata matches the
 candidate report, then runs `gemstone-benchmark-compare`, uploads selection and
@@ -288,6 +311,12 @@ Run the opt-in live lane:
 
 ```bash
 GS_RUN_LIVE=1 ./scripts/run_live_checks.sh
+```
+
+Run the opt-in live soak lane:
+
+```bash
+GS_RUN_LIVE=1 GS_RUN_LIVE_SOAK=1 ./scripts/run_live_checks.sh
 ```
 
 Destructive live coverage is available separately on GitHub through the manual
@@ -328,6 +357,16 @@ To bootstrap or repair the runner on the macOS GemStone host:
 
 See [SELF_HOSTED_RUNNER.md](/Users/tariq/src/gemstone-py/SELF_HOSTED_RUNNER.md:1) for the full bootstrap,
 launchd, log-path, and health-check flow.
+
+## Release And Admin Operations
+
+For repository operations:
+
+- use the scheduled/manual `Runner Health` workflow to detect self-hosted runner drift and offline state
+- use `Release Dry Run` before cutting a new version
+- use `Release TestPyPI` as the full publish rehearsal
+- use the real `Release` workflow only after `CHANGELOG.md`, `pyproject.toml`, live checks, and benchmarks all match the intended version
+- keep a second Mac host or at least a documented rebuild path for the `gemstone-py-local` self-hosted runner
 
 Run the live demo against a configured stone:
 
