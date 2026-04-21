@@ -4,6 +4,13 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+## 0.2.3 - 2026-04-21
+
+- Added a full `docs/` manual set with a setup guide, user manual, examples guide, cookbook, and a long-form humorous introduction.
+- Added repository-native SVG diagrams, screenshot-style illustrations, and cartoons for the new docs set.
+- Added a local PDF build pipeline for the docs and generated companion/manual/book PDFs under `docs/pdf/`.
+- Fixed SVG layout issues in the generated book/manual assets so text fits cleanly in the rendered PDF boxes.
+
 ## 0.2.2 - 2026-04-21
 
 - Cleaned the public package metadata and README rendering so PyPI no longer shows local absolute paths or repo-local file links in the long description.

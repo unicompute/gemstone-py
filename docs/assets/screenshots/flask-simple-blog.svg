@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900">
+  <rect width="1280" height="900" fill="#ece8df"/>
+  <rect x="30" y="30" width="1220" height="840" rx="22" fill="#ffffff" stroke="#c9c0b5" stroke-width="3"/>
+  <rect x="30" y="30" width="1220" height="82" rx="22" fill="#22313f"/>
+  <text x="70" y="82" font-family="Helvetica, Arial, sans-serif" font-size="34" fill="#fefefe">Simple Blog Example</text>
+  <text x="950" y="82" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#c8d6e5">Flask + gemstone_py</text>
+
+  <rect x="80" y="150" width="1120" height="140" rx="18" fill="#f7f1e6" stroke="#ccbfa7" stroke-width="2"/>
+  <text x="120" y="198" font-family="Georgia, serif" font-size="34" fill="#2c2c2c">Hello from the GemStone-backed</text>
+  <text x="120" y="238" font-family="Georgia, serif" font-size="34" fill="#2c2c2c">blog</text>
+  <text x="120" y="272" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#6a6a6a">Illustrative screenshot based on the example app structure</text>
+
+  <rect x="80" y="310" width="540" height="230" rx="18" fill="#fefaf2" stroke="#d8c9b1" stroke-width="2"/>
+  <text x="110" y="360" font-family="Georgia, serif" font-size="32" fill="#3b2f25">Post: Transactions are feelings</text>
+  <text x="110" y="395" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b5145">"I only wanted a blog engine and now I know</text>
+  <text x="110" y="423" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b5145">what a SymbolDictionary is."</text>
+  <text x="110" y="460" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b5145">Author: DataCurator</text>
+  <text x="110" y="490" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b5145">Stored under PersistentRoot with a proper commit</text>
+
+  <rect x="660" y="310" width="540" height="230" rx="18" fill="#fefaf2" stroke="#d8c9b1" stroke-width="2"/>
+  <text x="690" y="360" font-family="Georgia, serif" font-size="32" fill="#3b2f25">Request session notes</text>
+  <text x="690" y="398" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b5145">- provider created at app startup</text>
+  <text x="690" y="430" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b5145">- teardown decides commit vs abort</text>
+  <text x="690" y="462" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b5145">- pool/thread-local options available</text>
+
+  <rect x="80" y="580" width="1120" height="230" rx="18" fill="#f7f1e6" stroke="#ccbfa7" stroke-width="2"/>
+  <text x="120" y="635" font-family="Georgia, serif" font-size="30" fill="#2c2c2c">Why this example matters</text>
+  <text x="120" y="678" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#5b5145">It shows the shape of a real web application while keeping</text>
+  <text x="120" y="708" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#5b5145">the persistence model small enough to understand in one sitting.</text>
+  <text x="120" y="748" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#5b5145">That is the sweet spot: not a toy one-liner,</text>
+  <text x="120" y="778" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#5b5145">not an accidental enterprise platform.</text>
+</svg>

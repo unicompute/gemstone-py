@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="620" viewBox="0 0 980 620">
+  <rect width="980" height="620" fill="#fbf3e4"/>
+  <text x="50" y="70" font-family="Georgia, serif" font-size="30" fill="#3c2f2f">Cartoon: The Stone Club Bouncer</text>
+  <rect x="80" y="130" width="820" height="420" rx="24" fill="#fffaf2" stroke="#3c2f2f" stroke-width="4"/>
+  <rect x="160" y="220" width="160" height="260" rx="16" fill="#2f4858"/>
+  <circle cx="240" cy="185" r="54" fill="#f0c9a5" stroke="#3c2f2f" stroke-width="4"/>
+  <circle cx="220" cy="175" r="5" fill="#2f2f2f"/>
+  <circle cx="260" cy="175" r="5" fill="#2f2f2f"/>
+  <path d="M220 205 Q240 222 260 205" stroke="#2f2f2f" stroke-width="4" fill="none"/>
+  <text x="168" y="520" font-family="Helvetica, Arial, sans-serif" font-size="22" fill="#2f4858">GemStone</text>
+
+  <rect x="610" y="250" width="120" height="190" rx="14" fill="#ffcf96" stroke="#3c2f2f" stroke-width="4"/>
+  <circle cx="670" cy="220" r="42" fill="#f0c9a5" stroke="#3c2f2f" stroke-width="4"/>
+  <text x="598" y="475" font-family="Helvetica, Arial, sans-serif" font-size="22" fill="#7a5120">Python app</text>
+
+  <rect x="380" y="240" width="170" height="120" rx="16" fill="#dceeff" stroke="#295d8a" stroke-width="4"/>
+  <text x="420" y="288" font-family="Helvetica, Arial, sans-serif" font-size="24" fill="#17344f">Credentials?</text>
+  <text x="425" y="322" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#17344f">Transaction plan?</text>
+
+  <path d="M320 290 L380 290" stroke="#3c2f2f" stroke-width="6" marker-end="url(#arrow)"/>
+  <path d="M550 320 L610 320" stroke="#3c2f2f" stroke-width="6" marker-end="url(#arrow)"/>
+  <text x="315" y="392" font-family="Georgia, serif" font-size="24" fill="#6b5140">"No defaults, no nonsense."</text>
+  <text x="312" y="425" font-family="Georgia, serif" font-size="24" fill="#6b5140">"Also please stop forgetting to commit."</text>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#3c2f2f"/>
+    </marker>
+  </defs>
+</svg>

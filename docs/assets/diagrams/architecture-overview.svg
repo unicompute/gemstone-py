@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <rect width="1200" height="760" fill="#f6f0e6"/>
+  <rect x="40" y="40" width="1120" height="680" rx="28" fill="#fffaf2" stroke="#3c2f2f" stroke-width="4"/>
+  <text x="70" y="90" font-family="Georgia, serif" font-size="34" fill="#3c2f2f">gemstone-py Architecture Overview</text>
+  <text x="70" y="125" font-family="Georgia, serif" font-size="18" fill="#6d5c4f">One Python package, one GemStone stone, several layers of sensible chaos.</text>
+
+  <rect x="90" y="180" width="250" height="150" rx="20" fill="#dceeff" stroke="#295d8a" stroke-width="3"/>
+  <text x="120" y="220" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#17344f">Your Python App</text>
+  <text x="120" y="255" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#17344f">CLI tools</text>
+  <text x="120" y="282" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#17344f">scripts and notebooks</text>
+  <text x="120" y="309" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#17344f">Flask or Django apps</text>
+
+  <rect x="455" y="150" width="320" height="225" rx="22" fill="#ffe7cc" stroke="#9b5f1e" stroke-width="3"/>
+  <text x="545" y="195" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#5b3410">gemstone_py</text>
+  <text x="490" y="235" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b3410">GemStoneSession</text>
+  <text x="490" y="262" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b3410">PersistentRoot / GSCollection</text>
+  <text x="490" y="286" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b3410">GStore / ObjectLog</text>
+  <text x="490" y="310" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b3410">concurrency helpers / web providers</text>
+  <text x="490" y="334" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b3410">Flask hooks and scoped sessions</text>
+
+  <rect x="860" y="180" width="255" height="165" rx="20" fill="#eadfff" stroke="#56337f" stroke-width="3"/>
+  <text x="907" y="220" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#3b2554">libgcirpc</text>
+  <text x="900" y="255" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#3b2554">GCI bridge</text>
+  <text x="890" y="282" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#3b2554">C API accessed through</text>
+  <text x="890" y="306" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#3b2554">ctypes bindings</text>
+  <text x="890" y="330" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#3b2554">Still strict. Still moody.</text>
+
+  <rect x="255" y="470" width="690" height="182" rx="24" fill="#dff5df" stroke="#2c6b3e" stroke-width="3"/>
+  <text x="330" y="515" font-family="Helvetica, Arial, sans-serif" font-size="32" fill="#1b4829">GemStone/S 64 repository</text>
+  <text x="330" y="552" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#1b4829">UserGlobals, Globals, Published, SessionMethods</text>
+  <text x="330" y="579" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#1b4829">persistent dictionaries, indexed collections, shared queues, counters</text>
+  <text x="330" y="604" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#1b4829">transactions, locks, conflicts, and the occasional</text>
+  <text x="330" y="628" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#1b4829">"who committed that?" moment</text>
+
+  <path d="M340 255 L455 255" stroke="#3c2f2f" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow)"/>
+  <path d="M775 255 L860 255" stroke="#3c2f2f" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow)"/>
+  <path d="M988 345 L988 430 L760 430 L760 470" stroke="#3c2f2f" stroke-width="4" stroke-linecap="round" fill="none" marker-end="url(#arrow)"/>
+  <path d="M615 375 L615 470" stroke="#3c2f2f" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow)"/>
+
+  <text x="144" y="410" font-family="Georgia, serif" font-size="20" fill="#6d5c4f">Application code stays in Python.</text>
+  <text x="144" y="436" font-family="Georgia, serif" font-size="20" fill="#6d5c4f">The stone keeps the state, the grudges, and the transactions.</text>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0 L8 4 L0 8 z" fill="#3c2f2f"/>
+    </marker>
+  </defs>
+</svg>

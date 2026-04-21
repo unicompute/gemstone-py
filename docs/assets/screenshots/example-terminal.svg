@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760">
+  <rect width="1280" height="760" rx="30" fill="#1f1f28"/>
+  <rect x="30" y="30" width="1220" height="700" rx="24" fill="#11131a" stroke="#3e4554" stroke-width="3"/>
+  <circle cx="90" cy="75" r="11" fill="#ff5f57"/>
+  <circle cx="125" cy="75" r="11" fill="#febc2e"/>
+  <circle cx="160" cy="75" r="11" fill="#28c840"/>
+  <text x="210" y="83" font-family="Menlo, Consolas, monospace" font-size="24" fill="#d4d7df">python -m gemstone_py.api_contract --json</text>
+
+  <g font-family="Menlo, Consolas, monospace" font-size="24">
+    <text x="70" y="150" fill="#7ee787">{</text>
+    <text x="110" y="190" fill="#79c0ff">"package"</text><text x="270" y="190" fill="#d4d7df">: </text><text x="310" y="190" fill="#a5d6ff">"gemstone-py"</text><text x="490" y="190" fill="#d4d7df">,</text>
+    <text x="110" y="230" fill="#79c0ff">"version"</text><text x="270" y="230" fill="#d4d7df">: </text><text x="310" y="230" fill="#a5d6ff">"0.2.2"</text><text x="430" y="230" fill="#d4d7df">,</text>
+    <text x="110" y="270" fill="#79c0ff">"checks"</text><text x="250" y="270" fill="#d4d7df">: [</text>
+    <text x="160" y="310" fill="#a5d6ff">"exports present"</text><text x="420" y="310" fill="#d4d7df">,</text>
+    <text x="160" y="350" fill="#a5d6ff">"cli entry points respond"</text><text x="530" y="350" fill="#d4d7df">,</text>
+    <text x="160" y="390" fill="#a5d6ff">"benchmark tools behave"</text><text x="515" y="390" fill="#d4d7df">,</text>
+    <text x="160" y="430" fill="#a5d6ff">"metadata is sane"</text>
+    <text x="110" y="470" fill="#d4d7df">],</text>
+    <text x="110" y="510" fill="#79c0ff">"status"</text><text x="240" y="510" fill="#d4d7df">: </text><text x="280" y="510" fill="#7ee787">"ok"</text>
+    <text x="70" y="550" fill="#7ee787">}</text>
+  </g>
+
+  <text x="70" y="638" font-family="Menlo, Consolas, monospace" font-size="18" fill="#8b949e">Illustrative screenshot: the real command is in the repo and returns</text>
+  <text x="70" y="666" font-family="Menlo, Consolas, monospace" font-size="18" fill="#8b949e">machine-readable JSON.</text>
+</svg>

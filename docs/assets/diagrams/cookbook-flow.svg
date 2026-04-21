@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <rect width="1200" height="720" fill="#fbf8f2"/>
+  <text x="55" y="70" font-family="Georgia, serif" font-size="34" fill="#32261f">Cookbook Recipe Flow</text>
+  <text x="55" y="104" font-family="Georgia, serif" font-size="18" fill="#68594d">A quick way to see how the recipes in the cookbook are organized.</text>
+
+  <g font-family="Helvetica, Arial, sans-serif">
+    <rect x="70" y="200" width="200" height="120" rx="20" fill="#dceeff" stroke="#255f88" stroke-width="3"/>
+    <text x="125" y="245" font-size="26" fill="#17344f">Configure</text>
+    <text x="112" y="277" font-size="15" fill="#17344f">GemStoneConfig</text>
+    <text x="120" y="299" font-size="15" fill="#17344f">from_env()</text>
+
+    <rect x="320" y="200" width="205" height="120" rx="20" fill="#ffe7cc" stroke="#9b5f1e" stroke-width="3"/>
+    <text x="395" y="245" font-size="26" fill="#5b3410">Connect</text>
+    <text x="360" y="277" font-size="15" fill="#5b3410">session or</text>
+    <text x="351" y="299" font-size="15" fill="#5b3410">session_scope()</text>
+
+    <rect x="575" y="200" width="205" height="120" rx="20" fill="#e1f6df" stroke="#2c6b3e" stroke-width="3"/>
+    <text x="635" y="245" font-size="26" fill="#1b4829">Persist</text>
+    <text x="620" y="288" font-size="16" fill="#1b4829">root, store, query, log</text>
+
+    <rect x="835" y="200" width="210" height="120" rx="20" fill="#eadfff" stroke="#56337f" stroke-width="3"/>
+    <text x="885" y="245" font-size="26" fill="#3b2554">Share</text>
+    <text x="860" y="288" font-size="16" fill="#3b2554">locks, queues, counters</text>
+
+    <rect x="320" y="440" width="205" height="120" rx="20" fill="#fff1d8" stroke="#9b5f1e" stroke-width="3"/>
+    <text x="375" y="485" font-size="26" fill="#5b3410">Expose</text>
+    <text x="343" y="520" font-size="16" fill="#5b3410">Flask request sessions</text>
+
+    <rect x="575" y="440" width="205" height="120" rx="20" fill="#ffe3e3" stroke="#8a2f2f" stroke-width="3"/>
+    <text x="620" y="485" font-size="26" fill="#5b1717">Recover</text>
+    <text x="604" y="520" font-size="16" fill="#5b1717">abort, retry, benchmark</text>
+  </g>
+
+  <path d="M270 258 L320 258" stroke="#32261f" stroke-width="6" marker-end="url(#arrow)"/>
+  <path d="M525 258 L575 258" stroke="#32261f" stroke-width="6" marker-end="url(#arrow)"/>
+  <path d="M780 258 L835 258" stroke="#32261f" stroke-width="6" marker-end="url(#arrow)"/>
+  <path d="M678 320 L678 440" stroke="#32261f" stroke-width="6" marker-end="url(#arrow)"/>
+  <path d="M940 320 L940 390 L422 390 L422 440" stroke="#32261f" stroke-width="6" fill="none" marker-end="url(#arrow)"/>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#32261f"/>
+    </marker>
+  </defs>
+</svg>

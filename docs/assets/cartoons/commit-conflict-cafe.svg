@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="620" viewBox="0 0 980 620">
+  <rect width="980" height="620" fill="#f7efe5"/>
+  <text x="50" y="70" font-family="Georgia, serif" font-size="30" fill="#352922">Cartoon: Commit Conflict Cafe</text>
+  <rect x="60" y="120" width="860" height="440" rx="26" fill="#fffaf3" stroke="#352922" stroke-width="4"/>
+  <rect x="160" y="270" width="200" height="40" rx="20" fill="#7b5e57"/>
+  <rect x="620" y="270" width="200" height="40" rx="20" fill="#7b5e57"/>
+  <circle cx="260" cy="205" r="48" fill="#f2cfad" stroke="#352922" stroke-width="4"/>
+  <circle cx="720" cy="205" r="48" fill="#f2cfad" stroke="#352922" stroke-width="4"/>
+  <rect x="215" y="250" width="90" height="120" rx="16" fill="#9ec5fe" stroke="#352922" stroke-width="4"/>
+  <rect x="675" y="250" width="90" height="120" rx="16" fill="#ffb4a2" stroke="#352922" stroke-width="4"/>
+  <rect x="400" y="220" width="180" height="170" rx="18" fill="#dff5df" stroke="#2c6b3e" stroke-width="4"/>
+  <text x="430" y="285" font-family="Helvetica, Arial, sans-serif" font-size="24" fill="#1b4829">Shared row</text>
+  <text x="420" y="320" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#1b4829">"Both of you</text>
+  <text x="425" y="348" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#1b4829">edited me."</text>
+
+  <path d="M305 300 L400 300" stroke="#352922" stroke-width="6" marker-end="url(#arrow)"/>
+  <path d="M675 300 L580 300" stroke="#352922" stroke-width="6" marker-end="url(#arrow)"/>
+
+  <text x="120" y="470" font-family="Georgia, serif" font-size="24" fill="#62493a">Session A: "I committed first."</text>
+  <text x="560" y="470" font-family="Georgia, serif" font-size="24" fill="#62493a">Session B: "I brought retry logic."</text>
+  <text x="280" y="520" font-family="Georgia, serif" font-size="26" fill="#62493a">The moral: conflicts are not bugs. They are schedules with opinions.</text>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#352922"/>
+    </marker>
+  </defs>
+</svg>
