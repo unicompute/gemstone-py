@@ -4,9 +4,14 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
-- Added benchmark smoke/regression profiles, scheduled runner health checks, and opt-in live soak coverage.
+## 0.2.1 - 2026-04-21
+
+- Upgraded the release workflows to Node 24-compatible GitHub Actions majors.
+- Verified the tag-triggered release path against the updated workflow stack after the `0.2.0` publish.
 
 ## 0.2.0 - 2026-04-21
+
+- Added benchmark smoke/regression profiles, scheduled runner health checks, and opt-in live soak coverage.
 
 - Added metadata-aware benchmark comparison guardrails and threshold enforcement.
 - Added release workflow validation for tag/version/changelog consistency before publishing.
