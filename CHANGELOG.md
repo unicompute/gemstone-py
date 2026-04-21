@@ -4,6 +4,11 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+## 0.2.2 - 2026-04-21
+
+- Cleaned the public package metadata and README rendering so PyPI no longer shows local absolute paths or repo-local file links in the long description.
+- Added explicit project URLs for the homepage, repository, issues, changelog, and runner guide.
+
 ## 0.2.1 - 2026-04-21
 
 - Upgraded the release workflows to Node 24-compatible GitHub Actions majors.
