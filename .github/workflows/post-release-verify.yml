@@ -1,0 +1,128 @@
+name: Post Release Verify
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: Published PyPI version to verify
+        required: true
+      python-version:
+        description: Python version to use for verification
+        required: true
+        default: "3.11"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-pypi:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_VERSION: ${{ github.event.inputs['release-version'] }}
+      PYTHON_VERSION: ${{ github.event.inputs['python-version'] }}
+      PACKAGE_NAME: gemstone-py
+      PYPI_JSON_URL: https://pypi.org/pypi/gemstone-py/json
+    steps:
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Wait for release on PyPI
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.request
+          from pathlib import Path
+
+          url = os.environ["PYPI_JSON_URL"]
+          version = os.environ["RELEASE_VERSION"]
+          attempts = 8
+          for attempt in range(1, attempts + 1):
+              with urllib.request.urlopen(url) as response:  # noqa: S310
+                  payload = json.load(response)
+              releases = payload.get("releases", {})
+              if version in releases and releases[version]:
+                  Path("pypi-release.json").write_text(
+                      json.dumps(payload, indent=2) + "\n", encoding="utf-8"
+                  )
+                  raise SystemExit(0)
+              print(
+                  f"Release {version} not visible on PyPI yet; retrying ({attempt}/{attempts})..."
+              )
+              time.sleep(20)
+          raise SystemExit(f"Release {version} did not appear on PyPI in time.")
+          PY
+
+      - name: Install published package from PyPI
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "${PACKAGE_NAME}==${RELEASE_VERSION}"
+
+      - name: Verify installed artifact behavior
+        shell: bash
+        run: |
+          python -m gemstone_py.api_contract --json > api-contract.json
+          gemstone-hello >/dev/null
+          gemstone-examples hello >/dev/null
+          gemstone-benchmark-compare --help >/dev/null
+          gemstone-benchmark-baseline-register --help >/dev/null
+
+      - name: Verify PyPI metadata and long description
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads(Path("pypi-release.json").read_text(encoding="utf-8"))
+          version = os.environ["RELEASE_VERSION"]
+          info = payload["info"]
+          urls = payload["urls"]
+          filenames = {entry["filename"] for entry in urls}
+          expected = {
+              f"gemstone_py-{version}-py3-none-any.whl",
+              f"gemstone_py-{version}.tar.gz",
+          }
+          if info["version"] != version:
+              raise SystemExit(
+                  f"PyPI info.version {info['version']!r} did not match {version!r}"
+              )
+          if not expected.issubset(filenames):
+              raise SystemExit(
+                  f"PyPI files missing for {version}: expected {sorted(expected)!r}, got {sorted(filenames)!r}"
+              )
+          project_urls = info.get("project_urls") or {}
+          for key in ["Homepage", "Repository", "Issues", "Changelog", "RunnerGuide"]:
+              if key not in project_urls:
+                  raise SystemExit(f"Missing project URL {key!r} in PyPI metadata")
+          description = info.get("description") or ""
+          if "/Users/" in description:
+              raise SystemExit("PyPI long description still contains a local /Users/ path")
+          Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8").write(
+              "\n".join(
+                  [
+                      "## Post Release Verify",
+                      "",
+                      f"- package: `{info['name']}`",
+                      f"- version: `{info['version']}`",
+                      f"- release URL: {info['release_url']}",
+                      f"- files: {', '.join(sorted(filenames))}",
+                      "",
+                  ]
+              )
+          )
+          PY
+
+      - name: Upload verification artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: gemstone-py-post-release-verify
+          path: |
+            api-contract.json
+            pypi-release.json
+          if-no-files-found: error

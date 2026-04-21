@@ -7,12 +7,12 @@ Use this before cutting a tagged release or publishing artifacts.
 python3 -m pip install -e .[dev]
 ```
 
-Update `pyproject.toml` and add an entry to [CHANGELOG.md](/Users/tariq/src/gemstone-py/CHANGELOG.md:1)
+Update `pyproject.toml` and add an entry to [CHANGELOG.md](https://github.com/unicompute/gemstone-py/blob/main/CHANGELOG.md)
 before cutting a new version.
 
 The GitHub `Release` workflow now validates that the release tag matches
 `project.version` and that the same version is present in
-[CHANGELOG.md](/Users/tariq/src/gemstone-py/CHANGELOG.md:1).
+[CHANGELOG.md](https://github.com/unicompute/gemstone-py/blob/main/CHANGELOG.md).
 
 2. Run the local CI lane:
 ```bash
@@ -42,7 +42,7 @@ gemstone-benchmark-compare previous-benchmark-report.json benchmark-report.json 
 ```
 If you accept the new numbers, add the accepted report under
 `.github/benchmarks/` and register it in
-[.github/benchmarks/index.json](/Users/tariq/src/gemstone-py/.github/benchmarks/index.json:1)
+[.github/benchmarks/index.json](https://github.com/unicompute/gemstone-py/blob/main/.github/benchmarks/index.json)
 so the GitHub `Benchmarks` workflow can select it automatically for matching
 environments.
 
@@ -63,17 +63,20 @@ gemstone-smalltalk-demo
 
 10. Use the manual `Release TestPyPI` workflow if you want a full publish rehearsal against TestPyPI. It now publishes to TestPyPI and then installs the published version back into a clean runner for post-publish API/CLI verification.
 
-11. Run the optional live soak lane if you want higher confidence before a production release:
+11. After a real PyPI publish, use the manual `Post Release Verify` workflow to confirm the published package installs from real PyPI, the API contract passes, the public CLI entry points work, and the PyPI metadata is clean.
+
+12. Run the optional live soak lane if you want higher confidence before a production release:
 ```bash
 GS_RUN_LIVE=1 GS_RUN_LIVE_SOAK=1 ./scripts/run_live_checks.sh
 ```
 
-12. Tag and publish only after the checks above are green.
+13. Tag and publish only after the checks above are green.
 
 For GitHub automation:
 
 - use the manual `Release Dry Run` workflow to validate metadata, run CI, and upload build artifacts without publishing
 - use the manual `Release TestPyPI` workflow for a trusted-publishing rehearsal against TestPyPI
+- use the manual `Post Release Verify` workflow after production publish
 - push a tag like `v0.1.1` to trigger the `Release` workflow and create a GitHub release
 - configure PyPI trusted publishing for the repository's `pypi` GitHub environment
 - configure TestPyPI trusted publishing for the repository's `testpypi` GitHub environment

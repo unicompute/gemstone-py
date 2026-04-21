@@ -18,7 +18,10 @@ The workflow actions have been updated to the current Node 24-compatible majors:
 - `actions/checkout@v6`
 - `actions/setup-python@v6`
 - `actions/upload-artifact@v7`
-- `actions/download-artifact@v5`
+- `actions/download-artifact@v8`
+
+The repository workflows are also pinned to immutable action commit SHAs, so
+runner behavior does not drift when an upstream major tag is retargeted.
 
 Those action lines require a current self-hosted runner. The local bootstrap
 script keeps a reproducible pinned default (`2.333.1` today), but it can also
@@ -147,6 +150,30 @@ If you want workflows to keep targeting either host automatically, give the
 backup runner the same `gemstone-py-local` label set. If you want to direct
 workflows to the backup runner only during recovery, register it under a
 different label and override the `runner-labels` workflow input manually.
+
+## Failover Playbook
+
+When the primary `gemstone-py-local` runner is unavailable:
+
+1. Check the `Runner Health` workflow and confirm whether the runner is offline
+   or only behind on version.
+2. If the primary host is recoverable, run:
+
+   ```bash
+   ./scripts/install_self_hosted_runner_service.sh status
+   ./scripts/bootstrap_self_hosted_runner.sh --check
+   ./scripts/install_self_hosted_runner_service.sh restart
+   ```
+
+3. If the primary host is not recoverable quickly, bootstrap the backup host
+   with the same labels and start the hardened service.
+4. Re-dispatch `Live`, `Destructive Live`, or `Benchmarks` using the default
+   `gemstone-py-local` label set if the backup host shares that label.
+5. If the backup host uses a distinct label, supply that override through the
+   workflow `runner-labels` input and record the temporary routing in the run
+   summary or release notes.
+6. Once the primary host is healthy again, either remove the shared label from
+   the backup host or stop the backup runner so scheduling returns to normal.
 
 ## Workflow Defaults
 

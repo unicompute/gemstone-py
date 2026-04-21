@@ -281,6 +281,12 @@ environment, then installs the just-published version back from TestPyPI and
 runs `python -m gemstone_py.api_contract --json` plus the public CLI smoke
 checks against that published artifact.
 
+For a real-PyPI post-publish check, use the manual `Post Release Verify`
+workflow. It polls PyPI for the requested release, installs the published
+package from real PyPI, runs `python -m gemstone_py.api_contract --json`,
+checks the public CLI entry points, and validates the PyPI JSON metadata plus
+long description.
+
 On GitHub, use the manual `Benchmarks` workflow to run the same lane against a
 configured stone and upload `benchmark-report.json` as an artifact. The
 workflow now supports named policy profiles:
@@ -353,6 +359,8 @@ The workflows also use the current Node 24-compatible action majors:
 - `actions/download-artifact@v8`
 
 That means the GemStone host should keep its self-hosted runner current.
+External GitHub Actions are also pinned to immutable commit SHAs in the
+workflow files for supply-chain hardening.
 
 To bootstrap or repair the runner on the macOS GemStone host:
 
@@ -379,6 +387,7 @@ For repository operations:
 - use the scheduled/manual `Runner Health` workflow to detect self-hosted runner drift and offline state
 - use `Release Dry Run` before cutting a new version
 - use `Release TestPyPI` as the full publish rehearsal
+- use `Post Release Verify` after a real PyPI publish to validate the public artifact and metadata
 - use the real `Release` workflow only after `CHANGELOG.md`, `pyproject.toml`, live checks, and benchmarks all match the intended version
 - keep a second Mac host or at least a documented rebuild path for the `gemstone-py-local` self-hosted runner
 
