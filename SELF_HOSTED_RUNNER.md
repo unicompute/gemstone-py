@@ -21,8 +21,9 @@ The workflow actions have been updated to the current Node 24-compatible majors:
 - `actions/download-artifact@v5`
 
 Those action lines require a current self-hosted runner. The local bootstrap
-script defaults to runner `2.333.1`, which is newer than the minimum Node 24
-runner requirement published by the GitHub actions.
+script keeps a reproducible pinned default (`2.333.1` today), but it can also
+query GitHub for the latest available runner release before bootstrapping or
+upgrading.
 
 ## Bootstrap
 
@@ -49,6 +50,8 @@ Useful overrides:
 RUNNER_VERSION=2.333.1 ./scripts/bootstrap_self_hosted_runner.sh
 RUNNER_ROOT=/Users/tariq/src/actions-runner-gemstone-py ./scripts/bootstrap_self_hosted_runner.sh
 RUNNER_NAME=gemstone-py-local-arm64 ./scripts/bootstrap_self_hosted_runner.sh
+./scripts/bootstrap_self_hosted_runner.sh --latest-version
+./scripts/bootstrap_self_hosted_runner.sh --use-latest
 ```
 
 To inspect the current install without changing it:
@@ -57,11 +60,15 @@ To inspect the current install without changing it:
 ./scripts/bootstrap_self_hosted_runner.sh --check
 ```
 
+That check now reports the installed, target, and latest available runner
+versions together, so version drift is visible without upgrading.
+
 To upgrade the runner binaries in place while preserving the registration,
 service metadata, `_work/`, and `hostedtoolcache/`:
 
 ```bash
 ./scripts/bootstrap_self_hosted_runner.sh --upgrade --runner-version 2.333.1
+./scripts/bootstrap_self_hosted_runner.sh --upgrade --use-latest
 ```
 
 ## Service Install

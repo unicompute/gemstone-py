@@ -991,16 +991,19 @@ def install_flask_request_session(
     config["installed"] = True
     if provider is not None and close_at_exit:
         atexit.register(close_flask_request_session_provider, app)
-    if provider is not None and warmup_sessions and hasattr(app, "before_serving"):
-        @app.before_serving
-        def _warm_request_session_provider() -> None:
-            warm_flask_request_session_provider(app, warmup_sessions)
-    if provider is not None and close_on_after_serving and hasattr(app, "after_serving"):
-        @app.after_serving
-        def _close_request_session_provider() -> None:
-            close_flask_request_session_provider(app)
 
-    @app.after_request
+    def _warm_request_session_provider() -> None:
+        warm_flask_request_session_provider(app, warmup_sessions)
+
+    if provider is not None and warmup_sessions and hasattr(app, "before_serving"):
+        app.before_serving(_warm_request_session_provider)
+
+    def _close_request_session_provider() -> None:
+        close_flask_request_session_provider(app)
+
+    if provider is not None and close_on_after_serving and hasattr(app, "after_serving"):
+        app.after_serving(_close_request_session_provider)
+
     def _record_request_session_outcome(response: Any) -> Any:
         if not getattr(app.session_interface, "_gemstone_request_session_finalizes", False):
             _app, flask_g = _flask_request_state()
@@ -1012,7 +1015,8 @@ def install_flask_request_session(
                 )
         return response
 
-    @app.teardown_request
+    app.after_request(_record_request_session_outcome)
+
     def _cleanup_request_session(exc: BaseException | None) -> None:
         if getattr(app.session_interface, "_gemstone_request_session_finalizes", False):
             if exc is not None:
@@ -1032,6 +1036,8 @@ def install_flask_request_session(
             )
         else:
             finalize_flask_request_session()
+
+    app.teardown_request(_cleanup_request_session)
 
     return app
 

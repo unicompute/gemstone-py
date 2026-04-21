@@ -106,9 +106,6 @@ module = [
   "gemstone_py.web",
 ]
 strict = true
-disable_error_code = [
-  "untyped-decorator",
-]
 
 [[tool.mypy.overrides]]
 module = [

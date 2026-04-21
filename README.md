@@ -317,8 +317,10 @@ To bootstrap or repair the runner on the macOS GemStone host:
 
 ```bash
 ./scripts/bootstrap_self_hosted_runner.sh
+./scripts/bootstrap_self_hosted_runner.sh --latest-version
 ./scripts/bootstrap_self_hosted_runner.sh --check
 ./scripts/bootstrap_self_hosted_runner.sh --upgrade --runner-version 2.333.1
+./scripts/bootstrap_self_hosted_runner.sh --upgrade --use-latest
 ./scripts/install_self_hosted_runner_service.sh check
 ./scripts/install_self_hosted_runner_service.sh install --start
 ./scripts/install_self_hosted_runner_service.sh status

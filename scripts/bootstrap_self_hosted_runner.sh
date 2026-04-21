@@ -11,6 +11,8 @@ Options:
   --runner-root PATH           Runner installation directory
   --runner-name NAME           Registered runner name
   --runner-version VERSION     Actions runner version to download/configure
+  --use-latest                 Resolve the latest available runner release and use it
+  --latest-version             Print the latest available runner release version and exit
   --labels CSV                 Comma-separated runner labels
   --work-folder NAME           Runner work folder name
   --token TOKEN                Explicit registration token
@@ -20,12 +22,14 @@ Options:
 
 Environment fallback:
   REPO_SLUG, RUNNER_ROOT, RUNNER_NAME, RUNNER_VERSION, RUNNER_LABELS,
-  RUNNER_WORK_FOLDER, RUNNER_TOKEN
+  RUNNER_WORK_FOLDER, RUNNER_TOKEN, RUNNER_USE_LATEST
 
 This script downloads or refreshes a macOS ARM64 self-hosted runner, configures
 the local tool cache directory, and registers the runner with --replace.
 If gh is installed and authenticated, it can mint the registration token
-automatically for the target repository.
+automatically for the target repository. The default target version stays pinned
+for reproducibility; use --use-latest or --latest-version to check GitHub's
+current runner release.
 EOF
 }
 
@@ -36,8 +40,10 @@ RUNNER_VERSION="${RUNNER_VERSION:-2.333.1}"
 RUNNER_LABELS="${RUNNER_LABELS:-self-hosted,macOS,ARM64,gemstone-py-local}"
 RUNNER_WORK_FOLDER="${RUNNER_WORK_FOLDER:-_work}"
 RUNNER_TOKEN="${RUNNER_TOKEN:-}"
+RUNNER_USE_LATEST="${RUNNER_USE_LATEST:-0}"
 CHECK_ONLY=0
 UPGRADE_ONLY=0
+LATEST_ONLY=0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_TEMPLATE="${SCRIPT_DIR}/actions.runner.macos.plist.template"
 
@@ -58,6 +64,14 @@ while [[ $# -gt 0 ]]; do
     --runner-version)
       RUNNER_VERSION="$2"
       shift 2
+      ;;
+    --use-latest)
+      RUNNER_USE_LATEST=1
+      shift
+      ;;
+    --latest-version)
+      LATEST_ONLY=1
+      shift
       ;;
     --labels)
       RUNNER_LABELS="$2"
@@ -91,12 +105,76 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+normalize_bool() {
+  local value="${1:-0}"
+  case "${value}" in
+    1|true|TRUE|True|yes|YES|Yes|on|ON|On)
+      echo 1
+      ;;
+    *)
+      echo 0
+      ;;
+  esac
+}
+
+RUNNER_USE_LATEST="$(normalize_bool "${RUNNER_USE_LATEST}")"
+
 RUNNER_URL="https://github.com/${REPO_SLUG}"
-RUNNER_ARCHIVE="actions-runner-osx-arm64-${RUNNER_VERSION}.tar.gz"
-RUNNER_DOWNLOAD_URL="https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/${RUNNER_ARCHIVE}"
 TOOL_CACHE_ROOT="${RUNNER_ROOT}/hostedtoolcache"
 RUNNER_JSON_PATH="${RUNNER_ROOT}/.runner"
 SERVICE_CONFIG_PATH="${RUNNER_ROOT}/.service"
+RUNNER_ARCHIVE=""
+RUNNER_DOWNLOAD_URL=""
+
+refresh_runner_download_context() {
+  RUNNER_ARCHIVE="actions-runner-osx-arm64-${RUNNER_VERSION}.tar.gz"
+  RUNNER_DOWNLOAD_URL="https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/${RUNNER_ARCHIVE}"
+}
+
+latest_runner_version() {
+  local latest payload
+  if command -v gh >/dev/null 2>&1; then
+    latest="$(gh api "repos/actions/runner/releases/latest" --jq .tag_name 2>/dev/null || true)"
+    latest="${latest#v}"
+    if [[ -n "${latest}" ]]; then
+      echo "${latest}"
+      return 0
+    fi
+  fi
+
+  if command -v curl >/dev/null 2>&1; then
+    payload="$(curl -fsSL "https://api.github.com/repos/actions/runner/releases/latest" 2>/dev/null || true)"
+    if [[ -n "${payload}" ]]; then
+      python3 - <<'PY' "${payload}"
+import json
+import sys
+
+payload = json.loads(sys.argv[1])
+tag = payload.get("tag_name", "")
+tag = tag[1:] if tag.startswith("v") else tag
+if not tag:
+    raise SystemExit(1)
+print(tag)
+PY
+      return $?
+    fi
+  fi
+
+  return 1
+}
+
+resolve_target_runner_version() {
+  if [[ "${RUNNER_USE_LATEST}" == "1" ]]; then
+    local latest
+    latest="$(latest_runner_version)"
+    if [[ -z "${latest}" ]]; then
+      echo "Unable to resolve the latest GitHub Actions runner release." >&2
+      exit 1
+    fi
+    RUNNER_VERSION="${latest}"
+  fi
+  refresh_runner_download_context
+}
 
 current_runner_version() {
   if [[ ! -f "${RUNNER_ROOT}/bin/Runner.Listener.deps.json" ]]; then
@@ -162,16 +240,18 @@ service_running() {
 }
 
 github_runner_payload() {
-  local runner_name
+  local runner_name payload
   runner_name="$(configured_runner_name 2>/dev/null || true)"
   [[ -n "${runner_name}" ]] || return 1
   command -v gh >/dev/null 2>&1 || return 1
-  gh api "repos/${REPO_SLUG}/actions/runners" 2>/dev/null | python3 - <<'PY' "${runner_name}"
+  payload="$(gh api "repos/${REPO_SLUG}/actions/runners" 2>/dev/null || true)"
+  [[ -n "${payload}" ]] || return 1
+  python3 - <<'PY' "${runner_name}" "${payload}"
 import json
 import sys
 
 target = sys.argv[1]
-payload = json.load(sys.stdin)
+payload = json.loads(sys.argv[2])
 for runner in payload.get("runners", []):
     if runner.get("name") == target:
         print(json.dumps(runner))
@@ -199,7 +279,7 @@ download_runner_archive() {
 }
 
 print_check_report() {
-  local installed_version configured_name service_name plist_path
+  local installed_version configured_name service_name plist_path latest_version
   local github_payload github_status github_labels github_busy
 
   installed_version="$(current_runner_version 2>/dev/null || true)"
@@ -207,12 +287,14 @@ print_check_report() {
   service_name="$(configured_service_name 2>/dev/null || true)"
   plist_path="$(service_plist_path 2>/dev/null || true)"
   github_payload="$(github_runner_payload 2>/dev/null || true)"
+  latest_version="$(latest_runner_version 2>/dev/null || true)"
 
   echo "Runner check:"
   echo "  repo:            ${REPO_SLUG}"
   echo "  root:            ${RUNNER_ROOT}"
   echo "  target version:  ${RUNNER_VERSION}"
   echo "  installed:       ${installed_version:-<missing>}"
+  echo "  latest version:  ${latest_version:-<unavailable>}"
   echo "  configured name: ${configured_name:-<missing>}"
   echo "  labels:          ${RUNNER_LABELS}"
   echo "  work folder:     ${RUNNER_WORK_FOLDER}"
@@ -257,6 +339,22 @@ PY
     echo "  upgrade needed:  yes"
   else
     echo "  upgrade needed:  no"
+  fi
+  if [[ -z "${latest_version}" ]]; then
+    echo "  latest target:   <unavailable>"
+  elif [[ "${RUNNER_VERSION}" != "${latest_version}" ]]; then
+    echo "  latest target:   no"
+  else
+    echo "  latest target:   yes"
+  fi
+  if [[ -z "${latest_version}" ]]; then
+    echo "  latest install:  <unavailable>"
+  elif [[ -n "${installed_version}" && "${installed_version}" != "${latest_version}" ]]; then
+    echo "  latest install:  no"
+  elif [[ -n "${installed_version}" ]]; then
+    echo "  latest install:  yes"
+  else
+    echo "  latest install:  <missing>"
   fi
 }
 
@@ -314,6 +412,18 @@ upgrade_runner_in_place() {
   rm -rf "${temp_root}"
   print_check_report
 }
+
+if [[ "${LATEST_ONLY}" == "1" ]]; then
+  latest_version="$(latest_runner_version 2>/dev/null || true)"
+  if [[ -z "${latest_version}" ]]; then
+    echo "Unable to resolve the latest GitHub Actions runner release." >&2
+    exit 1
+  fi
+  echo "${latest_version}"
+  exit 0
+fi
+
+resolve_target_runner_version
 
 if [[ "${CHECK_ONLY}" == "1" ]]; then
   print_check_report
