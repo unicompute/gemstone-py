@@ -38,7 +38,7 @@ on:
       operation-thresholds:
         description: Optional comma-separated SUITE/OPERATION=PCT regression threshold overrides
         required: false
-        default: "persistent_root/write_mapping_commit=30,persistent_root/mapping_keys=40,gscollection/bulk_insert_and_index_commit=30,gscollection/indexed_search=25,gstore/batch_write=35,gstore/snapshot_read=40,rchash/populate_commit=25,rchash/items=35"
+        default: "persistent_root/write_mapping_commit=30,persistent_root/mapping_keys=40,gscollection/bulk_insert_and_index_commit=30,gscollection/indexed_search=50,gstore/batch_write=35,gstore/snapshot_read=40,rchash/populate_commit=80,rchash/items=35"
 
 permissions:
   contents: read

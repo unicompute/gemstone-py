@@ -47,16 +47,17 @@ to a fuller per-operation set:
 - `persistent_root/write_mapping_commit=30`
 - `persistent_root/mapping_keys=40`
 - `gscollection/bulk_insert_and_index_commit=30`
-- `gscollection/indexed_search=25`
+- `gscollection/indexed_search=50`
 - `gstore/batch_write=35`
 - `gstore/snapshot_read=40`
-- `rchash/populate_commit=25`
+- `rchash/populate_commit=80`
 - `rchash/items=35`
 
 Those defaults are intentionally broader than the original single global
 threshold, because repeated samples on the local self-hosted GemStone host have
-shown noticeable run-to-run jitter across multiple write-heavy operations, not
-just `mapping_keys` and `snapshot_read`.
+shown noticeable run-to-run jitter across multiple write-heavy operations,
+including deeper outliers in `gscollection/indexed_search` and
+`rchash/populate_commit`.
 
 The manual benchmark workflow also defaults its runner labels to:
 

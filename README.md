@@ -273,15 +273,16 @@ set:
 - `persistent_root/write_mapping_commit=30`
 - `persistent_root/mapping_keys=40`
 - `gscollection/bulk_insert_and_index_commit=30`
-- `gscollection/indexed_search=25`
+- `gscollection/indexed_search=50`
 - `gstore/batch_write=35`
 - `gstore/snapshot_read=40`
-- `rchash/populate_commit=25`
+- `rchash/populate_commit=80`
 - `rchash/items=35`
 
 Those defaults are broader than the original single global threshold because
 repeated local samples on the self-hosted GemStone host showed meaningful
-timing jitter across several write-heavy operations.
+timing jitter across several write-heavy operations, with especially noisy
+outliers in `gscollection/indexed_search` and `rchash/populate_commit`.
 
 Run the opt-in live lane:
 
