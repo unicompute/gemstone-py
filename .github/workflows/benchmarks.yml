@@ -151,12 +151,12 @@ jobs:
             spec="$(echo "${spec}" | xargs)"
             [[ -n "${spec}" ]] || continue
             threshold_args+=(--suite-threshold "${spec}")
-          done < <(printf '%s' "${BENCH_SUITE_THRESHOLDS}" | tr ',\n' '\n')
+          done < <(printf '%s\n' "${BENCH_SUITE_THRESHOLDS}" | tr ',\n' '\n')
           while IFS= read -r spec; do
             spec="$(echo "${spec}" | xargs)"
             [[ -n "${spec}" ]] || continue
             threshold_args+=(--operation-threshold "${spec}")
-          done < <(printf '%s' "${BENCH_OPERATION_THRESHOLDS}" | tr ',\n' '\n')
+          done < <(printf '%s\n' "${BENCH_OPERATION_THRESHOLDS}" | tr ',\n' '\n')
           set +e
           "${PYTHON_BIN}" -m gemstone_py.benchmark_compare \
             "${BENCH_BASELINE_REPORT}" \
