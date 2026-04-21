@@ -30,8 +30,15 @@ from gemstone_py.session_facade import GemStoneSessionFacade
 ## Install
 
 ```bash
-cd /Users/tariq/src/gemstone-py
-python3 -m pip install -e .
+python3 -m pip install gemstone-py
+```
+
+For development from source:
+
+```bash
+git clone https://github.com/unicompute/gemstone-py.git
+cd gemstone-py
+python3 -m pip install -e .[dev]
 ```
 
 Installed demo commands:
@@ -249,11 +256,15 @@ the built wheel and sdist via `python -m gemstone_py.api_contract`, including
 non-live behavior checks for release metadata, benchmark baseline lifecycle,
 benchmark baseline selection, and benchmark threshold comparison.
 
-For release prep, use [RELEASE_CHECKLIST.md](/Users/tariq/src/gemstone-py/RELEASE_CHECKLIST.md:1)
-and keep [CHANGELOG.md](/Users/tariq/src/gemstone-py/CHANGELOG.md:1) updated. GitHub also provides a
+For release prep, use
+[RELEASE_CHECKLIST.md](https://github.com/unicompute/gemstone-py/blob/main/RELEASE_CHECKLIST.md)
+and keep
+[CHANGELOG.md](https://github.com/unicompute/gemstone-py/blob/main/CHANGELOG.md)
+updated. GitHub also provides a
 `Release` workflow for tagged/manual artifact builds and optional PyPI publish.
 It validates the release tag against `project.version` and requires the same
-version to appear in [CHANGELOG.md](/Users/tariq/src/gemstone-py/CHANGELOG.md:1)
+version to appear in
+[CHANGELOG.md](https://github.com/unicompute/gemstone-py/blob/main/CHANGELOG.md)
 before artifacts are built or published. Manual PyPI publish now uses PyPI
 trusted publishing via GitHub OIDC in the `pypi` environment rather than a
 long-lived API token.
@@ -278,12 +289,13 @@ workflow now supports named policy profiles:
 - `regression`: stricter thresholds intended for deliberate performance review
 
 If the
-repository contains [.github/benchmarks/index.json](/Users/tariq/src/gemstone-py/.github/benchmarks/index.json:1),
+repository contains
+[.github/benchmarks/index.json](https://github.com/unicompute/gemstone-py/blob/main/.github/benchmarks/index.json),
 the workflow selects the committed baseline whose metadata matches the
 candidate report, then runs `gemstone-benchmark-compare`, uploads selection and
 comparison artifacts, and writes the selection/comparison tables into the
 workflow summary. The repository already includes a committed baseline at
-[.github/benchmarks/baseline.json](/Users/tariq/src/gemstone-py/.github/benchmarks/baseline.json:1)
+[.github/benchmarks/baseline.json](https://github.com/unicompute/gemstone-py/blob/main/.github/benchmarks/baseline.json)
 registered in the manifest for the default benchmark parameters. Threshold
 enforcement is skipped when no committed baseline matches the candidate
 metadata, and the workflow can fail on regressions larger than the configured
@@ -338,7 +350,7 @@ The workflows also use the current Node 24-compatible action majors:
 - `actions/checkout@v6`
 - `actions/setup-python@v6`
 - `actions/upload-artifact@v7`
-- `actions/download-artifact@v5`
+- `actions/download-artifact@v8`
 
 That means the GemStone host should keep its self-hosted runner current.
 
@@ -355,7 +367,9 @@ To bootstrap or repair the runner on the macOS GemStone host:
 ./scripts/install_self_hosted_runner_service.sh status
 ```
 
-See [SELF_HOSTED_RUNNER.md](/Users/tariq/src/gemstone-py/SELF_HOSTED_RUNNER.md:1) for the full bootstrap,
+See
+[SELF_HOSTED_RUNNER.md](https://github.com/unicompute/gemstone-py/blob/main/SELF_HOSTED_RUNNER.md)
+for the full bootstrap,
 launchd, log-path, and health-check flow.
 
 ## Release And Admin Operations
