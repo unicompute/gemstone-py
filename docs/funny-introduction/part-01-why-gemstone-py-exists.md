@@ -1,22 +1,5 @@
 # Part I: Why gemstone-py Exists
 
-## Cover Page
-
-This part answers the first honest question:
-
-> Why does this package exist instead of fifteen smaller scripts and one large
-> folder called `old_working_copy_final_v2_really`?
-
-Because the underlying problem is real.
-
-Python applications sometimes need to talk directly to a GemStone/S 64 stone,
-and they need to do it without turning every interaction into a hand-rolled
-experiment in transactions, sessions, and C library handling.
-
-`gemstone-py` exists to provide a coherent answer to that problem.
-
-\newpage
-
 ## The Elevator Pitch
 
 If somebody corners you near a whiteboard and asks what this package is, say:

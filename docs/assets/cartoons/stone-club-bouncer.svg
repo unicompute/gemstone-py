@@ -2,28 +2,39 @@
   <rect width="980" height="620" fill="#fbf3e4"/>
   <text x="50" y="70" font-family="Georgia, serif" font-size="30" fill="#3c2f2f">Cartoon: The Stone Club Bouncer</text>
   <rect x="80" y="130" width="820" height="420" rx="24" fill="#fffaf2" stroke="#3c2f2f" stroke-width="4"/>
-  <rect x="160" y="220" width="160" height="260" rx="16" fill="#2f4858"/>
-  <circle cx="240" cy="185" r="54" fill="#f0c9a5" stroke="#3c2f2f" stroke-width="4"/>
-  <circle cx="220" cy="175" r="5" fill="#2f2f2f"/>
-  <circle cx="260" cy="175" r="5" fill="#2f2f2f"/>
-  <path d="M220 205 Q240 222 260 205" stroke="#2f2f2f" stroke-width="4" fill="none"/>
-  <text x="168" y="520" font-family="Helvetica, Arial, sans-serif" font-size="22" fill="#2f4858">GemStone</text>
+  <image x="132" y="188" width="208" height="208" href="emerald-logo.svg" preserveAspectRatio="xMidYMid meet"/>
+  <rect x="140" y="478" width="170" height="48" rx="12" fill="#e5f1fb" stroke="#2f4858" stroke-width="3"/>
+  <text x="225" y="509" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" fill="#2f4858">GemStone</text>
 
-  <rect x="610" y="250" width="120" height="190" rx="14" fill="#ffcf96" stroke="#3c2f2f" stroke-width="4"/>
-  <circle cx="670" cy="220" r="42" fill="#f0c9a5" stroke="#3c2f2f" stroke-width="4"/>
-  <text x="598" y="475" font-family="Helvetica, Arial, sans-serif" font-size="22" fill="#7a5120">Python app</text>
+  <g transform="translate(576 188)">
+    <rect x="0" y="0" width="188" height="206" rx="18" fill="#ffffff" stroke="#3c2f2f" stroke-width="4"/>
+    <path d="M18 0 H170 Q188 0 188 18 V38 H0 V18 Q0 0 18 0 Z" fill="#2e5f8d"/>
+    <circle cx="26" cy="19" r="5" fill="#ffd3d3"/>
+    <circle cx="42" cy="19" r="5" fill="#ffe8a6"/>
+    <circle cx="58" cy="19" r="5" fill="#c9f0d0"/>
+    <rect x="24" y="58" width="140" height="24" rx="8" fill="#edf5ff"/>
+    <rect x="24" y="98" width="102" height="12" rx="6" fill="#c0d9f0"/>
+    <rect x="24" y="120" width="138" height="12" rx="6" fill="#d6e6f5"/>
+    <rect x="24" y="146" width="90" height="34" rx="10" fill="#e5f1fb" stroke="#2e5f8d" stroke-width="2.5"/>
+    <text x="94" y="75" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#264968">Python service</text>
+    <text x="69" y="168" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#264968">API</text>
+    <text x="130" y="168" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#6f86a0">stable</text>
+  </g>
+  <rect x="574" y="476" width="192" height="48" rx="12" fill="#ffe4bf" stroke="#7a5120" stroke-width="3"/>
+  <text x="670" y="507" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" fill="#7a5120">Python app</text>
 
   <rect x="380" y="240" width="170" height="120" rx="16" fill="#dceeff" stroke="#295d8a" stroke-width="4"/>
-  <text x="420" y="288" font-family="Helvetica, Arial, sans-serif" font-size="24" fill="#17344f">Credentials?</text>
-  <text x="425" y="322" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#17344f">Transaction plan?</text>
+  <text x="465" y="289" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="24" fill="#17344f">Credentials?</text>
+  <text x="465" y="323" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#17344f">Transaction plan?</text>
 
-  <path d="M320 290 L380 290" stroke="#3c2f2f" stroke-width="6" marker-end="url(#arrow)"/>
-  <path d="M550 320 L610 320" stroke="#3c2f2f" stroke-width="6" marker-end="url(#arrow)"/>
-  <text x="315" y="392" font-family="Georgia, serif" font-size="24" fill="#6b5140">"No defaults, no nonsense."</text>
-  <text x="312" y="425" font-family="Georgia, serif" font-size="24" fill="#6b5140">"Also please stop forgetting to commit."</text>
+  <path d="M332 300 L380 300" stroke="#3c2f2f" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M550 300 L576 300" stroke="#3c2f2f" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="332" y="410" width="476" height="54" rx="14" fill="#fff5e8" stroke="#c6ab92" stroke-width="2.5"/>
+  <text x="570" y="435" text-anchor="middle" font-family="Georgia, serif" font-size="21" fill="#6b5140">"No defaults, no nonsense."</text>
+  <text x="570" y="456" text-anchor="middle" font-family="Georgia, serif" font-size="21" fill="#6b5140">"Also please stop forgetting to commit."</text>
 
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10 z" fill="#3c2f2f"/>
     </marker>
   </defs>

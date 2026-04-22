@@ -137,9 +137,10 @@ th {
 .title-page {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 250mm;
   page-break-after: always;
+  padding-top: 8mm;
 }
 
 .title-page h1 {
@@ -151,12 +152,31 @@ th {
 .subtitle {
   font-size: 15pt;
   color: #6d5c4f;
-  margin-bottom: 8mm;
+  margin-bottom: 6mm;
 }
 
 .meta {
   color: #7a6d61;
   font-size: 10.5pt;
+}
+
+.cover-art {
+  width: 100%;
+  max-width: 170mm;
+  max-height: none;
+  margin: 4mm auto 7mm auto;
+}
+
+.title-page.cover-only {
+  justify-content: center;
+  padding-top: 0;
+  min-height: 257mm;
+}
+
+.title-page.cover-only .cover-art {
+  width: 186mm;
+  max-width: none;
+  margin: 0 auto;
 }
 
 .page-break {

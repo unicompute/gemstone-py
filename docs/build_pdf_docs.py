@@ -25,6 +25,8 @@ class BuildTarget:
     title: str
     subtitle: str
     source_paths: tuple[Path, ...]
+    cover_image: Path | None = None
+    cover_only: bool = False
 
 
 def _normalize_target(target: str, source_dir: Path) -> str:
@@ -210,14 +212,29 @@ def _build_html(target: BuildTarget) -> Path:
         toc_entries.extend(toc)
         body_parts.append(rendered)
 
-    title_page = f"""
-    <section class="title-page">
-      <h1>{html.escape(target.title)}</h1>
-      <div class="subtitle">{html.escape(target.subtitle)}</div>
-      <div class="meta">Generated from the Markdown sources in gemstone-py/docs</div>
-      <div class="meta">Assets are local SVG illustrations stored in the repository.</div>
-    </section>
-    """
+    cover_html = ""
+    if target.cover_image is not None:
+        cover_html = (
+            f'<img class="cover-art" src="{html.escape(target.cover_image.resolve().as_uri(), quote=True)}" '
+            f'alt="{html.escape(target.title, quote=True)} cover art"/>'
+        )
+
+    if target.cover_only and target.cover_image is not None:
+        title_page = f"""
+        <section class="title-page cover-only">
+          {cover_html}
+        </section>
+        """
+    else:
+        title_page = f"""
+        <section class="title-page">
+          <h1>{html.escape(target.title)}</h1>
+          <div class="subtitle">{html.escape(target.subtitle)}</div>
+          {cover_html}
+          <div class="meta">Generated from the Markdown sources in gemstone-py/docs</div>
+          <div class="meta">Assets are local SVG illustrations stored in the repository.</div>
+        </section>
+        """
 
     note = """
     <section class="doc-note">
@@ -298,6 +315,8 @@ def main() -> int:
                 funny_dir / "part-06-concurrency-conflicts-and-retries.md",
                 funny_dir / "part-07-benchmarks-releases-and-operator-survival.md",
             ),
+            DOCS_DIR / "assets" / "cartoons" / "funny-introduction-cover.svg",
+            True,
         ),
     )
 

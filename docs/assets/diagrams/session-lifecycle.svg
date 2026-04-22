@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="820" viewBox="0 0 1100 820">
-  <rect width="1100" height="820" fill="#fbf7f1"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="950" viewBox="0 0 1100 950">
+  <rect width="1100" height="950" fill="#fbf7f1"/>
   <text x="60" y="70" font-family="Georgia, serif" font-size="34" fill="#2f2a24">GemStone Session and Transaction Lifecycle</text>
   <text x="60" y="104" font-family="Georgia, serif" font-size="18" fill="#6f6457">This is the happy path. The unhappy path is the same diagram, only louder.</text>
 
@@ -9,35 +9,35 @@
     <text x="125" y="232" font-size="16" fill="#17344f">GemStoneConfig.from_env() resolves GS_STONE,</text>
     <text x="125" y="256" font-size="16" fill="#17344f">GS_USERNAME, GS_PASSWORD, and library hints.</text>
 
-    <rect x="90" y="305" width="920" height="120" rx="20" fill="#ffe7cc" stroke="#9b5f1e" stroke-width="3"/>
-    <text x="125" y="340" font-size="28" fill="#5b3410">2. Open session</text>
-    <text x="125" y="372" font-size="16" fill="#5b3410">GemStoneSession(config=..., transaction_policy=...)</text>
-    <text x="125" y="396" font-size="16" fill="#5b3410">logs in through libgcirpc.</text>
+    <rect x="90" y="345" width="920" height="120" rx="20" fill="#ffe7cc" stroke="#9b5f1e" stroke-width="3"/>
+    <text x="125" y="380" font-size="28" fill="#5b3410">2. Open session</text>
+    <text x="125" y="412" font-size="16" fill="#5b3410">GemStoneSession(config=..., transaction_policy=...)</text>
+    <text x="125" y="436" font-size="16" fill="#5b3410">logs in through libgcirpc.</text>
 
-    <rect x="90" y="450" width="920" height="130" rx="20" fill="#e1f6df" stroke="#2c6b3e" stroke-width="3"/>
-    <text x="125" y="495" font-size="28" fill="#1b4829">3. Work inside a transaction</text>
-    <text x="125" y="527" font-size="16" fill="#1b4829">Read PersistentRoot, update GSCollection, log events,</text>
-    <text x="125" y="551" font-size="16" fill="#1b4829">or use session_scope() around a unit of work.</text>
+    <rect x="90" y="540" width="920" height="130" rx="20" fill="#e1f6df" stroke="#2c6b3e" stroke-width="3"/>
+    <text x="125" y="585" font-size="28" fill="#1b4829">3. Work inside a transaction</text>
+    <text x="125" y="617" font-size="16" fill="#1b4829">Read PersistentRoot, update GSCollection, log events,</text>
+    <text x="125" y="641" font-size="16" fill="#1b4829">or use session_scope() around a unit of work.</text>
 
-    <rect x="90" y="605" width="440" height="120" rx="20" fill="#fff1d8" stroke="#9b5f1e" stroke-width="3"/>
-    <text x="125" y="655" font-size="28" fill="#5b3410">4A. Commit on success</text>
-    <text x="125" y="682" font-size="15" fill="#5b3410">Commit explicitly or let</text>
-    <text x="125" y="704" font-size="15" fill="#5b3410">COMMIT_ON_SUCCESS do it.</text>
+    <rect x="90" y="770" width="440" height="120" rx="20" fill="#fff1d8" stroke="#9b5f1e" stroke-width="3"/>
+    <text x="125" y="820" font-size="28" fill="#5b3410">4A. Commit on success</text>
+    <text x="125" y="847" font-size="15" fill="#5b3410">Commit explicitly or let</text>
+    <text x="125" y="869" font-size="15" fill="#5b3410">COMMIT_ON_SUCCESS do it.</text>
 
-    <rect x="570" y="605" width="440" height="120" rx="20" fill="#ffe3e3" stroke="#8a2f2f" stroke-width="3"/>
-    <text x="605" y="655" font-size="28" fill="#5b1717">4B. Abort on failure</text>
-    <text x="605" y="682" font-size="15" fill="#5b1717">Exceptions, failed requests, or</text>
-    <text x="605" y="704" font-size="15" fill="#5b1717">ABORT_ON_EXIT unwind safely.</text>
+    <rect x="570" y="770" width="440" height="120" rx="20" fill="#ffe3e3" stroke="#8a2f2f" stroke-width="3"/>
+    <text x="605" y="820" font-size="28" fill="#5b1717">4B. Abort on failure</text>
+    <text x="605" y="847" font-size="15" fill="#5b1717">Exceptions, failed requests, or</text>
+    <text x="605" y="869" font-size="15" fill="#5b1717">ABORT_ON_EXIT unwind safely.</text>
   </g>
 
-  <path d="M550 275 L550 305" stroke="#2f2a24" stroke-width="6" marker-end="url(#arrow)"/>
-  <path d="M550 425 L550 450" stroke="#2f2a24" stroke-width="6" marker-end="url(#arrow)"/>
-  <path d="M410 580 L310 605" stroke="#2f2a24" stroke-width="6" fill="none" marker-end="url(#arrow)"/>
-  <path d="M690 580 L790 605" stroke="#2f2a24" stroke-width="6" fill="none" marker-end="url(#arrow)"/>
+  <path d="M550 275 L550 345" stroke="#2f2a24" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M550 465 L550 540" stroke="#2f2a24" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M500 670 L345 770" stroke="#2f2a24" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M600 670 L755 770" stroke="#2f2a24" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
 
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M0 0 L10 5 L0 10 z" fill="#2f2a24"/>
+    <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M0 0 L8 4 L0 8 z" fill="#2f2a24"/>
     </marker>
   </defs>
 </svg>
