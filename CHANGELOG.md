@@ -4,6 +4,11 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+## 0.2.5 - 2026-04-22
+
+- Updated documentation diagrams: improved arrow routing in architecture overview, examples map, and cookbook flow SVGs.
+- Rebuilt companion PDF with corrected visuals.
+
 ## 0.2.4 - 2026-04-21
 
 - Published to PyPI and Test PyPI.
