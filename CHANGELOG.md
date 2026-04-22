@@ -4,6 +4,10 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+## 0.2.4 - 2026-04-21
+
+- Published to PyPI and Test PyPI.
+
 ## 0.2.3 - 2026-04-21
 
 - Added a full `docs/` manual set with a setup guide, user manual, examples guide, cookbook, and a long-form humorous introduction.
