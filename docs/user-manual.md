@@ -4,8 +4,6 @@ This manual explains the public surface of `gemstone-py` from the point of view
 of a user who wants to build reliable code, not just make a demo print a nice
 dictionary once.
 
-![Architecture overview](assets/diagrams/architecture-overview.svg)
-
 ## The Mental Model
 
 Three ideas matter more than the rest:

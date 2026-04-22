@@ -3,44 +3,68 @@
   <text x="60" y="70" font-family="Georgia, serif" font-size="34" fill="#31261f">Map of the Examples Directory</text>
   <text x="60" y="104" font-family="Georgia, serif" font-size="18" fill="#6c5b4f">Start in the center, then wander toward the demos that match your appetite for persistence, web apps, or controlled chaos.</text>
 
+  <!-- Centre circle: cx=600 cy=425 r=105 -->
   <circle cx="600" cy="425" r="105" fill="#dceeff" stroke="#255f88" stroke-width="4"/>
-  <text x="522" y="410" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#17344f">examples/</text>
-  <text x="515" y="445" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#17344f">tour starts here</text>
+  <text x="600" y="415" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#17344f">examples/</text>
+  <text x="600" y="448" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#17344f">tour starts here</text>
 
-  <g font-family="Helvetica, Arial, sans-serif">
-    <rect x="120" y="130" width="260" height="120" rx="20" fill="#ffe7cc" stroke="#9b5f1e" stroke-width="3"/>
-    <text x="160" y="180" font-size="28" fill="#5b3410">example.py</text>
-    <text x="145" y="212" font-size="18" fill="#5b3410">grand tour of sessions, roots, logs,</text>
-    <text x="145" y="238" font-size="18" fill="#5b3410">collections, conflicts, and locks</text>
+  <!-- top-left: example.py  x=100..400, y=115..265  centre=(250,190) -->
+  <rect x="100" y="115" width="300" height="150" rx="20" fill="#ffe7cc" stroke="#9b5f1e" stroke-width="3"/>
+  <text x="250" y="158" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#5b3410">example.py</text>
+  <text x="250" y="192" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b3410">grand tour of sessions, roots,</text>
+  <text x="250" y="214" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b3410">logs, collections, conflicts,</text>
+  <text x="250" y="236" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b3410">and locks</text>
 
-    <rect x="815" y="130" width="270" height="120" rx="20" fill="#ffe7cc" stroke="#9b5f1e" stroke-width="3"/>
-    <text x="845" y="180" font-size="28" fill="#5b3410">misc/</text>
-    <text x="840" y="212" font-size="18" fill="#5b3410">smalltalk_demo.py and tiny CLI demos</text>
-    <text x="840" y="238" font-size="18" fill="#5b3410">good for first contact</text>
+  <!-- top-right: misc/  x=800..1100, y=115..265  centre=(950,190) -->
+  <rect x="800" y="115" width="300" height="150" rx="20" fill="#ffe7cc" stroke="#9b5f1e" stroke-width="3"/>
+  <text x="950" y="158" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#5b3410">misc/</text>
+  <text x="950" y="196" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b3410">smalltalk_demo.py and</text>
+  <text x="950" y="218" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b3410">tiny CLI demos</text>
+  <text x="950" y="240" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b3410">good for first contact</text>
 
-    <rect x="80" y="620" width="280" height="130" rx="20" fill="#e1f6df" stroke="#2c6b3e" stroke-width="3"/>
-    <text x="120" y="674" font-size="28" fill="#1b4829">persistence/</text>
-    <text x="110" y="706" font-size="18" fill="#1b4829">GSCollection, GStore, migrations,</text>
-    <text x="110" y="732" font-size="18" fill="#1b4829">KD trees, hat tricks, indexing</text>
+  <!-- bottom-left: persistence/  x=60..380, y=610..770  centre=(220,690) -->
+  <rect x="60" y="610" width="320" height="160" rx="20" fill="#e1f6df" stroke="#2c6b3e" stroke-width="3"/>
+  <text x="220" y="655" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#1b4829">persistence/</text>
+  <text x="220" y="690" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#1b4829">GSCollection, GStore,</text>
+  <text x="220" y="712" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#1b4829">migrations, KD trees,</text>
+  <text x="220" y="734" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#1b4829">hat tricks, indexing</text>
 
-    <rect x="820" y="620" width="280" height="130" rx="20" fill="#eadfff" stroke="#56337f" stroke-width="3"/>
-    <text x="885" y="674" font-size="28" fill="#3b2554">flask/</text>
-    <text x="850" y="706" font-size="18" fill="#3b2554">simple_blog, magtag, sessions,</text>
-    <text x="850" y="732" font-size="18" fill="#3b2554">sinatra ports, request handling</text>
+  <!-- bottom-right: flask/  x=820..1140, y=610..770  centre=(980,690) -->
+  <rect x="820" y="610" width="320" height="160" rx="20" fill="#eadfff" stroke="#56337f" stroke-width="3"/>
+  <text x="980" y="655" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#3b2554">flask/</text>
+  <text x="980" y="690" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#3b2554">simple_blog, magtag,</text>
+  <text x="980" y="712" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#3b2554">sessions, sinatra ports,</text>
+  <text x="980" y="734" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#3b2554">request handling</text>
 
-    <rect x="460" y="675" width="280" height="110" rx="20" fill="#ffe3e3" stroke="#8a2f2f" stroke-width="3"/>
-    <text x="525" y="720" font-size="28" fill="#5b1717">django/ and webstack/</text>
-    <text x="505" y="752" font-size="18" fill="#5b1717">full app translations and route demos</text>
-  </g>
+  <!-- bottom-centre: django/  x=440..760, y=660..790  centre=(600,725) -->
+  <rect x="440" y="660" width="320" height="130" rx="20" fill="#ffe3e3" stroke="#8a2f2f" stroke-width="3"/>
+  <text x="600" y="702" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#5b1717">django/ and webstack/</text>
+  <text x="600" y="732" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b1717">full app translations</text>
+  <text x="600" y="754" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b1717">and route demos</text>
 
-  <path d="M526 341 L320 250" stroke="#31261f" stroke-width="6" fill="none" marker-end="url(#arrow)"/>
-  <path d="M675 341 L855 250" stroke="#31261f" stroke-width="6" fill="none" marker-end="url(#arrow)"/>
-  <path d="M500 520 L310 620" stroke="#31261f" stroke-width="6" fill="none" marker-end="url(#arrow)"/>
-  <path d="M700 520 L860 620" stroke="#31261f" stroke-width="6" fill="none" marker-end="url(#arrow)"/>
-  <path d="M600 530 L600 675" stroke="#31261f" stroke-width="6" fill="none" marker-end="url(#arrow)"/>
+  <!--
+    Circle centre (600,425) r=105. Arrows start ON the circle boundary.
+    Recomputed for updated box positions:
+
+    → example.py  nearest point on box bottom edge: (250,265)
+      vec=(-350,-160) len=385  unit=(-0.909,-0.416)  start=(600-95,425-44)=(505,381)  end=(250,265)
+    → misc/       nearest point on box bottom edge: (950,265)
+      vec=(350,-160)  len=385  unit=(0.909,-0.416)   start=(600+95,425-44)=(695,381)  end=(950,265)
+    → persistence/ nearest point on box top edge: (380,610)
+      vec=(-380,185)  len=423  unit=(-0.899,0.438)   start=(600-94,425+46)=(506,471)  end=(380,610)
+    → flask/      nearest point on box top edge: (820,610)
+      vec=(220,185)   len=287  unit=(0.766,0.642)    start=(600+80,425+67)=(680,492)  end=(820,610)
+    → django/     nearest point on box top: (600,660)
+      vec=(0,235)     unit=(0,1)                      start=(600,530)  end=(600,660)
+  -->
+  <line x1="505" y1="381" x2="252" y2="267" stroke="#31261f" stroke-width="2.5" marker-end="url(#arr)"/>
+  <line x1="695" y1="381" x2="948" y2="267" stroke="#31261f" stroke-width="2.5" marker-end="url(#arr)"/>
+  <line x1="506" y1="471" x2="382" y2="608" stroke="#31261f" stroke-width="2.5" marker-end="url(#arr)"/>
+  <line x1="680" y1="492" x2="818" y2="608" stroke="#31261f" stroke-width="2.5" marker-end="url(#arr)"/>
+  <line x1="600" y1="530" x2="600" y2="658" stroke="#31261f" stroke-width="2.5" marker-end="url(#arr)"/>
 
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+    <marker id="arr" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto">
       <path d="M0 0 L10 5 L0 10 z" fill="#31261f"/>
     </marker>
   </defs>

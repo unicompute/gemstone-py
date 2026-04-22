@@ -10,6 +10,7 @@
   <text x="120" y="282" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#17344f">scripts and notebooks</text>
   <text x="120" y="309" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#17344f">Flask or Django apps</text>
 
+  <!-- gemstone_py box: x=455..775, y=150..375 -->
   <rect x="455" y="150" width="320" height="225" rx="22" fill="#ffe7cc" stroke="#9b5f1e" stroke-width="3"/>
   <text x="545" y="195" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#5b3410">gemstone_py</text>
   <text x="490" y="235" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b3410">GemStoneSession</text>
@@ -18,6 +19,7 @@
   <text x="490" y="310" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b3410">concurrency helpers / web providers</text>
   <text x="490" y="334" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b3410">Flask hooks and scoped sessions</text>
 
+  <!-- libgcirpc box: x=860..1115, y=180..345 -->
   <rect x="860" y="180" width="255" height="165" rx="20" fill="#eadfff" stroke="#56337f" stroke-width="3"/>
   <text x="907" y="220" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#3b2554">libgcirpc</text>
   <text x="900" y="255" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#3b2554">GCI bridge</text>
@@ -25,6 +27,7 @@
   <text x="890" y="306" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#3b2554">ctypes bindings</text>
   <text x="890" y="330" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#3b2554">Still strict. Still moody.</text>
 
+  <!-- GemStone box: x=255..945, y=462..644 -->
   <rect x="255" y="462" width="690" height="182" rx="24" fill="#dff5df" stroke="#2c6b3e" stroke-width="3"/>
   <text x="330" y="507" font-family="Helvetica, Arial, sans-serif" font-size="32" fill="#1b4829">GemStone/S 64 repository</text>
   <text x="330" y="544" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#1b4829">UserGlobals, Globals, Published, SessionMethods</text>
@@ -32,17 +35,23 @@
   <text x="330" y="596" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#1b4829">transactions, locks, conflicts, and the occasional</text>
   <text x="330" y="620" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#1b4829">"who committed that?" moment</text>
 
-  <path d="M340 255 L455 255" stroke="#3c2f2f" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow)"/>
-  <path d="M775 255 L860 255" stroke="#3c2f2f" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow)"/>
-  <path d="M1004 345 L1004 392 L1042 392 L1042 448 L900 448 L900 462" stroke="#3c2f2f" stroke-width="4" stroke-linecap="round" fill="none" marker-end="url(#arrow)"/>
-  <path d="M615 375 L615 462" stroke="#3c2f2f" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow)"/>
+  <!-- Python App right (340,255) → gemstone_py left (455,255): horizontal -->
+  <line x1="340" y1="255" x2="453" y2="255" stroke="#3c2f2f" stroke-width="3" marker-end="url(#arr)"/>
+  <!-- gemstone_py right (775,255) → libgcirpc left (860,255): horizontal -->
+  <line x1="775" y1="255" x2="858" y2="255" stroke="#3c2f2f" stroke-width="3" marker-end="url(#arr)"/>
+  <!-- libgcirpc bottom-centre (987,345) → GemStone top at same x (987) BUT 987>945 so use x=880
+       libgcirpc left=860, GemStone right=945 — overlap x=860..945, use centre x=900
+       Straight vertical: start (900,345) end (900,462) — both inside their respective boxes -->
+  <line x1="900" y1="345" x2="900" y2="460" stroke="#3c2f2f" stroke-width="3" marker-end="url(#arr)"/>
+  <!-- gemstone_py bottom-centre (615,375) → GemStone top (615,462): vertical -->
+  <line x1="615" y1="375" x2="615" y2="460" stroke="#3c2f2f" stroke-width="3" marker-end="url(#arr)"/>
 
   <text x="600" y="676" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-weight="700" fill="#6d5c4f">Application code stays in Python.</text>
   <text x="600" y="700" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-weight="700" fill="#6d5c4f">The stone keeps the state, the grudges, and the transactions.</text>
 
   <defs>
-    <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M0 0 L8 4 L0 8 z" fill="#3c2f2f"/>
+    <marker id="arr" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#3c2f2f"/>
     </marker>
   </defs>
 </svg>
