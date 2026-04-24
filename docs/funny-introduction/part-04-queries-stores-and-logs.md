@@ -14,7 +14,6 @@ That is when the specialist tools step onto the stage:
 Each one solves a different problem. The trick is not merely knowing that they
 exist. The trick is knowing when each one is the least surprising tool.
 
-\newpage
 
 ## `GSCollection`: When Search Begins to Matter
 
@@ -34,7 +33,6 @@ It is not good for:
 - replacing all dictionaries just because indexing sounds sophisticated
 - pretending you now have an ORM universe and therefore wisdom
 
-\newpage
 
 ## A Good Reason to Use `GSCollection`
 
@@ -55,7 +53,6 @@ That is `GSCollection` territory.
 The package examples around indexing do a good job of teaching exactly this
 moment, which is why they remain worth reading even if you already know the API.
 
-\newpage
 
 ## Indexes Are a Promise to Your Future Self
 
@@ -72,7 +69,6 @@ definition learns which queries the system actually values.
 
 That is an underrated form of documentation. Good indexes explain the workload.
 
-\newpage
 
 ## `GStore`: A Repository Store That Feels Like a Store
 
@@ -90,7 +86,6 @@ Sometimes the best application abstraction is:
 
 That is exactly the space `GStore` occupies.
 
-\newpage
 
 ## Why `GStore` Is Nice
 
@@ -112,7 +107,6 @@ That distinction is subtle and useful:
 
 Confusing the two makes APIs worse and conversations longer.
 
-\newpage
 
 ## `ObjectLog`: When the Past Needs a Filing System
 
@@ -131,7 +125,6 @@ Python logging answers:
 
 That difference matters when audits, history, and postmortems become real.
 
-\newpage
 
 ## The Psychological Value of a Good Log
 
@@ -146,7 +139,6 @@ Systems without durable event logs create a familiar species of meeting:
 An `ObjectLog` does not solve every mystery, but it improves the quality of your
 ignorance. That is a large operational gift.
 
-\newpage
 
 ## Screenshot Intermission: Benchmarks Are Not the Same as Examples
 
@@ -158,7 +150,6 @@ That separation is part of the same design discipline that makes the persistence
 helpers useful. Teaching code is not measurement policy. Measurement policy is
 measurement policy.
 
-\newpage
 
 ## Choosing Between the Three
 
@@ -183,7 +174,6 @@ Use `ObjectLog` when:
 The point is not to pick a winner. The point is to stop forcing one abstraction
 to cosplay as all the others.
 
-\newpage
 
 ## Performance Work Happened Here Too
 
@@ -206,7 +196,6 @@ The package now has:
 
 That makes the performance story concrete instead of ceremonial.
 
-\newpage
 
 ## The Main Example Ties Them Together
 
@@ -224,7 +213,6 @@ A library becomes easier to trust when the major pieces feel like they were
 designed to live in the same house, rather than as distant cousins introduced at
 a wedding.
 
-\newpage
 
 ## A Joke About Naming Stores
 
@@ -241,7 +229,6 @@ Name them like they are real.
 
 Your benchmark reports, cleanup scripts, and future self will all appreciate it.
 
-\newpage
 
 ## A Practical Design Heuristic
 
@@ -258,7 +245,6 @@ If the answer is:
 
 That question is often enough to choose correctly.
 
-\newpage
 
 ## End of Part IV
 
@@ -271,7 +257,6 @@ the web layer.
 Request lifecycles make transaction design visible in a way scripts rarely do.
 That is why the next part exists.
 
-\newpage
 
 ## Part IV Notes Page
 

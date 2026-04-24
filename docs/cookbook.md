@@ -230,20 +230,40 @@ Longer soak run:
 GS_RUN_LIVE=1 GS_RUN_LIVE_SOAK=1 ./scripts/run_live_checks.sh
 ```
 
-## Recipe 19: Understand Commit Conflicts Without Pretending They Are Rare
-
-![Commit conflict cartoon](assets/cartoons/commit-conflict-cafe.svg)
+## Recipe 19: Handle Commit Conflicts Without Pretending They Are Rare
 
 When multiple sessions modify overlapping state, conflicts are normal. The right
-pattern is:
+pattern:
+
+```python
+from gemstone_py import GemStoneConfig, GemStoneSession, TransactionPolicy
+from gemstone_py.concurrency import CommitConflictError
+
+config = GemStoneConfig.from_env()
+
+for attempt in range(3):
+    with GemStoneSession(config=config,
+                         transaction_policy=TransactionPolicy.MANUAL) as session:
+        try:
+            # reload data each attempt — previous read is stale after abort
+            root = PersistentRoot(session)
+            root["counter"] = (root.get("counter") or 0) + 1
+            session.commit()
+            break
+        except CommitConflictError:
+            session.abort()
+            if attempt == 2:
+                raise
+```
+
+Rules:
 
 - keep the write unit small
-- retry where appropriate
-- do not treat conflict exceptions as a shocking personal betrayal
+- reload data after every abort — the previous read is stale
+- bound the retry count — do not loop forever
+- log conflicts — frequent conflicts signal a design smell, not bad luck
 
 ## Recipe 20: Learn a Queue With a Hat
-
-![Queue hat trick cartoon](assets/cartoons/queue-hat-trick.svg)
 
 The hat trick example is memorable because it teaches a real primitive through a
 slightly ridiculous scenario. You should keep more examples like that in your

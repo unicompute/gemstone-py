@@ -1,10 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="980" height="620" viewBox="0 0 980 620">
   <rect width="980" height="620" fill="#f7efe5"/>
-  <text x="50" y="70" font-family="Georgia, serif" font-size="30" fill="#352922">Cartoon: Commit Conflict Cafe</text>
+  <text x="50" y="70" font-family="Georgia, serif" font-size="30" font-weight="700" fill="#352922">Café Intermission</text>
+  <text x="50" y="98" font-family="Georgia, serif" font-size="16" fill="#7a6a5a">Two sessions, one row. Someone has to retry.</text>
+
   <rect x="60" y="120" width="860" height="440" rx="26" fill="#fffaf3" stroke="#352922" stroke-width="4"/>
-  <image x="150" y="146" width="216" height="216" href="eps-male-circle.png" preserveAspectRatio="xMidYMid meet"/>
-  <image x="614" y="146" width="216" height="216" href="eps-female-circle.png" preserveAspectRatio="xMidYMid meet"/>
-  <g transform="translate(332 242)">
+
+  <image x="150" y="146" width="216" height="216" href="eps-female-circle.png" preserveAspectRatio="xMidYMid meet"/>
+  <image x="614" y="146" width="216" height="216" href="eps-male-circle.png" preserveAspectRatio="xMidYMid meet"/>
+
+  <g transform="translate(308 228)">
     <rect x="0" y="0" width="36" height="44" rx="4" fill="#fffdf7" stroke="#352922" stroke-width="3"/>
     <path d="M24 0 L36 12 L24 12 Z" fill="#efe2cf" stroke="#352922" stroke-width="3"/>
     <line x1="8" y1="18" x2="27" y2="18" stroke="#352922" stroke-width="2.5" stroke-linecap="round"/>
@@ -14,7 +18,7 @@
     <path d="M40 24 L45 19 L50 24 L45 29 Z" fill="#f49a85" stroke="#352922" stroke-width="2.5"/>
     <path d="M21 43 L26 48 L18 50 Z" fill="#f8efdc" stroke="#352922" stroke-width="2.5"/>
   </g>
-  <g transform="translate(772 242)">
+  <g transform="translate(790 228)">
     <rect x="0" y="0" width="36" height="44" rx="4" fill="#fffdf7" stroke="#352922" stroke-width="3"/>
     <path d="M24 0 L36 12 L24 12 Z" fill="#efe2cf" stroke="#352922" stroke-width="3"/>
     <line x1="8" y1="18" x2="27" y2="18" stroke="#352922" stroke-width="2.5" stroke-linecap="round"/>
@@ -24,10 +28,17 @@
     <path d="M40 24 L45 19 L50 24 L45 29 Z" fill="#f49a85" stroke="#352922" stroke-width="2.5"/>
     <path d="M21 43 L26 48 L18 50 Z" fill="#f8efdc" stroke="#352922" stroke-width="2.5"/>
   </g>
+
   <rect x="400" y="220" width="180" height="170" rx="18" fill="#dff5df" stroke="#2c6b3e" stroke-width="4"/>
-  <text x="430" y="285" font-family="Helvetica, Arial, sans-serif" font-size="24" fill="#1b4829">Shared row</text>
-  <text x="420" y="320" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#1b4829">"Both of you</text>
-  <text x="425" y="348" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#1b4829">edited me."</text>
+  <text x="490" y="270" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="24" fill="#1b4829">Shared row</text>
+  <text x="490" y="312" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#1b4829">"Both of you</text>
+  <text x="490" y="340" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#1b4829">edited me."</text>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0 L8 4 L0 8 z" fill="#352922"/>
+    </marker>
+  </defs>
 
   <path d="M356 300 L400 300" stroke="#352922" stroke-width="4" marker-end="url(#arrow)"/>
   <path d="M624 300 L580 300" stroke="#352922" stroke-width="4" marker-end="url(#arrow)"/>
@@ -36,10 +47,4 @@
   <text x="560" y="470" font-family="Georgia, serif" font-size="24" fill="#62493a">Session B: "I brought retry logic."</text>
   <text x="490" y="516" text-anchor="middle" font-family="Georgia, serif" font-size="24" fill="#62493a">The moral: conflicts are not bugs.</text>
   <text x="490" y="544" text-anchor="middle" font-family="Georgia, serif" font-size="24" fill="#62493a">They are schedules with opinions.</text>
-
-  <defs>
-    <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M0 0 L8 4 L0 8 z" fill="#352922"/>
-    </marker>
-  </defs>
 </svg>

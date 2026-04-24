@@ -5,8 +5,6 @@ The top-level `README.md` in the repo is still the quickest way to get the
 package installed, but the files here are meant to answer the questions people
 ask on day two, day ten, and day forty-five.
 
-![Architecture overview](assets/diagrams/architecture-overview.svg)
-
 ## Reading Order
 
 If you are new to the project, use this order:
@@ -17,13 +15,17 @@ If you are new to the project, use this order:
 4. [Cookbook](cookbook.md)
 5. [Funny Introduction](funny-introduction/README.md)
 
+If you want a narrative overview before diving in:
+
+- [Medium article](medium-article.md) — a complete end-to-end guide written in article style
+
 If you are already productive and only need answers:
 
-- "Why is my login failing?" -> [Setup Guide](setup-guide.md)
-- "Which transaction policy should I use?" -> [User Manual](user-manual.md)
-- "Which example should I run first?" -> [Examples Guide](examples-guide.md)
-- "How do I do X quickly?" -> [Cookbook](cookbook.md)
-- "I want the whole story, plus jokes." -> [Funny Introduction](funny-introduction/README.md)
+- "Why is my login failing?" → [Setup Guide](setup-guide.md)
+- "Which transaction policy should I use?" → [User Manual](user-manual.md)
+- "Which example should I run first?" → [Examples Guide](examples-guide.md)
+- "How do I do X quickly?" → [Cookbook](cookbook.md)
+- "I want the whole story, plus jokes." → [Funny Introduction](funny-introduction/README.md)
 
 ## What This Docs Set Covers
 

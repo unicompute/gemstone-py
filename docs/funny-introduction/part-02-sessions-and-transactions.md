@@ -10,7 +10,6 @@ That behaviour lives in sessions and transactions.
 This is where many persistence systems become vague. `gemstone-py` has instead
 become rather blunt, which is healthy.
 
-\newpage
 
 ## What a Session Is
 
@@ -31,7 +30,6 @@ stone. That relationship includes:
 - visibility of committed and uncommitted work
 - failure modes that are more honest than most web developers prefer before lunch
 
-\newpage
 
 ## Configuration First, Not Last
 
@@ -50,7 +48,6 @@ This is valuable because:
 It also means your login story can be explained in one sentence instead of six
 fragments and a shrug.
 
-\newpage
 
 ## The Session Lifecycle in One Diagram
 
@@ -71,7 +68,6 @@ Many bad persistence stories happen because somebody mentally removed step 4 and
 replaced it with "the library will surely do what I meant." This package works
 hard to stop that sentence from succeeding.
 
-\newpage
 
 ## Manual Is the Honest Default
 
@@ -90,7 +86,6 @@ Manual means:
 The price is that you must think. The reward is that your data model is not held
 together by misunderstood context manager etiquette.
 
-\newpage
 
 ## The Three Policies
 
@@ -121,7 +116,6 @@ Use when:
 
 None of these are abstract philosophy. They are repository behaviour.
 
-\newpage
 
 ## `session_scope(...)` Is the Friendly Path
 
@@ -140,7 +134,6 @@ This pattern fits services and request handlers naturally. It also keeps commit
 semantics close to the application boundary, which is a polite way of saying
 "fewer people will accidentally commit from somewhere bizarre."
 
-\newpage
 
 ## The Classic Mistake: "It Worked, But the Data Is Gone"
 
@@ -161,7 +154,6 @@ The fix is not a mysterious GemStone ritual. The fix is one of:
 - use `session_scope(...)`
 - call `commit()` explicitly
 
-\newpage
 
 ## A Relationship Analogy, Unfortunately Accurate
 
@@ -182,7 +174,6 @@ Abort on exit:
 The analogy becomes less funny once you realize how many production bugs come
 from engineers who treat all three states as emotionally interchangeable.
 
-\newpage
 
 ## Nested Transactions and Conflict Handling
 
@@ -201,7 +192,6 @@ parts to deserve tests and a pager.
 The important rule is to keep the retryable section as small and concrete as
 possible. Retrying half a business workflow is a confession, not a design.
 
-\newpage
 
 ## Aborts Are Not Shameful
 
@@ -220,7 +210,6 @@ An abort is often proof that the package is doing its job.
 
 The shame would be half-committed state dressed up as success.
 
-\newpage
 
 ## What Web Integration Changed
 
@@ -239,7 +228,6 @@ If the request lifecycle commits too early, you get a nasty class of bugs:
 That kind of bug is pure administrative sorrow. The package has already done the
 work to avoid it, which means users should actually use the provided web helpers.
 
-\newpage
 
 ## Session Pools and Thread-Local Providers
 
@@ -263,7 +251,6 @@ Neither option changes the central truth:
 
 the session still represents a real transactional relationship with the stone.
 
-\newpage
 
 ## A Bouncer Cartoon Because You Have Earned It
 
@@ -275,7 +262,6 @@ This cartoon is silly, but the caption is not:
 
 That is approximately the package's approach to transaction design.
 
-\newpage
 
 ## Practical Session Rules
 
@@ -291,7 +277,6 @@ If you want a short operational checklist:
 
 These rules are not glamorous. They are reliable.
 
-\newpage
 
 ## A Tiny Worked Example
 
@@ -317,7 +302,6 @@ This small example already tells a useful story:
 
 Many production features are just more ambitious versions of this sentence.
 
-\newpage
 
 ## End of Part II
 
@@ -328,7 +312,6 @@ Next we move into the first major persistence abstraction: `PersistentRoot`.
 That is where things become both friendlier and slightly more dangerous, because
 now the names you choose start to become part of the repository's public memory.
 
-\newpage
 
 ## Part II Notes Page
 

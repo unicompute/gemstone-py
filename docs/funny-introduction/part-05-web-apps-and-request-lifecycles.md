@@ -13,7 +13,6 @@ user-visible incidents.
 This part exists so you do not have to learn that lesson exclusively through
 production embarrassment.
 
-\newpage
 
 ## The First Rule of Web Persistence
 
@@ -37,7 +36,6 @@ If the persistence layer commits too early, you can easily wind up with:
 
 That combination is offensively educational.
 
-\newpage
 
 ## What the Package Provides
 
@@ -55,7 +53,6 @@ This is not a random utility pile. It is the package's answer to the question:
 
 > "How should a Python web app use GemStone responsibly?"
 
-\newpage
 
 ## The Key Design Decision: Teardown Owns the Outcome
 
@@ -74,7 +71,6 @@ already committed, you have created the worst kind of bug:
 
 The package now avoids that class of failure by design.
 
-\newpage
 
 ## A Screenshot of the Kind of App This Enables
 
@@ -90,7 +86,6 @@ Even a small Flask application with:
 
 already benefits from predictable commit-or-abort semantics.
 
-\newpage
 
 ## Pools Versus Thread-Local Providers
 
@@ -114,7 +109,6 @@ Use this when:
 Do not choose based on whichever name sounds more advanced. Choose based on
 actual runtime shape.
 
-\newpage
 
 ## Why Operational Visibility Matters
 
@@ -132,7 +126,6 @@ That means somebody will eventually ask:
 If the package cannot answer those questions, the application will eventually
 answer them by failing in public.
 
-\newpage
 
 ## The `simple_blog` Example
 
@@ -151,7 +144,6 @@ But small enough that a user can still keep the application shape in their head.
 That makes it a much better first web example than a sprawling demo with seven
 screens and an identity crisis.
 
-\newpage
 
 ## The `magtag` Example
 
@@ -170,7 +162,6 @@ It is useful not because you will copy it verbatim, but because it proves the
 package can live inside a web application with enough surface area to trigger
 real integration concerns.
 
-\newpage
 
 ## Session Middleware Is a Moral Choice
 
@@ -188,7 +179,6 @@ Bad middleware says:
 The current `gemstone-py` web design is good specifically because it stopped
 doing that.
 
-\newpage
 
 ## Production Guidance, Short Version
 
@@ -203,7 +193,6 @@ If you are using Flask:
 This is not over-engineering. It is the difference between a system you can
 debug and a system you can narrate only in retrospect.
 
-\newpage
 
 ## The "Handled 500" Story
 
@@ -222,7 +211,6 @@ That failure was useful because:
 The right lesson is not "how embarrassing." The right lesson is "good packages
 allow their own verification lanes to teach them something important."
 
-\newpage
 
 ## Web Development Is Where Discipline Pays Off
 
@@ -240,7 +228,6 @@ This is why the package's investment in session providers, live tests, soak
 tests, and request teardown logic is not optional garnish. It is the core of
 trustworthy web use.
 
-\newpage
 
 ## A Joke About Flask Extensions
 
@@ -254,7 +241,6 @@ Many Flask extensions silently assume they are the only adults in the room.
 That is less romantic than black-box convenience, but much better if you enjoy
 applications that can survive contact with errors.
 
-\newpage
 
 ## End of Part V
 
@@ -265,7 +251,6 @@ Next comes the part that frightens everybody just enough to be useful:
 concurrency, conflicts, shared state, retries, and the rules for not becoming a
 folktale told by more careful engineers.
 
-\newpage
 
 ## Part V Notes Page
 

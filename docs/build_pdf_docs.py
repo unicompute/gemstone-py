@@ -29,26 +29,36 @@ class BuildTarget:
     cover_only: bool = False
 
 
-def _normalize_target(target: str, source_dir: Path) -> str:
+def _normalize_target(target: str, source_dir: Path, known_stems: frozenset[str] | None = None) -> str:
     if target.startswith(("http://", "https://", "mailto:", "#")):
         return target
+    # Cross-document .md link — resolve to an internal anchor when all docs
+    # are compiled into one HTML (companion / book builds).
+    path = target.split("#")[0]
+    fragment = target[len(path):]  # e.g. "#some-heading" or ""
+    if path.endswith(".md"):
+        stem = Path(path).stem
+        if known_stems is not None and stem in known_stems:
+            # Map "other-doc.md" → "#other-doc" so links work inside the
+            # combined HTML / PDF without needing cross-file navigation.
+            return f"#{stem}{fragment}"
     return (source_dir / target).resolve().as_uri()
 
 
-def _inline(text: str, source_dir: Path) -> str:
+def _inline(text: str, source_dir: Path, known_stems: frozenset[str] | None = None) -> str:
     text = html.escape(text, quote=False)
     text = re.sub(
         r"!\[([^\]]*)\]\(([^)]+)\)",
         lambda m: (
             f'<img alt="{html.escape(m.group(1), quote=True)}" '
-            f'src="{html.escape(_normalize_target(m.group(2), source_dir), quote=True)}"/>'
+            f'src="{html.escape(_normalize_target(m.group(2), source_dir, known_stems), quote=True)}"/>'
         ),
         text,
     )
     text = re.sub(
         r"\[([^\]]+)\]\(([^)]+)\)",
         lambda m: (
-            f'<a href="{html.escape(_normalize_target(m.group(2), source_dir), quote=True)}">'
+            f'<a href="{html.escape(_normalize_target(m.group(2), source_dir, known_stems), quote=True)}">'
             f"{m.group(1)}</a>"
         ),
         text,
@@ -59,7 +69,7 @@ def _inline(text: str, source_dir: Path) -> str:
     return text
 
 
-def _render_table(lines: list[str], source_dir: Path) -> str:
+def _render_table(lines: list[str], source_dir: Path, known_stems: frozenset[str] | None = None) -> str:
     rows = []
     for line in lines:
         stripped = line.strip().strip("|")
@@ -67,11 +77,11 @@ def _render_table(lines: list[str], source_dir: Path) -> str:
     header = rows[0]
     body = rows[2:]
     out = ["<table>", "<thead><tr>"]
-    out.extend(f"<th>{_inline(cell, source_dir)}</th>" for cell in header)
+    out.extend(f"<th>{_inline(cell, source_dir, known_stems)}</th>" for cell in header)
     out.append("</tr></thead><tbody>")
     for row in body:
         out.append("<tr>")
-        out.extend(f"<td>{_inline(cell, source_dir)}</td>" for cell in row)
+        out.extend(f"<td>{_inline(cell, source_dir, known_stems)}</td>" for cell in row)
         out.append("</tr>")
     out.append("</tbody></table>")
     return "".join(out)
@@ -81,6 +91,7 @@ def _render_markdown(
     text: str,
     source_dir: Path,
     anchor_prefix: str,
+    known_stems: frozenset[str] | None = None,
 ) -> tuple[str, list[tuple[int, str, str]]]:
     lines = text.splitlines()
     i = 0
@@ -92,7 +103,7 @@ def _render_markdown(
     def flush_paragraph() -> None:
         nonlocal paragraph
         if paragraph:
-            out.append(f"<p>{_inline(' '.join(part.strip() for part in paragraph), source_dir)}</p>")
+            out.append(f"<p>{_inline(' '.join(part.strip() for part in paragraph), source_dir, known_stems)}</p>")
             paragraph = []
 
     def flush_lists() -> None:
@@ -137,7 +148,7 @@ def _render_markdown(
             base_anchor = re.sub(r"[^a-z0-9]+", "-", content.lower()).strip("-")
             anchor = f"{anchor_prefix}-{base_anchor}" if base_anchor else anchor_prefix
             toc.append((level, content, anchor))
-            out.append(f'<h{level} id="{anchor}">{_inline(content, source_dir)}</h{level}>')
+            out.append(f'<h{level} id="{anchor}">{_inline(content, source_dir, known_stems)}</h{level}>')
             i += 1
             continue
 
@@ -149,7 +160,7 @@ def _render_markdown(
             while i < len(lines) and lines[i].strip().startswith("> "):
                 quote_lines.append(lines[i].strip()[2:])
                 i += 1
-            out.append(f"<blockquote><p>{_inline(' '.join(quote_lines), source_dir)}</p></blockquote>")
+            out.append(f"<blockquote><p>{_inline(' '.join(quote_lines), source_dir, known_stems)}</p></blockquote>")
             continue
 
         if stripped.startswith("|") and i + 1 < len(lines):
@@ -162,7 +173,7 @@ def _render_markdown(
                 while i < len(lines) and lines[i].strip().startswith("|"):
                     table_lines.append(lines[i])
                     i += 1
-                out.append(_render_table(table_lines, source_dir))
+                out.append(_render_table(table_lines, source_dir, known_stems))
                 continue
 
         ordered_match = re.match(r"^\d+\.\s+(.*)$", stripped)
@@ -175,7 +186,7 @@ def _render_markdown(
                 list_stack.append(target)
                 out.append(f"<{target}>")
             item_text = ordered_match.group(1) if ordered_match else unordered_match.group(1)
-            out.append(f"<li>{_inline(item_text, source_dir)}</li>")
+            out.append(f"<li>{_inline(item_text, source_dir, known_stems)}</li>")
             i += 1
             continue
 
@@ -203,14 +214,22 @@ def _build_html(target: BuildTarget) -> Path:
     body_parts: list[str] = []
     toc_entries: list[tuple[int, str, str]] = []
 
+    # Stems of all source files in this build — used to rewrite cross-doc
+    # .md links to internal #anchors so they work as clickable PDF links.
+    known_stems: frozenset[str] = frozenset(p.stem for p in target.source_paths)
+
     for source_path in target.source_paths:
         rendered, toc = _render_markdown(
             source_path.read_text(encoding="utf-8"),
             source_path.parent,
             source_path.stem,
+            known_stems,
         )
         toc_entries.extend(toc)
-        body_parts.append(rendered)
+        # Emit a zero-height anchor at the file boundary so that cross-doc
+        # links like #setup-guide and #user-manual resolve correctly.
+        root_anchor = f'<div id="{source_path.stem}" style="height:0;margin:0;padding:0"></div>'
+        body_parts.append(root_anchor + rendered)
 
     cover_html = ""
     if target.cover_image is not None:

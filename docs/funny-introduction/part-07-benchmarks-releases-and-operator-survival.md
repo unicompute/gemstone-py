@@ -13,7 +13,6 @@ The bad news is that this story involves workflows, baselines, trusted
 publishers, runner service management, and PyPI metadata. In other words, it is
 the sort of material that turns junior engineers into maintainers.
 
-\newpage
 
 ## Benchmarks Are Not Vibes
 
@@ -32,7 +31,6 @@ The benchmark system now includes:
 
 That is what it looks like when performance work becomes policy rather than lore.
 
-\newpage
 
 ## Smoke Versus Regression
 
@@ -54,7 +52,6 @@ Trying to force one benchmark policy to do both jobs usually produces:
 
 Named profiles are cleaner.
 
-\newpage
 
 ## Baselines Are Managed, Not Worshipped
 
@@ -75,7 +72,6 @@ Benchmarks are shaped by:
 The tooling now acknowledges that. Reality is rude, but the tooling no longer
 pretends otherwise.
 
-\newpage
 
 ## Releases Must Be Proven Twice
 
@@ -98,7 +94,6 @@ This is exactly how releases should work:
 
 That is not overkill. That is the difference between "released" and "uploaded."
 
-\newpage
 
 ## Trusted Publishing Was Worth It
 
@@ -112,7 +107,6 @@ That is cleaner and safer.
 It is also slightly more bureaucratic the first time you set it up, which is how
 you know it is probably doing something useful.
 
-\newpage
 
 ## The Post-Release Verify Workflow Is a Love Letter to Reality
 
@@ -131,7 +125,6 @@ This closes a painful gap that many packages leave open forever:
 
 Now the answer can be verified automatically.
 
-\newpage
 
 ## The Self-Hosted Runner Story
 
@@ -152,7 +145,6 @@ The package now includes:
 
 This is not glamorous, but it is adult.
 
-\newpage
 
 ## A Runner Is Infrastructure, Not a Pet
 
@@ -171,7 +163,6 @@ A runner should have:
 
 In short, it should be infrastructure rather than folklore.
 
-\newpage
 
 ## Release Notes Matter Too
 
@@ -187,7 +178,6 @@ This sounds bureaucratic until the first moment you need to answer:
 
 At that moment, you either have release discipline or you have interpretive dance.
 
-\newpage
 
 ## Public Metadata Is Part of the Product
 
@@ -206,7 +196,6 @@ then the package looks unmaintained before the user even installs it.
 
 Metadata is not decoration. It is the front door.
 
-\newpage
 
 ## The Release That Taught a Lesson
 
@@ -225,7 +214,6 @@ But the lesson was excellent:
 post-release verification is not vanity. It catches what normal build success
 cannot see.
 
-\newpage
 
 ## A Joke About Maintainers
 
@@ -240,7 +228,6 @@ That is how maintainers are made.
 Somewhere between the first trusted publisher entry and the first benchmark
 baseline manifest, a person quietly becomes more responsible than they intended.
 
-\newpage
 
 ## The Full Lifecycle, Condensed
 
@@ -257,7 +244,6 @@ Here is the modern package lifecycle in one list:
 
 That is a proper supply chain story, not a triumphant shell alias.
 
-\newpage
 
 ## Final Cartoon-Free Advice
 
@@ -271,7 +257,6 @@ If you maintain this package or one like it:
 
 These habits are not glamorous, but they compound into trust.
 
-\newpage
 
 ## End of Part VII
 
@@ -293,7 +278,6 @@ That is a substantial amount of ground.
 
 It is also enough ground to be genuinely useful.
 
-\newpage
 
 ## Final Notes Page
 

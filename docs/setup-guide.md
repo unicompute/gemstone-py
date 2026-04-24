@@ -3,8 +3,6 @@
 This guide gets you from "I cloned the repo" to "I can log in to GemStone from
 Python and run the examples without muttering at the terminal."
 
-![Session lifecycle](assets/diagrams/session-lifecycle.svg)
-
 ## What You Need
 
 At minimum:
@@ -61,21 +59,20 @@ export GS_HOST_PASSWORD=
 export GS_LIB_PATH=/full/path/to/libgcirpc-3.7.x-64.dylib
 ```
 
-What they mean:
+Quick reference:
 
-- `GS_LIB`
-  The GemStone `lib/` directory. The package uses it for library discovery.
-- `GS_LIB_PATH`
-  Optional exact path to a specific `libgcirpc` file. Use this when you want to
-  pin the client library instead of relying on directory search.
-- `GS_STONE`
-  The stone name.
-- `GS_USERNAME`, `GS_PASSWORD`
-  The GemStone login credentials.
-- `GS_HOST`, `GS_NETLDI`, `GS_GEM_SERVICE`
-  Connection hints for remote or explicitly configured environments.
-- `GS_HOST_USERNAME`, `GS_HOST_PASSWORD`
-  Optional remote host credentials for cases where the underlying runtime needs them.
+| Variable | Required | Example | Purpose |
+| --- | --- | --- | --- |
+| `GS_LIB` | Yes | `/opt/gemstone/product/lib` | GemStone `lib/` directory for library discovery |
+| `GS_STONE` | Yes | `gs64stone` | Stone name |
+| `GS_USERNAME` | Yes | `DataCurator` | GemStone login username |
+| `GS_PASSWORD` | Yes | `swordfish` | GemStone login password |
+| `GS_LIB_PATH` | No | `/full/path/libgcirpc.dylib` | Pin to a specific `libgcirpc` file |
+| `GS_HOST` | No | `localhost` | Remote stone host |
+| `GS_NETLDI` | No | `netldi` | NetLDI service name |
+| `GS_GEM_SERVICE` | No | `gemnetobject` | Gem service name |
+| `GS_HOST_USERNAME` | No | | Remote host OS username |
+| `GS_HOST_PASSWORD` | No | | Remote host OS password |
 
 ## First Real Login
 

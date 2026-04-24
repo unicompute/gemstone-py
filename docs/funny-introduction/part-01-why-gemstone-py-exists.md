@@ -17,7 +17,6 @@ The unsober pitch is:
 
 Both are true. One is more likely to get you invited back to meetings.
 
-\newpage
 
 ## The Problem Behind the Package
 
@@ -41,7 +40,6 @@ Without a real package, teams drift toward a recognizable archeological layer:
 
 The point of `gemstone-py` is to avoid that outcome.
 
-\newpage
 
 ## The Package's Temperament
 
@@ -64,7 +62,6 @@ You will notice the package is not trying to become:
 It remains a Python package for people who know that the stone is real and the
 repository is not a metaphor.
 
-\newpage
 
 ## The Stack in One Picture
 
@@ -86,7 +83,6 @@ The second misunderstanding is that all persistence helpers are merely local
 objects with a distant hobby. They are not. The data structures they front are
 real repository state.
 
-\newpage
 
 ## Why the Package Is Better Than a Pile of Glue
 
@@ -115,7 +111,6 @@ It can also:
 
 There is no glamour in this list, which is exactly why it is valuable.
 
-\newpage
 
 ## A Brief Tour of the Public Surface
 
@@ -148,7 +143,6 @@ It maps to the actual lifecycle of production software:
 That is a proper narrative arc. It is almost heroic. Only the benchmark JSON
 reports prevent it from becoming fantasy literature.
 
-\newpage
 
 ## The Package Is Also a History Lesson
 
@@ -170,7 +164,6 @@ That is why the package now emphasizes:
 You inherit the useful ideas without keeping the old scaffolding that no longer
 helps.
 
-\newpage
 
 ## The First Joke You Should Internalize
 
@@ -194,7 +187,6 @@ GemStone is persistent. That means:
 The package will help you, but it will not infantilize the repository into a
 temporary playground. That is a feature.
 
-\newpage
 
 ## What You Should Expect as a User
 
@@ -221,7 +213,6 @@ The promise is:
 > "A disciplined Python surface over GemStone, with enough tooling that you can
 > trust what the package claims."
 
-\newpage
 
 ## What You Should Not Expect
 
@@ -238,7 +229,6 @@ The package has worked hard to stop doing those things.
 The result is sometimes slightly less cuddly than a typical convenience library.
 It is also vastly easier to defend in front of other engineers.
 
-\newpage
 
 ## Screenshot Intermission
 
@@ -252,7 +242,6 @@ a machine-readable way after installation.
 That means users do not have to interpret success based on the emotional tone of
 one print statement and a half-finished shell script.
 
-\newpage
 
 ## The Human Value of a Good Setup Story
 
@@ -275,7 +264,6 @@ With those things:
 
 That is not just technical quality. That is social quality.
 
-\newpage
 
 ## Why This Introduction Is So Long
 
@@ -289,7 +277,6 @@ Three reasons:
 
 The third reason is, admittedly, difficult to refute.
 
-\newpage
 
 ## End of Part I
 
@@ -304,7 +291,6 @@ Next comes the real center of gravity: sessions and transactions.
 
 That is where most users either become comfortable or become poets of regret.
 
-\newpage
 
 ## Part I Notes Page
 

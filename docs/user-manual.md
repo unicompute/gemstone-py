@@ -250,6 +250,42 @@ The package also includes:
 - conflict detection helpers
 - instance listing utilities
 
+### Commit Conflicts
+
+When two sessions modify the same object and both try to commit, GemStone raises
+a conflict. The second committer gets a `CommitConflictError`.
+
+This is not a bug. It is the correct behaviour of an optimistic concurrency
+system. The right response is:
+
+1. catch `CommitConflictError`
+2. call `session.abort()` to reset the transaction
+3. reload the data
+4. reapply the change (with a narrowed scope if possible)
+5. retry the commit
+
+Keep retries bounded. Log them. If you see frequent conflicts on the same
+object, that is a signal the write pattern needs rethinking — not that the
+concurrency model is wrong.
+
+```python
+from gemstone_py import GemStoneSession, TransactionPolicy
+from gemstone_py.concurrency import CommitConflictError
+
+for attempt in range(3):
+    with GemStoneSession(config=config,
+                         transaction_policy=TransactionPolicy.MANUAL) as session:
+        try:
+            counter = session.global_get("Visits")
+            session.eval(f"Visits := {counter + 1}")
+            session.commit()
+            break
+        except CommitConflictError:
+            session.abort()
+            if attempt == 2:
+                raise
+```
+
 ## Web Integration
 
 The web integration lives in `gemstone_py.web`.

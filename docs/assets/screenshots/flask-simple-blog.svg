@@ -1,32 +1,96 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900">
-  <rect width="1280" height="900" fill="#ece8df"/>
-  <rect x="30" y="30" width="1220" height="840" rx="22" fill="#ffffff" stroke="#c9c0b5" stroke-width="3"/>
-  <rect x="30" y="30" width="1220" height="82" rx="22" fill="#22313f"/>
-  <text x="70" y="82" font-family="Helvetica, Arial, sans-serif" font-size="34" fill="#fefefe">Simple Blog Example</text>
-  <text x="950" y="82" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#c8d6e5">Flask + gemstone_py</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="940" viewBox="0 0 1280 940">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f5f0e8"/>
+      <stop offset="1" stop-color="#e8e0d0"/>
+    </linearGradient>
+    <filter id="drop" x="-4%" y="-4%" width="108%" height="108%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#1a1a1a" flood-opacity="0.16"/>
+    </filter>
+  </defs>
 
-  <rect x="80" y="150" width="1120" height="140" rx="18" fill="#f7f1e6" stroke="#ccbfa7" stroke-width="2"/>
-  <text x="120" y="198" font-family="Georgia, serif" font-size="34" fill="#2c2c2c">Hello from the GemStone-backed</text>
-  <text x="120" y="238" font-family="Georgia, serif" font-size="34" fill="#2c2c2c">blog</text>
-  <text x="120" y="272" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#6a6a6a">Illustrative screenshot based on the example app structure</text>
+  <rect width="1280" height="940" fill="url(#bgGrad)"/>
 
-  <rect x="80" y="310" width="540" height="230" rx="18" fill="#fefaf2" stroke="#d8c9b1" stroke-width="2"/>
-  <text x="110" y="360" font-family="Georgia, serif" font-size="32" fill="#3b2f25">Post: Transactions are feelings</text>
-  <text x="110" y="395" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b5145">"I only wanted a blog engine and now I know</text>
-  <text x="110" y="423" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b5145">what a SymbolDictionary is."</text>
-  <text x="110" y="460" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b5145">Author: DataCurator</text>
-  <text x="110" y="490" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b5145">Stored under PersistentRoot with a proper commit</text>
+  <!-- Browser window -->
+  <rect x="30" y="30" width="1220" height="880" rx="22" fill="#ffffff" stroke="#c9c0b5" stroke-width="2" filter="url(#drop)"/>
 
-  <rect x="660" y="310" width="540" height="230" rx="18" fill="#fefaf2" stroke="#d8c9b1" stroke-width="2"/>
-  <text x="690" y="360" font-family="Georgia, serif" font-size="32" fill="#3b2f25">Request session notes</text>
-  <text x="690" y="398" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b5145">- provider created at app startup</text>
-  <text x="690" y="430" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b5145">- teardown decides commit vs abort</text>
-  <text x="690" y="462" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b5145">- pool/thread-local options available</text>
+  <!-- Browser chrome -->
+  <rect x="30" y="30" width="1220" height="56" rx="22" fill="#f0ebe0"/>
+  <rect x="30" y="64" width="1220" height="22" fill="#f0ebe0"/>
+  <circle cx="68" cy="58" r="9" fill="#ff5f57"/>
+  <circle cx="98" cy="58" r="9" fill="#febc2e"/>
+  <circle cx="128" cy="58" r="9" fill="#28c840"/>
+  <!-- address bar -->
+  <rect x="160" y="44" width="760" height="28" rx="8" fill="#fff" stroke="#c9c0b5" stroke-width="1.5"/>
+  <text x="175" y="63" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#6a6560">localhost:5000/blog</text>
 
-  <rect x="80" y="580" width="1120" height="230" rx="18" fill="#f7f1e6" stroke="#ccbfa7" stroke-width="2"/>
-  <text x="120" y="635" font-family="Georgia, serif" font-size="30" fill="#2c2c2c">Why this example matters</text>
-  <text x="120" y="678" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#5b5145">It shows the shape of a real web application while keeping</text>
-  <text x="120" y="708" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#5b5145">the persistence model small enough to understand in one sitting.</text>
-  <text x="120" y="748" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#5b5145">That is the sweet spot: not a toy one-liner,</text>
-  <text x="120" y="778" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#5b5145">not an accidental enterprise platform.</text>
+  <!-- App header bar -->
+  <rect x="30" y="86" width="1220" height="70" fill="#22313f"/>
+  <text x="70" y="130" font-family="Georgia, serif" font-size="30" font-weight="700" fill="#fefefe">Simple Blog</text>
+  <text x="70" y="152" font-family="Helvetica, Arial, sans-serif" font-size="0" fill="#fefefe">·</text>
+  <!-- nav links -->
+  <text x="900" y="128" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#c8d6e5">Posts</text>
+  <text x="980" y="128" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#c8d6e5">About</text>
+  <text x="1060" y="128" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#c8d6e5">New post</text>
+  <text x="1166" y="128" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#8ba4b8">Flask + gemstone_py</text>
+
+  <!-- Hero section -->
+  <rect x="60" y="182" width="1160" height="120" rx="16" fill="#f9f4ea" stroke="#ddd4bd" stroke-width="1.5"/>
+  <text x="100" y="228" font-family="Georgia, serif" font-size="30" font-weight="700" fill="#2c2c2c">GemStone-backed blog</text>
+  <text x="100" y="264" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#6a6a6a">Every post persisted in GemStone/S 64 · one session per request · explicit commit on success</text>
+  <text x="100" y="290" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#8a8a8a" font-style="italic">Illustrative screenshot — based on the examples/flask/simple_blog structure</text>
+
+  <!-- Post card 1 -->
+  <rect x="60" y="326" width="548" height="240" rx="16" fill="#fefaf2" stroke="#d8c9b1" stroke-width="1.5" filter="url(#drop)"/>
+  <text x="94" y="370" font-family="Georgia, serif" font-size="24" font-weight="700" fill="#3b2f25">Transactions Are Feelings</text>
+  <text x="94" y="396" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#8a7a6a">by DataCurator · 2026-04-22</text>
+  <line x1="94" y1="408" x2="576" y2="408" stroke="#e0d4c0" stroke-width="1"/>
+  <text x="94" y="434" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b5145">"I only wanted a blog engine and now I</text>
+  <text x="94" y="458" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b5145">understand what a SymbolDictionary is."</text>
+  <text x="94" y="492" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#7a6a5a">Stored under UserGlobals["posts"]</text>
+  <text x="94" y="514" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#7a6a5a">with an explicit commit on success.</text>
+  <!-- Read more button -->
+  <rect x="94" y="534" width="110" height="32" rx="8" fill="#22313f"/>
+  <text x="149" y="555" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#fff">Read more</text>
+
+  <!-- Post card 2 -->
+  <rect x="672" y="326" width="548" height="240" rx="16" fill="#fefaf2" stroke="#d8c9b1" stroke-width="1.5" filter="url(#drop)"/>
+  <text x="706" y="370" font-family="Georgia, serif" font-size="24" font-weight="700" fill="#3b2f25">The Partial Commit Problem</text>
+  <text x="706" y="396" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#8a7a6a">by SysAdmin · 2026-04-23</text>
+  <line x1="706" y1="408" x2="1188" y2="408" stroke="#e0d4c0" stroke-width="1"/>
+  <text x="706" y="434" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b5145">"Flask teardown decides commit or abort.</text>
+  <text x="706" y="458" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b5145">No partial data survives a handled error."</text>
+  <text x="706" y="492" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#7a6a5a">install_flask_request_session() wires</text>
+  <text x="706" y="514" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#7a6a5a">this up automatically.</text>
+  <!-- Read more button -->
+  <rect x="706" y="534" width="110" height="32" rx="8" fill="#22313f"/>
+  <text x="761" y="555" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#fff">Read more</text>
+
+  <!-- Request session notes panel -->
+  <rect x="60" y="596" width="548" height="250" rx="16" fill="#f0f6ff" stroke="#b8d0e8" stroke-width="1.5" filter="url(#drop)"/>
+  <text x="94" y="634" font-family="Georgia, serif" font-size="20" font-weight="700" fill="#264968">Request session notes</text>
+  <line x1="94" y1="646" x2="576" y2="646" stroke="#c8ddf5" stroke-width="1"/>
+  <text x="94" y="676" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#3a5a78">✓  Session pool created at app startup</text>
+  <text x="94" y="706" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#3a5a78">✓  One session checked out per request</text>
+  <text x="94" y="736" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#3a5a78">✓  Teardown decides commit vs abort</text>
+  <text x="94" y="766" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#3a5a78">✓  No partial data on handled exceptions</text>
+  <text x="94" y="796" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#3a5a78">✓  Pool health inspectable at runtime</text>
+  <text x="94" y="826" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#5a7898" font-style="italic">install_flask_request_session(app, provider)</text>
+
+  <!-- Why this example matters panel -->
+  <rect x="672" y="596" width="548" height="250" rx="16" fill="#f5f2ea" stroke="#d4c9b4" stroke-width="1.5" filter="url(#drop)"/>
+  <text x="706" y="634" font-family="Georgia, serif" font-size="20" font-weight="700" fill="#3c2f20">Why this example matters</text>
+  <line x1="706" y1="646" x2="1188" y2="646" stroke="#e0d4c0" stroke-width="1"/>
+  <text x="706" y="678" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b5145">It shows the shape of a real web app</text>
+  <text x="706" y="702" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b5145">while keeping the persistence model small</text>
+  <text x="706" y="726" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b5145">enough to understand in one sitting.</text>
+  <text x="706" y="762" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b5145">Not a toy one-liner.</text>
+  <text x="706" y="786" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b5145">Not an accidental enterprise platform.</text>
+  <text x="706" y="822" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#8a7a6a" font-style="italic">That is the sweet spot.</text>
+
+  <!-- Footer bar -->
+  <rect x="30" y="876" width="1220" height="34" rx="0" fill="#f0ebe0"/>
+  <rect x="30" y="876" width="1220" height="34" rx="0" fill="#f0ebe0"/>
+  <rect x="30" y="892" width="1220" height="18" fill="#f0ebe0"/>
+  <text x="640" y="900" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#8a8070">Powered by Flask + gemstone-py · GemStone/S 64 persistence · explicit transactions</text>
 </svg>

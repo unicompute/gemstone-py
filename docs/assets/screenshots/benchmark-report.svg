@@ -1,27 +1,72 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="780" viewBox="0 0 1280 780">
-  <rect width="1280" height="780" fill="#f0efe9"/>
-  <rect x="30" y="30" width="1220" height="720" rx="22" fill="#ffffff" stroke="#cfc8bb" stroke-width="3"/>
-  <text x="60" y="78" font-family="Helvetica, Arial, sans-serif" font-size="34" fill="#2d3436">Benchmark Report (Illustrative)</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="860" viewBox="0 0 1280 860">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f5f4ee"/>
+      <stop offset="1" stop-color="#e8e6de"/>
+    </linearGradient>
+    <filter id="drop" x="-4%" y="-4%" width="108%" height="108%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#1a1a1a" flood-opacity="0.18"/>
+    </filter>
+  </defs>
 
-  <g font-family="Menlo, Consolas, monospace" font-size="20">
-    <rect x="70" y="120" width="1140" height="70" rx="12" fill="#22313f"/>
-    <text x="100" y="165" fill="#f8f9fa">suite            operation                      ops/s    delta</text>
+  <rect width="1280" height="860" fill="url(#bgGrad)"/>
+  <!-- Window chrome -->
+  <rect x="30" y="30" width="1220" height="800" rx="22" fill="#ffffff" stroke="#cfc8bb" stroke-width="2" filter="url(#drop)"/>
+  <rect x="30" y="30" width="1220" height="52" rx="22" fill="#e6e3dc"/>
+  <rect x="30" y="60" width="1220" height="22" fill="#e6e3dc"/>
+  <circle cx="68" cy="56" r="9" fill="#ff5f57"/>
+  <circle cx="98" cy="56" r="9" fill="#febc2e"/>
+  <circle cx="128" cy="56" r="9" fill="#28c840"/>
+  <text x="640" y="62" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#6a6560">Benchmark Report (Illustrative)</text>
 
-    <rect x="70" y="215" width="1140" height="55" rx="10" fill="#eef8ef"/>
-    <text x="100" y="250" fill="#215732">persistent_root  mapping_keys                327100.4   +1.1%</text>
+  <!-- Title inside -->
+  <text x="70" y="118" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="700" fill="#2d3436">gemstone-benchmarks — regression profile</text>
+  <text x="70" y="148" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#636e72">Comparing: baseline-2026-04-20.json → current run  ·  threshold: ±15%</text>
 
-    <rect x="70" y="290" width="1140" height="55" rx="10" fill="#eef8ef"/>
-    <text x="100" y="325" fill="#215732">gscollection     indexed_search                687.4    -4.8%</text>
+  <!-- Header row -->
+  <rect x="70" y="168" width="1140" height="48" rx="10" fill="#22313f"/>
+  <text x="100" y="200" font-family="Menlo, Consolas, monospace" font-size="17" fill="#f8f9fa">suite              operation                       ops/s       delta    status</text>
 
-    <rect x="70" y="365" width="1140" height="55" rx="10" fill="#fff7e6"/>
-    <text x="100" y="400" fill="#7a5400">gstore           snapshot_read                2401.9   -17.3%</text>
+  <!-- Row 1: green OK -->
+  <rect x="70" y="236" width="1140" height="50" rx="8" fill="#eef8ef"/>
+  <text x="100" y="267" font-family="Menlo, Consolas, monospace" font-size="17" fill="#215732">persistent_root    mapping_keys                 327 100.4    +1.1%    </text>
+  <rect x="1142" y="244" width="52" height="32" rx="8" fill="#2c9e4a"/>
+  <text x="1168" y="265" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="14" font-weight="700" fill="#fff">OK</text>
 
-    <rect x="70" y="440" width="1140" height="55" rx="10" fill="#eef8ef"/>
-    <text x="100" y="475" fill="#215732">rchash           items                       31245.0    -6.4%</text>
-  </g>
+  <!-- Row 2: green OK -->
+  <rect x="70" y="306" width="1140" height="50" rx="8" fill="#eef8ef"/>
+  <text x="100" y="337" font-family="Menlo, Consolas, monospace" font-size="17" fill="#215732">gscollection       indexed_search                   687.4    -4.8%    </text>
+  <rect x="1142" y="314" width="52" height="32" rx="8" fill="#2c9e4a"/>
+  <text x="1168" y="335" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="14" font-weight="700" fill="#fff">OK</text>
 
-  <text x="70" y="565" font-family="Georgia, serif" font-size="24" fill="#2d3436">The benchmark workflow can compare reports, enforce thresholds,</text>
-  <text x="70" y="596" font-family="Georgia, serif" font-size="24" fill="#2d3436">and upload JSON artifacts.</text>
-  <text x="70" y="640" font-family="Georgia, serif" font-size="20" fill="#5c6166">That means performance discussions can happen with evidence</text>
-  <text x="70" y="668" font-family="Georgia, serif" font-size="20" fill="#5c6166">instead of dramatic hand gestures.</text>
+  <!-- Row 3: yellow WARN -->
+  <rect x="70" y="376" width="1140" height="50" rx="8" fill="#fff8e6"/>
+  <text x="100" y="407" font-family="Menlo, Consolas, monospace" font-size="17" fill="#7a5400">gstore             snapshot_read                  2 401.9   -17.3%    </text>
+  <rect x="1130" y="384" width="72" height="32" rx="8" fill="#e8a020"/>
+  <text x="1166" y="405" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="14" font-weight="700" fill="#fff">WARN</text>
+
+  <!-- Row 4: green OK -->
+  <rect x="70" y="446" width="1140" height="50" rx="8" fill="#eef8ef"/>
+  <text x="100" y="477" font-family="Menlo, Consolas, monospace" font-size="17" fill="#215732">rchash             items                         31 245.0    -6.4%    </text>
+  <rect x="1142" y="454" width="52" height="32" rx="8" fill="#2c9e4a"/>
+  <text x="1168" y="475" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="14" font-weight="700" fill="#fff">OK</text>
+
+  <!-- Row 5: red FAIL (threshold breach) -->
+  <rect x="70" y="516" width="1140" height="50" rx="8" fill="#fff0f0"/>
+  <text x="100" y="547" font-family="Menlo, Consolas, monospace" font-size="17" fill="#8a1c1c">objectlog          append_batch                  1 023.1   -38.2%    </text>
+  <rect x="1130" y="524" width="72" height="32" rx="8" fill="#c0392b"/>
+  <text x="1166" y="545" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="14" font-weight="700" fill="#fff">FAIL</text>
+
+  <!-- Summary line -->
+  <rect x="70" y="590" width="1140" height="44" rx="8" fill="#f4f2ec" stroke="#cfc8bb" stroke-width="1.5"/>
+  <text x="100" y="618" font-family="Menlo, Consolas, monospace" font-size="16" fill="#2d3436">Result: 3 OK  ·  1 WARN  ·  1 FAIL  →  exit 1  (threshold exceeded)</text>
+
+  <!-- Divider -->
+  <line x1="70" y1="654" x2="1210" y2="654" stroke="#d8d0c4" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+  <!-- Explanatory text -->
+  <text x="70" y="688" font-family="Georgia, serif" font-size="21" fill="#2d3436">The benchmark workflow compares JSON artifacts, enforces thresholds,</text>
+  <text x="70" y="716" font-family="Georgia, serif" font-size="21" fill="#2d3436">and fails CI when a regression exceeds the allowed percentage.</text>
+  <text x="70" y="756" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#636e72">WARN = within 1.5× the threshold.   FAIL = threshold exceeded — investigate before merging.</text>
+  <text x="70" y="784" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#636e72">Performance discussions can now happen with evidence instead of dramatic hand gestures.</text>
 </svg>

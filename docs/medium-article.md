@@ -451,7 +451,7 @@ Open `http://127.0.0.1:9292/` in a browser.
 
 The Object Browser tab lets you navigate the object graph. Click any object to inspect its instance variables, keys, or elements. Breadcrumbs track your path back through the graph.
 
-*[Screenshot: Object Browser showing a Dictionary with instVars table and Smalltalk eval panel]*
+*Object Browser: navigate the live object graph, inspect instance variables, and evaluate Smalltalk in context.*
 
 The eval panel lets you run Smalltalk expressions in the context of the currently selected object:
 
@@ -465,7 +465,7 @@ self at: #MyApp     → a StringKeyValueDictionary
 
 The Symbol List Browser tab shows the full symbol list for any GemStone user.
 
-*[Screenshot: Symbol List Browser — user dropdown, Dictionaries pane, Keys/Values table, PrintString box]*
+*Symbol List Browser: two-column layout — dictionaries on the left, keys and values on the right.*
 
 The two-column layout mirrors the Pharo symbol list browser:
 - Left column: dictionaries in the selected user's symbol list

@@ -1,41 +1,63 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="980" height="620" viewBox="0 0 980 620">
-  <rect width="980" height="620" fill="#fbf3e4"/>
-  <text x="50" y="70" font-family="Georgia, serif" font-size="30" fill="#3c2f2f">Cartoon: The Stone Club Bouncer</text>
-  <rect x="80" y="130" width="820" height="420" rx="24" fill="#fffaf2" stroke="#3c2f2f" stroke-width="4"/>
-  <image x="132" y="188" width="208" height="208" href="emerald-logo.svg" preserveAspectRatio="xMidYMid meet"/>
-  <rect x="140" y="478" width="170" height="48" rx="12" fill="#e5f1fb" stroke="#2f4858" stroke-width="3"/>
-  <text x="225" y="509" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" fill="#2f4858">GemStone</text>
-
-  <g transform="translate(576 188)">
-    <rect x="0" y="0" width="188" height="206" rx="18" fill="#ffffff" stroke="#3c2f2f" stroke-width="4"/>
-    <path d="M18 0 H170 Q188 0 188 18 V38 H0 V18 Q0 0 18 0 Z" fill="#2e5f8d"/>
-    <circle cx="26" cy="19" r="5" fill="#ffd3d3"/>
-    <circle cx="42" cy="19" r="5" fill="#ffe8a6"/>
-    <circle cx="58" cy="19" r="5" fill="#c9f0d0"/>
-    <rect x="24" y="58" width="140" height="24" rx="8" fill="#edf5ff"/>
-    <rect x="24" y="98" width="102" height="12" rx="6" fill="#c0d9f0"/>
-    <rect x="24" y="120" width="138" height="12" rx="6" fill="#d6e6f5"/>
-    <rect x="24" y="146" width="90" height="34" rx="10" fill="#e5f1fb" stroke="#2e5f8d" stroke-width="2.5"/>
-    <text x="94" y="75" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#264968">Python service</text>
-    <text x="69" y="168" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#264968">API</text>
-    <text x="130" y="168" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#6f86a0">stable</text>
-  </g>
-  <rect x="574" y="476" width="192" height="48" rx="12" fill="#ffe4bf" stroke="#7a5120" stroke-width="3"/>
-  <text x="670" y="507" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" fill="#7a5120">Python app</text>
-
-  <rect x="380" y="240" width="170" height="120" rx="16" fill="#dceeff" stroke="#295d8a" stroke-width="4"/>
-  <text x="465" y="289" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="24" fill="#17344f">Credentials?</text>
-  <text x="465" y="323" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" fill="#17344f">Transaction plan?</text>
-
-  <path d="M332 300 L380 300" stroke="#3c2f2f" stroke-width="3" marker-end="url(#arrow)"/>
-  <path d="M550 300 L576 300" stroke="#3c2f2f" stroke-width="3" marker-end="url(#arrow)"/>
-  <rect x="332" y="410" width="476" height="54" rx="14" fill="#fff5e8" stroke="#c6ab92" stroke-width="2.5"/>
-  <text x="570" y="435" text-anchor="middle" font-family="Georgia, serif" font-size="21" fill="#6b5140">"No defaults, no nonsense."</text>
-  <text x="570" y="456" text-anchor="middle" font-family="Georgia, serif" font-size="21" fill="#6b5140">"Also please stop forgetting to commit."</text>
-
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fdf7ec"/>
+      <stop offset="1" stop-color="#f2e8d4"/>
+    </linearGradient>
+    <filter id="drop" x="-8%" y="-8%" width="116%" height="116%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#3c2f2f" flood-opacity="0.15"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10 z" fill="#3c2f2f"/>
     </marker>
   </defs>
+
+  <rect width="980" height="620" fill="url(#bgGrad)"/>
+
+  <text x="50" y="58" font-family="Georgia, serif" font-size="30" font-weight="700" fill="#3c2f2f">Cartoon: The Stone Club Bouncer</text>
+
+  <rect x="50" y="116" width="880" height="500" rx="24" fill="#fffaf2" stroke="#3c2f2f" stroke-width="4" filter="url(#drop)"/>
+
+  <rect x="110" y="132" width="236" height="32" rx="12" fill="#eef8e7" stroke="#5ca313" stroke-width="2"/>
+  <text x="228" y="153" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#417802">GemStone gatekeeper</text>
+  <image x="108" y="170" width="240" height="240" href="emerald-logo.svg" preserveAspectRatio="xMidYMid meet"/>
+  <rect x="118" y="418" width="220" height="38" rx="12" fill="#eef8e7" stroke="#5ca313" stroke-width="2"/>
+  <text x="228" y="442" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#417802">No config, no entry.</text>
+
+  <rect x="360" y="246" width="204" height="142" rx="20" fill="#dceeff" stroke="#295d8a" stroke-width="4"/>
+  <text x="462" y="298" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#17344f">Credentials?</text>
+  <text x="462" y="338" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#17344f">Transaction plan?</text>
+  <text x="462" y="370" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#557390">Show me your config.</text>
+
+  <rect x="598" y="128" width="236" height="32" rx="12" fill="#e7eef8" stroke="#3d6b9d" stroke-width="2"/>
+  <text x="716" y="149" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#2d5378">Python wants a session</text>
+
+  <g transform="translate(600 160)">
+    <rect x="0" y="0" width="230" height="250" rx="22" fill="#ffffff" stroke="#3b4c5b" stroke-width="4"/>
+    <rect x="0" y="0" width="230" height="54" rx="22" fill="#3d6b9d"/>
+    <rect x="0" y="28" width="230" height="26" fill="#3d6b9d"/>
+    <circle cx="32" cy="27" r="7" fill="#ffd1d1"/>
+    <circle cx="56" cy="27" r="7" fill="#ffe4a6"/>
+    <circle cx="80" cy="27" r="7" fill="#cdeccf"/>
+    <rect x="42" y="82" width="146" height="34" rx="12" fill="#e6eef9"/>
+    <text x="115" y="105" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#2d5378">Python service</text>
+    <rect x="42" y="130" width="116" height="18" rx="9" fill="#bcd5ee"/>
+    <rect x="42" y="164" width="170" height="18" rx="9" fill="#c9def2"/>
+    <rect x="42" y="190" width="86" height="42" rx="12" fill="#e4eef9" stroke="#3d6b9d" stroke-width="3"/>
+    <text x="85" y="209" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#2d5378">API</text>
+    <text x="85" y="225" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#6f88a6">stable</text>
+  </g>
+
+  <path d="M322 316 L360 316" fill="none" stroke="#3c2f2f" stroke-width="2.5" stroke-linecap="round" marker-end="url(#arrow)"/>
+  <path d="M564 316 L600 316" fill="none" stroke="#3c2f2f" stroke-width="2.5" stroke-linecap="round" marker-end="url(#arrow)"/>
+
+  <rect x="300" y="462" width="520" height="92" rx="16" fill="#fff5e8" stroke="#c6ab92" stroke-width="2.5"/>
+  <text x="560" y="500" text-anchor="middle" font-family="Georgia, serif" font-size="18" font-style="italic" fill="#6b5140">"No defaults, no nonsense."</text>
+  <text x="560" y="530" text-anchor="middle" font-family="Georgia, serif" font-size="18" font-style="italic" fill="#6b5140">"Also please stop forgetting to commit."</text>
+
+  <rect x="96" y="540" width="196" height="58" rx="14" fill="#dceeff" stroke="#295d8a" stroke-width="2.5"/>
+  <text x="194" y="576" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#17344f">GemStone</text>
+
+  <rect x="596" y="540" width="208" height="58" rx="16" fill="#ffe4bf" stroke="#b07022" stroke-width="2.5"/>
+  <text x="700" y="576" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#8b5716">Python app</text>
 </svg>

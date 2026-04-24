@@ -1,43 +1,113 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="950" viewBox="0 0 1100 950">
-  <rect width="1100" height="950" fill="#fbf7f1"/>
-  <text x="60" y="70" font-family="Georgia, serif" font-size="34" fill="#2f2a24">GemStone Session and Transaction Lifecycle</text>
-  <text x="60" y="104" font-family="Georgia, serif" font-size="18" fill="#6f6457">This is the happy path. The unhappy path is the same diagram, only louder.</text>
-
-  <g font-family="Helvetica, Arial, sans-serif" fill="#1f1f1f">
-    <rect x="90" y="150" width="920" height="125" rx="20" fill="#dceeff" stroke="#255f88" stroke-width="3"/>
-    <text x="125" y="200" font-size="28" fill="#17344f">1. Load config</text>
-    <text x="125" y="232" font-size="16" fill="#17344f">GemStoneConfig.from_env() resolves GS_STONE,</text>
-    <text x="125" y="256" font-size="16" fill="#17344f">GS_USERNAME, GS_PASSWORD, and library hints.</text>
-
-    <rect x="90" y="345" width="920" height="120" rx="20" fill="#ffe7cc" stroke="#9b5f1e" stroke-width="3"/>
-    <text x="125" y="380" font-size="28" fill="#5b3410">2. Open session</text>
-    <text x="125" y="412" font-size="16" fill="#5b3410">GemStoneSession(config=..., transaction_policy=...)</text>
-    <text x="125" y="436" font-size="16" fill="#5b3410">logs in through libgcirpc.</text>
-
-    <rect x="90" y="540" width="920" height="130" rx="20" fill="#e1f6df" stroke="#2c6b3e" stroke-width="3"/>
-    <text x="125" y="585" font-size="28" fill="#1b4829">3. Work inside a transaction</text>
-    <text x="125" y="617" font-size="16" fill="#1b4829">Read PersistentRoot, update GSCollection, log events,</text>
-    <text x="125" y="641" font-size="16" fill="#1b4829">or use session_scope() around a unit of work.</text>
-
-    <rect x="90" y="770" width="440" height="120" rx="20" fill="#fff1d8" stroke="#9b5f1e" stroke-width="3"/>
-    <text x="125" y="820" font-size="28" fill="#5b3410">4A. Commit on success</text>
-    <text x="125" y="847" font-size="15" fill="#5b3410">Commit explicitly or let</text>
-    <text x="125" y="869" font-size="15" fill="#5b3410">COMMIT_ON_SUCCESS do it.</text>
-
-    <rect x="570" y="770" width="440" height="120" rx="20" fill="#ffe3e3" stroke="#8a2f2f" stroke-width="3"/>
-    <text x="605" y="820" font-size="28" fill="#5b1717">4B. Abort on failure</text>
-    <text x="605" y="847" font-size="15" fill="#5b1717">Exceptions, failed requests, or</text>
-    <text x="605" y="869" font-size="15" fill="#5b1717">ABORT_ON_EXIT unwind safely.</text>
-  </g>
-
-  <path d="M550 275 L550 345" stroke="#2f2a24" stroke-width="3" marker-end="url(#arrow)"/>
-  <path d="M550 465 L550 540" stroke="#2f2a24" stroke-width="3" marker-end="url(#arrow)"/>
-  <path d="M500 670 L345 770" stroke="#2f2a24" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
-  <path d="M600 670 L755 770" stroke="#2f2a24" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
-
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1020" viewBox="0 0 1100 1020">
   <defs>
-    <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-      <path d="M0 0 L8 4 L0 8 z" fill="#2f2a24"/>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fdfaf5"/>
+      <stop offset="1" stop-color="#f3ece0"/>
+    </linearGradient>
+    <filter id="drop" x="-8%" y="-8%" width="116%" height="116%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#2f2a24" flood-opacity="0.13"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 1 L11 6 L0 11 Z" fill="#2f2a24"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 1 L11 6 L0 11 Z" fill="#2c6b3e"/>
+    </marker>
+    <marker id="arrowRed" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 1 L11 6 L0 11 Z" fill="#8a2f2f"/>
+    </marker>
+    <marker id="arrowGray" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 1 L11 6 L0 11 Z" fill="#6a7080"/>
     </marker>
   </defs>
+
+  <rect width="1100" height="1020" fill="url(#bgGrad)"/>
+
+  <!-- Title -->
+  <text x="550" y="60" text-anchor="middle" font-family="Georgia, serif" font-size="34" font-weight="700" fill="#2f2a24">The Session Lifecycle in One Diagram</text>
+  <text x="550" y="95" text-anchor="middle" font-family="Georgia, serif" font-size="17" fill="#7a6a5a">This is the happy path. The unhappy path is the same diagram, only louder.</text>
+
+  <!-- Step badges -->
+  <!-- ── Step 1: Load config  y=140..270 ── -->
+  <rect x="90" y="140" width="920" height="130" rx="20" fill="#dceeff" stroke="#255f88" stroke-width="3" filter="url(#drop)"/>
+  <circle cx="130" cy="175" r="20" fill="#255f88"/>
+  <text x="130" y="181" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#fff">1</text>
+  <text x="168" y="185" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="700" fill="#17344f">Load config</text>
+  <text x="168" y="218" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#17344f">GemStoneConfig.from_env() reads GS_STONE, GS_USERNAME, GS_PASSWORD, and GS_LIB</text>
+  <text x="168" y="242" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#17344f">from environment variables. Raises GemStoneConfigurationError when required vars are absent.</text>
+
+  <!-- Arrow 1→2 -->
+  <line x1="550" y1="272" x2="550" y2="320" stroke="#2f2a24" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="570" y="301" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#2f2a24">config object</text>
+
+  <!-- ── Step 2: Open session  y=322..452 ── -->
+  <rect x="90" y="322" width="920" height="130" rx="20" fill="#ffe7cc" stroke="#9b5f1e" stroke-width="3" filter="url(#drop)"/>
+  <circle cx="130" cy="357" r="20" fill="#9b5f1e"/>
+  <text x="130" y="363" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#fff">2</text>
+  <text x="168" y="367" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="700" fill="#5b3410">Open session</text>
+  <text x="168" y="400" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b3410">GemStoneSession(config=…, transaction_policy=…) logs in through libgcirpc.</text>
+  <text x="168" y="424" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b3410">Or use session_scope(config=…) for the commit-on-success shortcut.</text>
+
+  <!-- Arrow 2→3 -->
+  <line x1="550" y1="454" x2="550" y2="502" stroke="#2f2a24" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="570" y="483" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#2f2a24">live session</text>
+
+  <!-- ── Step 3: Work inside a transaction  y=504..650 ── -->
+  <rect x="90" y="504" width="920" height="146" rx="20" fill="#e1f6df" stroke="#2c6b3e" stroke-width="3" filter="url(#drop)"/>
+  <circle cx="130" cy="540" r="20" fill="#2c6b3e"/>
+  <text x="130" y="546" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#fff">3</text>
+  <text x="168" y="550" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="700" fill="#1b4829">Work inside a transaction</text>
+  <text x="168" y="583" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#1b4829">session.eval(…) · root["key"] = value · collection.search(…) · log.info(…)</text>
+  <text x="168" y="607" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#1b4829">All writes are provisional until committed. Reads see the last committed snapshot.</text>
+  <text x="168" y="631" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#1b4829">CommitConflictError is raised if two sessions edited the same object.</text>
+
+  <!-- Arrow left branch: 3→4A commit -->
+  <path d="M 420 652 L 310 700" stroke="#2c6b3e" stroke-width="2.5" fill="none" marker-end="url(#arrowGreen)"/>
+  <text x="318" y="688" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#2c6b3e">success</text>
+
+  <!-- Arrow right branch: 3→4B abort -->
+  <path d="M 680 652 L 790 700" stroke="#8a2f2f" stroke-width="2.5" fill="none" marker-end="url(#arrowRed)"/>
+  <text x="756" y="665" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#8a2f2f">failure / exception</text>
+
+  <!-- ── Step 4A: Commit  y=702..830  x=80..490 ── -->
+  <rect x="80" y="702" width="430" height="128" rx="20" fill="#d6f5e0" stroke="#2c6b3e" stroke-width="3" filter="url(#drop)"/>
+  <circle cx="118" cy="736" r="20" fill="#2c6b3e"/>
+  <text x="118" y="742" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#fff">4A</text>
+  <text x="154" y="746" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#1b4829">Commit on success</text>
+  <text x="108" y="780" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#1b4829">session.commit() · COMMIT_ON_SUCCESS</text>
+  <text x="108" y="802" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#1b4829">policy · or teardown via request</text>
+  <text x="108" y="822" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#1b4829" font-style="italic">integration. Writes become visible.</text>
+
+  <!-- ── Step 4B: Abort  y=702..830  x=590..1020 ── -->
+  <rect x="590" y="702" width="430" height="128" rx="20" fill="#ffe3e3" stroke="#8a2f2f" stroke-width="3" filter="url(#drop)"/>
+  <circle cx="628" cy="736" r="20" fill="#8a2f2f"/>
+  <text x="628" y="742" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#fff">4B</text>
+  <text x="664" y="746" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#5b1717">Abort on failure</text>
+  <text x="618" y="780" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5b1717">session.abort() · ABORT_ON_EXIT policy</text>
+  <text x="618" y="802" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5b1717">· exception handler · or request</text>
+  <text x="618" y="822" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5b1717" font-style="italic">teardown. No partial data survives.</text>
+
+  <!-- Arrow 4B retry loop back to step 3 -->
+  <path d="M 1022 766 Q 1070 766 1070 578 Q 1070 390 1012 390" stroke="#6a7080" stroke-width="2" fill="none" stroke-dasharray="6,4" marker-end="url(#arrowGray)"/>
+  <text x="1078" y="690" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#6a7080" transform="rotate(90,1078,690)">retry (optional)</text>
+
+  <!-- ── Step 5: Close session ── -->
+  <rect x="300" y="878" width="500" height="90" rx="20" fill="#f5f0e8" stroke="#6d5c4f" stroke-width="2.5" filter="url(#drop)"/>
+  <circle cx="338" cy="912" r="20" fill="#6d5c4f"/>
+  <text x="338" y="918" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#fff">5</text>
+  <text x="374" y="918" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#3c2f2f">Close session</text>
+  <text x="374" y="950" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#6d5c4f">Context manager exit logs out. GCI connection released.</text>
+
+  <!-- Arrow 4A → 5 -->
+  <path d="M 295 830 Q 295 860 380 876" stroke="#2c6b3e" stroke-width="2" fill="none" marker-end="url(#arrowGreen)"/>
+  <!-- Arrow 4B → 5 -->
+  <path d="M 705 830 Q 705 860 720 876" stroke="#8a2f2f" stroke-width="2" fill="none" marker-end="url(#arrowRed)"/>
+
+  <!-- Legend -->
+  <line x1="90" y1="988" x2="118" y2="988" stroke="#2c6b3e" stroke-width="2.5"/>
+  <text x="125" y="992" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#3c2f2f">success path</text>
+  <line x1="240" y1="988" x2="268" y2="988" stroke="#8a2f2f" stroke-width="2.5"/>
+  <text x="275" y="992" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#3c2f2f">failure / abort path</text>
+  <line x1="426" y1="988" x2="454" y2="988" stroke="#6a7080" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="461" y="992" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#3c2f2f">optional retry loop</text>
 </svg>

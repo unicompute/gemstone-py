@@ -11,7 +11,6 @@ The package therefore gives you real shared primitives, conflict visibility, and
 retry patterns. It does not promise a universe where everyone edits the same row
 and friendship magically wins.
 
-\newpage
 
 ## Shared State Is the Point, Not an Accident
 
@@ -28,7 +27,6 @@ When those structures matter across sessions, pretending they are local Python
 objects with a distant data layer is a design mistake. The package chooses to be
 honest instead.
 
-\newpage
 
 ## The Core Helpers
 
@@ -46,7 +44,6 @@ repository backed primitives.
 
 Those are the same sentence wearing different shoes.
 
-\newpage
 
 ## `RCCounter`
 
@@ -66,7 +63,6 @@ Do not use it when:
 
 Taste matters.
 
-\newpage
 
 ## `RCHash`
 
@@ -80,7 +76,6 @@ objects. They also need to perform.
 A shared data structure that is correct but painfully chatty becomes a tax on
 every user. The package has put real work into making the hot paths more sane.
 
-\newpage
 
 ## `RCQueue`
 
@@ -96,7 +91,6 @@ A queue immediately invites questions like:
 These are good questions. They are the questions that make real systems
 interesting and occasionally noisy.
 
-\newpage
 
 ## Commit Conflicts Are Not Personal Attacks
 
@@ -115,7 +109,6 @@ That is all.
 Treating conflicts as shocking betrayals is like treating a traffic light as a
 personal insult. The system is only telling you that other actors exist.
 
-\newpage
 
 ## Cafe Intermission
 
@@ -129,7 +122,6 @@ This is the whole concept in one image:
 
 The joke works because the underlying logic is exact.
 
-\newpage
 
 ## Retry Logic Is Part of Design
 
@@ -149,7 +141,6 @@ The wrong retry shape is:
 - rerun half the application
 - hope the world has changed enough to make this count as architecture
 
-\newpage
 
 ## Locks Are Tools, Not Decorations
 
@@ -167,7 +158,6 @@ serious in conversation.
 Use them because the access pattern requires them, not because "enterprise"
 started whispering in your ear.
 
-\newpage
 
 ## The Live Tests Matter Here More Than Almost Anywhere
 
@@ -183,7 +173,6 @@ only when live tests exercise:
 The package now includes repeated live contention and soak coverage because this
 domain refuses to be adequately explained by clever mocking alone.
 
-\newpage
 
 ## Why Soak Tests Exist
 
@@ -199,7 +188,6 @@ That is exactly the kind of question that matters in long-running applications.
 It is also exactly the kind of question that tends to go unasked until a system
 is old enough to have opinions and young enough to still page you.
 
-\newpage
 
 ## Naming Shared Structures
 
@@ -221,7 +209,6 @@ Bad:
 The repository is not merely where data lives. It is where future explanations
 must begin.
 
-\newpage
 
 ## A Practical Conflict Strategy
 
@@ -235,7 +222,6 @@ If you expect conflicts:
 
 This is how you keep concurrency from becoming a superstition.
 
-\newpage
 
 ## The Secret Benefit of Good Conflict Handling
 
@@ -253,7 +239,6 @@ Because the system stops behaving like a haunted house. A conflict becomes:
 That is much easier to live with than a system that "sometimes loses updates"
 and therefore forces everyone into dramatic oral history.
 
-\newpage
 
 ## End of Part VI
 
@@ -274,7 +259,6 @@ the boring, glorious machinery that proves a package can survive real life:
 - PyPI
 - post-release verification
 
-\newpage
 
 ## Part VI Notes Page
 

@@ -1,25 +1,100 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="980" height="620" viewBox="0 0 980 620">
-  <rect width="980" height="620" fill="#fcf4e8"/>
-  <text x="50" y="70" font-family="Georgia, serif" font-size="30" fill="#34271f">Cartoon: The Hat Trick Queue</text>
-  <rect x="70" y="120" width="840" height="440" rx="24" fill="#fffaf2" stroke="#34271f" stroke-width="4"/>
-  <image x="148" y="150" width="318" height="318" href="tux-paint-tophat.svg" preserveAspectRatio="xMidYMid meet"/>
-
-  <image x="590" y="136" width="244" height="244" href="afr62.svg" preserveAspectRatio="xMidYMid meet"/>
-
-  <path d="M486 308 C522 308 544 292 574 276" stroke="#34271f" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
-
-  <circle cx="300" cy="200" r="20" fill="#ffcf96"/>
-  <circle cx="330" cy="176" r="20" fill="#a5d6ff"/>
-  <circle cx="360" cy="205" r="20" fill="#dff5df"/>
-  <rect x="520" y="392" width="344" height="82" rx="18" fill="#fff4e8" stroke="#8d7764" stroke-width="3"/>
-  <text x="692" y="425" text-anchor="middle" font-family="Georgia, serif" font-size="19" fill="#5d483a">"I reached into PersistentRoot and</text>
-  <text x="692" y="452" text-anchor="middle" font-family="Georgia, serif" font-size="19" fill="#5d483a">pulled out a queue. This feels illegal."</text>
-  <rect x="150" y="494" width="370" height="46" rx="14" fill="#e7f0fb" stroke="#5c7288" stroke-width="3"/>
-  <text x="335" y="524" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" fill="#1f2937">HatTrickHat: backed by RCQueue</text>
-
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="660" viewBox="0 0 980 660">
   <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fdfaf0"/>
+      <stop offset="1" stop-color="#f2e8d0"/>
+    </linearGradient>
+    <linearGradient id="hatBody" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#111111"/>
+      <stop offset="0.45" stop-color="#2a2a2a"/>
+      <stop offset="1" stop-color="#111111"/>
+    </linearGradient>
+    <linearGradient id="hatShine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#111111"/>
+      <stop offset="0.3" stop-color="#3a3a3a"/>
+      <stop offset="0.5" stop-color="#555555"/>
+      <stop offset="0.7" stop-color="#3a3a3a"/>
+      <stop offset="1" stop-color="#111111"/>
+    </linearGradient>
+    <linearGradient id="brimGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#222222"/>
+      <stop offset="1" stop-color="#111111"/>
+    </linearGradient>
+    <filter id="drop" x="-8%" y="-8%" width="116%" height="116%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#34271f" flood-opacity="0.14"/>
+    </filter>
+    <filter id="hatShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="4" dy="8" stdDeviation="8" flood-color="#1a1008" flood-opacity="0.35"/>
+    </filter>
     <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M0 0 L8 4 L0 8 z" fill="#34271f"/>
     </marker>
   </defs>
+
+  <rect width="980" height="660" fill="url(#bgGrad)"/>
+
+  <!-- Title -->
+  <text x="50" y="58" font-family="Georgia, serif" font-size="28" font-weight="700" fill="#34271f">The Queue Hat Trick Intermission</text>
+  <text x="50" y="86" font-family="Georgia, serif" font-size="16" fill="#7a6a5a">RCQueue lives inside PersistentRoot. Pulling it out feels a little illegal.</text>
+
+  <!-- Main panel -->
+  <rect x="50" y="106" width="880" height="470" rx="24" fill="#fffaf2" stroke="#34271f" stroke-width="4" filter="url(#drop)"/>
+
+  <!-- ── Top hat asset ── -->
+  <image x="106" y="188" width="248" height="232" href="tux-paint-tophat.svg" preserveAspectRatio="xMidYMid meet" filter="url(#hatShadow)"/>
+
+  <!-- ── Queue balls floating above the hat opening ── -->
+  <circle cx="178" cy="170" r="24" fill="#ffcf96" stroke="#c47a30" stroke-width="2.5" filter="url(#drop)"/>
+  <text x="178" y="176" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#7a5120">job1</text>
+
+  <circle cx="230" cy="140" r="24" fill="#a5d6ff" stroke="#295d8a" stroke-width="2.5" filter="url(#drop)"/>
+  <text x="230" y="146" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#17344f">job2</text>
+
+  <circle cx="282" cy="168" r="24" fill="#dff5df" stroke="#2c6b3e" stroke-width="2.5" filter="url(#drop)"/>
+  <text x="282" y="174" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#1b4829">job3</text>
+
+  <!-- Dashed lines showing balls dropping into hat -->
+  <line x1="178" y1="195" x2="192" y2="206" stroke="#c47a30" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.6"/>
+  <line x1="230" y1="165" x2="230" y2="200" stroke="#295d8a" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.6"/>
+  <line x1="282" y1="193" x2="268" y2="206" stroke="#2c6b3e" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.6"/>
+
+  <!-- Arrow from hat to code box -->
+  <path d="M 400 290 C 440 290 468 262 510 250" stroke="#34271f" stroke-width="3.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="412" y="252" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#34271f">hat.dequeue()</text>
+
+  <!-- ── Code box (right) ── x=520..870 y=166..404 -->
+  <rect x="520" y="166" width="380" height="238" rx="18" fill="#1a1d28" stroke="#3e4554" stroke-width="3" filter="url(#drop)"/>
+  <!-- window chrome dots -->
+  <circle cx="548" cy="188" r="7" fill="#ff5f57"/>
+  <circle cx="572" cy="188" r="7" fill="#febc2e"/>
+  <circle cx="596" cy="188" r="7" fill="#28c840"/>
+  <g font-family="Menlo, Consolas, monospace" font-size="15">
+    <text x="540" y="222" fill="#79c0ff">from</text>
+    <text x="592" y="222" fill="#d4d7df">gemstone_py</text>
+    <text x="756" y="222" fill="#79c0ff">import</text>
+    <text x="810" y="222" fill="#d4d7df">…</text>
+
+    <text x="540" y="254" fill="#d4d7df">root = PersistentRoot(session)</text>
+    <text x="540" y="286" fill="#d4d7df">hat = root[</text>
+    <text x="636" y="286" fill="#a5d6ff">"HatTrickHat"</text>
+    <text x="780" y="286" fill="#d4d7df">]</text>
+
+    <text x="540" y="318" fill="#7ee787">job = hat.dequeue()</text>
+    <text x="540" y="350" fill="#8b949e"># backed by RCQueue</text>
+    <text x="540" y="378" fill="#8b949e"># persistent · conflict-safe</text>
+  </g>
+
+  <!-- ── RCQueue label badge ── -->
+  <rect x="520" y="426" width="380" height="58" rx="16" fill="#e7f0fb" stroke="#5c7288" stroke-width="2.5" filter="url(#drop)"/>
+  <text x="710" y="452" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#1f2937">RCQueue</text>
+  <text x="710" y="472" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#4a6070">repository-backed · multi-session · reduced-conflict</text>
+
+  <!-- ── Quote bubble ── -->
+  <rect x="70" y="448" width="420" height="92" rx="16" fill="#fff8ec" stroke="#8d7764" stroke-width="2.5"/>
+  <text x="280" y="479" text-anchor="middle" font-family="Georgia, serif" font-size="17" font-style="italic" fill="#5d483a">"I reached into PersistentRoot</text>
+  <text x="280" y="504" text-anchor="middle" font-family="Georgia, serif" font-size="17" font-style="italic" fill="#5d483a">and pulled out a queue.</text>
+  <text x="280" y="529" text-anchor="middle" font-family="Georgia, serif" font-size="17" font-style="italic" fill="#5d483a">This feels completely legal."</text>
+
+  <!-- ── Caption ── -->
+  <text x="490" y="608" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="#7a6a5a">The hat trick example shows how PersistentRoot, RCQueue, and session_scope compose naturally.</text>
 </svg>

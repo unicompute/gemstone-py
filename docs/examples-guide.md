@@ -25,10 +25,6 @@ If you want the shortest path:
 3. inspect one persistence example
 4. inspect one Flask example
 
-## The Screenshot You Wish You Took Before Running Everything
-
-![Illustrative terminal output](assets/screenshots/example-terminal.svg)
-
 ## `examples/example.py`: The Grand Tour
 
 If you only run one example, run this one.
@@ -134,8 +130,6 @@ Use these when you want patterns for:
 ## `examples/flask/`
 
 This directory is where the request/session layer stops being theory.
-
-![Illustrative Flask screenshot](assets/screenshots/flask-simple-blog.svg)
 
 Important sub-examples:
 

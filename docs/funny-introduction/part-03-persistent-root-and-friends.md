@@ -17,7 +17,6 @@ Yes. Exactly. That is why people like it.
 It is also why people can get themselves into trouble with it if they mistake
 directness for absence of consequence.
 
-\newpage
 
 ## What `PersistentRoot` Really Is
 
@@ -34,7 +33,6 @@ This matters because GemStone already has the idea of named global dictionaries.
 The library is not inventing fake storage out of local Python air. It is giving
 you a manageable way to work with repository-native structures.
 
-\newpage
 
 ## Why Users Love It Immediately
 
@@ -50,7 +48,6 @@ There is enormous value in being able to say:
 
 That sentence is both technical and social. It helps the code and the humans.
 
-\newpage
 
 ## The Four Symbol Dictionaries
 
@@ -72,7 +69,6 @@ Why?
 The other dictionaries matter, but they should not become your casual dumping
 ground just because they exist and seem adventurous.
 
-\newpage
 
 ## The Difference Between a Root and a Junk Drawer
 
@@ -102,7 +98,6 @@ Persistent names tend to outlive the emotional state in which they were created.
 Name things like somebody else will have to read them in six months, because
 somebody else will. Frequently that somebody else is you, but angrier.
 
-\newpage
 
 ## Simple Structures Work Well
 
@@ -126,7 +121,6 @@ The package later gives you more specialized helpers for:
 But you do not need all of those on day one. `PersistentRoot` lets you start
 with state that is named, readable, and durable.
 
-\newpage
 
 ## The Grand Tour Example Makes This Concrete
 
@@ -144,7 +138,6 @@ demonstrated behavioural fact.
 
 If a package claims persistence, it should show it across sessions. This one does.
 
-\newpage
 
 ## Cross-Session Visibility Is the First Real Magic Trick
 
@@ -161,7 +154,6 @@ thinking "repository-backed system."
 The distinction matters. You are not merely serializing data in the background.
 You are working with shared durable state that outlives the original process.
 
-\newpage
 
 ## When `PersistentRoot` Is Not Enough
 
@@ -177,7 +169,6 @@ This is not a failure of `PersistentRoot`.
 
 It is success with enough growth that you now deserve specialization.
 
-\newpage
 
 ## Friends of `PersistentRoot`
 
@@ -200,7 +191,6 @@ Examples:
 - store a named collection and use it through `GSCollection`
 - use root keys to organize top-level domain buckets
 
-\newpage
 
 ## A Good Application Shape
 
@@ -219,7 +209,6 @@ For example:
 That balance keeps the repository understandable at the top and specialized
 where it needs to be.
 
-\newpage
 
 ## The Queue Hat Trick Intermission
 
@@ -235,7 +224,6 @@ the underlying abstraction is real.
 
 The queue is real. The hat is branding.
 
-\newpage
 
 ## Batched Reads Matter More Than They First Appear
 
@@ -250,7 +238,6 @@ A helper that is simple but slow on normal operations becomes difficult to love.
 
 The package has put real effort into preventing that.
 
-\newpage
 
 ## Naming Strategies That Age Well
 
@@ -270,7 +257,6 @@ Less good strategies:
 If the key will probably survive longer than your current coffee, give it a name
 worthy of survival.
 
-\newpage
 
 ## A Useful First Refactor
 
@@ -284,7 +270,6 @@ point. The first useful refactor is usually to split that single blob into:
 That keeps inspection pleasant and reduces the tendency for everything to become
 a giant dictionary with unexplained interior politics.
 
-\newpage
 
 ## End of Part III
 
@@ -300,7 +285,6 @@ Next we move into the helpers you reach for when you need more structure:
 That is where the package starts to feel less like a bridge and more like a
 small ecosystem.
 
-\newpage
 
 ## Part III Notes Page
 

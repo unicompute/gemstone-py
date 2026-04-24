@@ -1,57 +1,116 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
-  <rect width="1200" height="760" fill="#f6f0e6"/>
-  <rect x="40" y="40" width="1120" height="680" rx="28" fill="#fffaf2" stroke="#3c2f2f" stroke-width="4"/>
-  <text x="70" y="90" font-family="Georgia, serif" font-size="34" fill="#3c2f2f">gemstone-py Architecture Overview</text>
-  <text x="70" y="125" font-family="Georgia, serif" font-size="18" fill="#6d5c4f">One Python package, one GemStone stone, several layers of sensible chaos.</text>
-
-  <rect x="90" y="180" width="250" height="150" rx="20" fill="#dceeff" stroke="#295d8a" stroke-width="3"/>
-  <text x="120" y="220" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#17344f">Your Python App</text>
-  <text x="120" y="255" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#17344f">CLI tools</text>
-  <text x="120" y="282" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#17344f">scripts and notebooks</text>
-  <text x="120" y="309" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#17344f">Flask or Django apps</text>
-
-  <!-- gemstone_py box: x=455..775, y=150..375 -->
-  <rect x="455" y="150" width="320" height="225" rx="22" fill="#ffe7cc" stroke="#9b5f1e" stroke-width="3"/>
-  <text x="545" y="195" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#5b3410">gemstone_py</text>
-  <text x="490" y="235" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#5b3410">GemStoneSession</text>
-  <text x="490" y="262" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b3410">PersistentRoot / GSCollection</text>
-  <text x="490" y="286" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b3410">GStore / ObjectLog</text>
-  <text x="490" y="310" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b3410">concurrency helpers / web providers</text>
-  <text x="490" y="334" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#5b3410">Flask hooks and scoped sessions</text>
-
-  <!-- libgcirpc box: x=860..1115, y=180..345 -->
-  <rect x="860" y="180" width="255" height="165" rx="20" fill="#eadfff" stroke="#56337f" stroke-width="3"/>
-  <text x="907" y="220" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#3b2554">libgcirpc</text>
-  <text x="900" y="255" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#3b2554">GCI bridge</text>
-  <text x="890" y="282" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#3b2554">C API accessed through</text>
-  <text x="890" y="306" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#3b2554">ctypes bindings</text>
-  <text x="890" y="330" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#3b2554">Still strict. Still moody.</text>
-
-  <!-- GemStone box: x=255..945, y=462..644 -->
-  <rect x="255" y="462" width="690" height="182" rx="24" fill="#dff5df" stroke="#2c6b3e" stroke-width="3"/>
-  <text x="330" y="507" font-family="Helvetica, Arial, sans-serif" font-size="32" fill="#1b4829">GemStone/S 64 repository</text>
-  <text x="330" y="544" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#1b4829">UserGlobals, Globals, Published, SessionMethods</text>
-  <text x="330" y="571" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#1b4829">persistent dictionaries, indexed collections, shared queues, counters</text>
-  <text x="330" y="596" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#1b4829">transactions, locks, conflicts, and the occasional</text>
-  <text x="330" y="620" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#1b4829">"who committed that?" moment</text>
-
-  <!-- Python App right (340,255) → gemstone_py left (455,255): horizontal -->
-  <line x1="340" y1="255" x2="453" y2="255" stroke="#3c2f2f" stroke-width="3" marker-end="url(#arr)"/>
-  <!-- gemstone_py right (775,255) → libgcirpc left (860,255): horizontal -->
-  <line x1="775" y1="255" x2="858" y2="255" stroke="#3c2f2f" stroke-width="3" marker-end="url(#arr)"/>
-  <!-- libgcirpc bottom-centre (987,345) → GemStone top at same x (987) BUT 987>945 so use x=880
-       libgcirpc left=860, GemStone right=945 — overlap x=860..945, use centre x=900
-       Straight vertical: start (900,345) end (900,462) — both inside their respective boxes -->
-  <line x1="900" y1="345" x2="900" y2="460" stroke="#3c2f2f" stroke-width="3" marker-end="url(#arr)"/>
-  <!-- gemstone_py bottom-centre (615,375) → GemStone top (615,462): vertical -->
-  <line x1="615" y1="375" x2="615" y2="460" stroke="#3c2f2f" stroke-width="3" marker-end="url(#arr)"/>
-
-  <text x="600" y="676" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-weight="700" fill="#6d5c4f">Application code stays in Python.</text>
-  <text x="600" y="700" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-weight="700" fill="#6d5c4f">The stone keeps the state, the grudges, and the transactions.</text>
-
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
   <defs>
-    <marker id="arr" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto">
-      <path d="M0 0 L10 5 L0 10 z" fill="#3c2f2f"/>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fdfaf4"/>
+      <stop offset="1" stop-color="#f2ead8"/>
+    </linearGradient>
+    <linearGradient id="pythonGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e6f2ff"/>
+      <stop offset="1" stop-color="#cce0f8"/>
+    </linearGradient>
+    <linearGradient id="gemPyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff3e0"/>
+      <stop offset="1" stop-color="#ffe0b2"/>
+    </linearGradient>
+    <linearGradient id="libGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3e8ff"/>
+      <stop offset="1" stop-color="#e1c9ff"/>
+    </linearGradient>
+    <linearGradient id="stoneGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e6f9ea"/>
+      <stop offset="1" stop-color="#c8eecc"/>
+    </linearGradient>
+    <filter id="drop" x="-8%" y="-8%" width="116%" height="116%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#3c2f2f" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arr" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 1 L11 6 L0 11 Z" fill="#3c2f2f"/>
     </marker>
   </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="800" fill="url(#bgGrad)"/>
+  <rect x="36" y="36" width="1128" height="728" rx="30" fill="none" stroke="#c8b89e" stroke-width="2" stroke-dasharray="6,4"/>
+
+  <!-- Title -->
+  <text x="600" y="82" text-anchor="middle" font-family="Georgia, serif" font-size="36" font-weight="700" fill="#3c2f2f">gemstone-py Architecture Overview</text>
+  <text x="600" y="116" text-anchor="middle" font-family="Georgia, serif" font-size="17" fill="#7a6a5a">One Python package. One GemStone stone. No middleware.</text>
+
+  <!-- ── Row 1: three boxes side by side ── -->
+
+  <!-- Box 1: Your Python App  x=60..330, y=168..370  cx=195,cy=269 -->
+  <rect x="60" y="168" width="270" height="202" rx="22" fill="url(#pythonGrad)" stroke="#295d8a" stroke-width="3" filter="url(#drop)"/>
+  <rect x="60" y="168" width="270" height="44" rx="22" fill="#295d8a"/>
+  <rect x="60" y="190" width="270" height="22" fill="#295d8a"/>
+  <text x="195" y="199" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#ffffff">Your Python App</text>
+  <text x="90" y="237" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#17344f">• CLI scripts and notebooks</text>
+  <text x="90" y="262" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#17344f">• Flask or Django web apps</text>
+  <text x="90" y="287" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#17344f">• Background workers</text>
+  <text x="90" y="312" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#17344f">• Data pipelines</text>
+  <text x="90" y="349" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#4a7ab5" font-style="italic">pip install gemstone-py</text>
+
+  <!-- Box 2: gemstone_py  x=440..760, y=148..395  cx=600,cy=271 -->
+  <rect x="440" y="148" width="320" height="248" rx="22" fill="url(#gemPyGrad)" stroke="#9b5f1e" stroke-width="3" filter="url(#drop)"/>
+  <rect x="440" y="148" width="320" height="44" rx="22" fill="#9b5f1e"/>
+  <rect x="440" y="170" width="320" height="22" fill="#9b5f1e"/>
+  <text x="600" y="179" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#ffffff">gemstone_py</text>
+  <text x="468" y="218" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b3410">• GemStoneSession + session_scope()</text>
+  <text x="468" y="242" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b3410">• PersistentRoot / GSCollection</text>
+  <text x="468" y="266" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b3410">• GStore / ObjectLog</text>
+  <text x="468" y="290" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b3410">• RCCounter / RCHash / RCQueue</text>
+  <text x="468" y="314" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b3410">• Flask hooks and web providers</text>
+  <text x="468" y="338" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b3410">• Benchmark + release tooling</text>
+  <text x="468" y="372" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#c47a30" font-style="italic">ctypes bindings — no middleware</text>
+
+  <!-- Box 3: libgcirpc  x=850..1140, y=168..360  cx=995,cy=264 -->
+  <rect x="850" y="168" width="290" height="192" rx="22" fill="url(#libGrad)" stroke="#56337f" stroke-width="3" filter="url(#drop)"/>
+  <rect x="850" y="168" width="290" height="44" rx="22" fill="#56337f"/>
+  <rect x="850" y="190" width="290" height="22" fill="#56337f"/>
+  <text x="995" y="199" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#ffffff">libgcirpc</text>
+  <text x="878" y="238" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#3b2554">• GCI C shared library</text>
+  <text x="878" y="263" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#3b2554">• Ships with GemStone</text>
+  <text x="878" y="288" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#3b2554">• .so / .dylib at runtime</text>
+  <text x="878" y="342" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#7a52a0" font-style="italic">Still strict. Still moody.</text>
+
+  <!-- ── Row 2: GemStone box spanning center ── -->
+  <!-- Box 4: GemStone/S 64  x=240..960, y=496..680  cx=600,cy=588 -->
+  <rect x="240" y="496" width="720" height="185" rx="24" fill="url(#stoneGrad)" stroke="#2c6b3e" stroke-width="3" filter="url(#drop)"/>
+  <rect x="240" y="496" width="720" height="44" rx="24" fill="#2c6b3e"/>
+  <rect x="240" y="518" width="720" height="22" fill="#2c6b3e"/>
+  <text x="600" y="527" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#ffffff">GemStone/S 64 Repository</text>
+  <text x="270" y="566" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#1b4829">• UserGlobals · Globals · Published · SessionMethods  (four SymbolDictionaries)</text>
+  <text x="270" y="591" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#1b4829">• Persistent objects — not rows, not documents — live Smalltalk instances</text>
+  <text x="270" y="616" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#1b4829">• Multi-version concurrency control · reduced-conflict structures · explicit locks</text>
+  <text x="270" y="651" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#3a8050" font-style="italic">The stone keeps the state, the grudges, and the transactions.</text>
+
+  <!-- ── Arrows ── -->
+
+  <!-- Python App right (330,269) → gemstone_py left (440,269) -->
+  <line x1="332" y1="265" x2="438" y2="265" stroke="#3c2f2f" stroke-width="2.5" marker-end="url(#arr)"/>
+  <text x="386" y="256" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#3c2f2f">calls</text>
+
+  <!-- gemstone_py right (760,265) → libgcirpc left (850,265) -->
+  <line x1="762" y1="265" x2="848" y2="265" stroke="#3c2f2f" stroke-width="2.5" marker-end="url(#arr)"/>
+  <text x="806" y="256" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#3c2f2f">loads</text>
+
+  <!-- libgcirpc bottom-centre (995,360) → GemStone top (right side ~870,496) -->
+  <path d="M 960 362 Q 920 430 870 494" stroke="#3c2f2f" stroke-width="2.5" fill="none" marker-end="url(#arr)"/>
+  <text x="940" y="426" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#3c2f2f">GCI calls</text>
+
+  <!-- gemstone_py bottom-centre (600,396) → GemStone top (600,494) -->
+  <line x1="600" y1="398" x2="600" y2="494" stroke="#3c2f2f" stroke-width="2.5" marker-end="url(#arr)"/>
+  <text x="640" y="448" text-anchor="start" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#3c2f2f">eval / persist</text>
+
+  <!-- ── Legend ── -->
+  <rect x="60" y="702" width="18" height="18" rx="4" fill="#295d8a"/>
+  <text x="86" y="716" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#3c2f2f">Your code</text>
+  <rect x="190" y="702" width="18" height="18" rx="4" fill="#9b5f1e"/>
+  <text x="216" y="716" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#3c2f2f">Python package</text>
+  <rect x="356" y="702" width="18" height="18" rx="4" fill="#56337f"/>
+  <text x="382" y="716" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#3c2f2f">C library (bundled with GemStone)</text>
+  <rect x="626" y="702" width="18" height="18" rx="4" fill="#2c6b3e"/>
+  <text x="652" y="716" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#3c2f2f">GemStone database server</text>
+
+  <!-- bottom tagline -->
+  <text x="600" y="758" text-anchor="middle" font-family="Georgia, serif" font-size="15" font-weight="700" fill="#7a6a5a">Application code stays in Python. The stone keeps everything else.</text>
 </svg>
