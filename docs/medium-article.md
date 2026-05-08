@@ -132,17 +132,30 @@ with gemstone.GemStoneSession(
 
 ## Evaluating Smalltalk
 
-`session.eval()` evaluates any Smalltalk expression and marshals the result back to Python automatically:
+`session.eval()` evaluates any Smalltalk expression and marshals the result back to Python automatically. The core session marshaller is intentionally small: scalar values become native Python values, and live GemStone objects become `OopRef` handles. Higher-level APIs such as `PersistentRoot`, `GsDict`, and the collection wrappers use a richer read path when they fetch object references from GemStone.
 
-| GemStone type | Python result |
-|---|---|
-| SmallInt | `int` |
-| Float | `float` |
-| String / Symbol | `str` |
-| Boolean | `bool` |
-| nil | `None` |
-| Character | single-char `str` |
-| Any other object | `OopRef` (wraps the OOP) |
+| GemStone value or class | `session.eval()` / `perform()` result | `PersistentRoot` / wrapper read result | Python value accepted on write |
+|---|---|---|---|
+| `nil` | `None` | `None` | `None` |
+| `Boolean` (`true`, `false`) | `bool` | `bool` | `bool` |
+| `SmallInteger` | `int` | `int` | `int` (stored as a SmallInteger OOP) |
+| `LargeInteger` | `OopRef` | `GsObject` | Not automatic |
+| `SmallDouble` / `Float` | `float` when GCI can decode it | `float` when GCI can decode it | `float` |
+| `Fraction` / `ScaledDecimal` / `DecimalFloat` | `OopRef` | `GsObject` | Not automatic |
+| `String` | `str` | `str` | `str` (stored as `String`) |
+| `Symbol` | `str` | `str` | Use `session.new_symbol()` when you need a `Symbol`; plain `str` writes a `String` |
+| `Character` | Single-character `str` | Single-character `str` | Not automatic |
+| `StringKeyValueDictionary` | `OopRef` | `GsDict` | `dict` or `GsDict` |
+| `Array` | `OopRef` | `list` with recursively converted items | `list` or `tuple` |
+| `OrderedCollection` | `OopRef` | `OrderedCollection` | Existing wrapper object |
+| `RcCounter` | `OopRef` | `RCCounter` | Existing wrapper object |
+| `RcKeyValueDictionary` | `OopRef` | `RCHash` | Existing wrapper object |
+| `RcQueue` | `OopRef` | `RCQueue` | Existing wrapper object |
+| `Date` / `Time` / `DateTime` / `DateAndTime` | `OopRef` | `GsObject` | Not automatic; use `gs_datetime()` / `datetime_to_gs()` for `DateAndTime` |
+| `Dictionary` / `IdentityDictionary` / `Set` / other collections without a dedicated wrapper | `OopRef` | `GsObject` | Not automatic |
+| Any other GemStone object | `OopRef` | `GsObject` | Not automatic, unless you pass an existing Python wrapper that exposes `_oop` |
+
+This table is about automatic conversion. If a value comes back as `OopRef` or `GsObject`, you can still work with it by sending Smalltalk messages through `send()`, `perform()`, or `perform_oop()`.
 
 ```python
 session.eval("'Hello' , ' world'")   # 'Hello world'
