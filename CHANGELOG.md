@@ -4,6 +4,8 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+## 0.2.8 - 2026-05-10
+
 - Made the local/CI Ruff gate cover the whole repository with explicit legacy
   ignores for translated example metadata and embedded long-form content.
 - Fixed full-repository Ruff findings in examples, tests, and compatibility
