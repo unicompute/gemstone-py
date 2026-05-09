@@ -46,14 +46,14 @@ When the native package is installed, `gemstone_py` uses it automatically.
 Set `GEMSTONE_PY_GCI_BACKEND=ctypes` or `GEMSTONE_PY_GCI_BACKEND=native` to
 force one backend while testing.
 The `Native Wheels` workflow builds Python 3.11 stable-ABI wheels for Linux
-x86_64, Linux aarch64, macOS x86_64, macOS aarch64, and Windows x86_64, with
-one native sdist and manual TestPyPI/PyPI publishing gates. Linux wheels are
-built with Maturin's Zig path and `--compatibility pypi` so the workflow rejects
+x86_64, Linux aarch64, macOS x86_64, macOS aarch64, Windows x86_64, and
+Windows ARM64, with one native sdist and manual TestPyPI/PyPI publishing gates.
+Linux wheels are built with Maturin's Zig path and `--compatibility pypi` so the workflow rejects
 non-PyPI-compatible Linux tags instead of uploading local `linux_*` wheels. Each
 matrix job checks the built wheel's `cp311-abi3` tag and expected platform
 markers, then installs the wheel and verifies that `gemstone_py._gci` selects
 the native backend before upload. Before publishing, the publish jobs verify
-that the merged artifact set contains exactly the expected native sdist and five
+that the merged artifact set contains exactly the expected native sdist and six
 platform wheels. The publish jobs also install the just-published native package
 and verify that `gemstone_py._gci` selects the native backend, then check
 package metadata for the expected sdist and Linux/macOS/Windows wheel families.

@@ -21,6 +21,7 @@ NATIVE_REQUIRED_WHEEL_MARKERS: tuple[tuple[str, ...], ...] = (
     ("macosx", "x86_64"),
     ("macosx", "arm64"),
     ("win_amd64",),
+    ("win_arm64",),
 )
 NATIVE_REQUIRED_PROJECT_URLS = ("Homepage", "Repository", "Issues")
 NATIVE_REQUIRED_CLASSIFIERS = (

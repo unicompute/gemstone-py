@@ -61,6 +61,7 @@ class WorkflowConfigTests(unittest.TestCase):
             "macos-x86_64",
             "macos-aarch64",
             "windows-x86_64",
+            "windows-aarch64",
         ]:
             self.assertIn(platform, content)
         self.assertIn("release-tag:", content)
@@ -76,6 +77,8 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertIn("macosx,x86_64", content)
         self.assertIn("macosx,arm64", content)
         self.assertIn("win_amd64", content)
+        self.assertIn("win_arm64", content)
+        self.assertIn("windows-11-arm", content)
         self.assertIn("Verify ${{ matrix.platform }} wheel artifact", content)
         self.assertIn("EXPECTED_WHEEL_MARKERS", content)
         self.assertIn("Verify ${{ matrix.platform }} wheel import", content)
