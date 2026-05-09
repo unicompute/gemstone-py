@@ -74,6 +74,8 @@ class WorkflowConfigTests(unittest.TestCase):
         content = pathlib.Path(".github/workflows/native-wheels.yml").read_text(
             encoding="utf-8"
         )
+        self.assertIn("branches:", content)
+        self.assertIn('"**"', content)
         self.assertIn("gemstone-py-native/**", content)
         for platform in [
             "linux-x86_64",

@@ -4,6 +4,9 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+- Scoped the native wheel workflow's automatic push trigger to branch pushes so
+  pure release tags do not start redundant native builds.
+
 ## 0.2.6 - 2026-05-09
 
 - Added the async session, async pool, FastAPI dependency, and async live coverage paths.

@@ -16,6 +16,8 @@ on:
         required: true
         default: "false"
   push:
+    branches:
+      - "**"
     paths:
       - "gemstone-py-native/**"
       - ".github/workflows/native-wheels.yml"
