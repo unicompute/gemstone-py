@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "gemstone-py-native"
-version = "0.1.1"
+version = "0.1.2"
 description = "Optional PyO3 native fast path for gemstone-py."
 readme = "README.md"
 requires-python = ">=3.11"

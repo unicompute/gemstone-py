@@ -4,6 +4,8 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+- Bumped `gemstone-py-native` to 0.1.2 for the PyPI Trusted Publishing
+  verification release.
 - Scoped the native wheel workflow's automatic push trigger to branch pushes so
   pure release tags do not start redundant native builds.
 - Removed TestPyPI API-token fallback from pure and native release workflows now
