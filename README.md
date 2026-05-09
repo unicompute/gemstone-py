@@ -62,9 +62,7 @@ catching missing source archive contents before publish. PyPI publishes require
 a native release tag that matches `gemstone-py-native`'s version, for example
 `native-v0.1.2`. Trusted Publishing is preferred for TestPyPI/PyPI because it
 produces PyPI publish attestations. TestPyPI publishes require Trusted
-Publishing. Real PyPI native publishes can temporarily fall back to an
-environment or repository secret named `PYPI_API_TOKEN` until the PyPI Trusted
-Publishing path is verified; API-token fallback disables attestation upload.
+Publishing. Real PyPI native publishes also require Trusted Publishing.
 
 For development from source:
 
