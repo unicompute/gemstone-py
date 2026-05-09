@@ -4,6 +4,13 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+## 0.2.6 - 2026-05-09
+
+- Added the async session, async pool, FastAPI dependency, and async live coverage paths.
+- Added typed managed object handles, identity-aware proxy caching, and explicit remote lifetime disposal support.
+- Added the optional PyO3 native GCI extension package with Linux, macOS, Windows, x86_64, ARM64, and Linux ARMv7 wheel builds.
+- Hardened TestPyPI/PyPI release verification for pure and native artifacts.
+
 ## 0.2.5 - 2026-04-22
 
 - Updated documentation diagrams: improved arrow routing in architecture overview, examples map, and cookbook flow SVGs.
