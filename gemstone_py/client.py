@@ -4,19 +4,21 @@ from __future__ import annotations
 
 import ctypes
 import os
+import threading
+from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
 from types import TracebackType
-from typing import Any, Literal, Optional, cast
+from typing import Any, Literal, Optional, TypeVar, cast
 
 from ._gci import (
     GCI_ENCRYPT_BUF_SIZE,
     GCI_INVALID_SESSION,
-    GciErrSType,
     OOP_FALSE,
     OOP_ILLEGAL,
     OOP_NIL,
     OOP_TRUE,
+    GciErrSType,
     _bind,
     _char_to_python,
     _is_char,
@@ -25,6 +27,7 @@ from ._gci import (
     _python_to_smallint,
     _smallint_to_python,
 )
+from .oop import ManagedOop, OopHandle, TypedOop
 
 __all__ = [
     "GemStoneError",
@@ -32,9 +35,14 @@ __all__ = [
     "TransactionPolicy",
     "GemStoneConfig",
     "GemStoneSession",
+    "ManagedOop",
     "OopRef",
+    "OopHandle",
+    "TypedOop",
     "connect",
 ]
+
+T = TypeVar("T")
 
 
 class GemStoneError(RuntimeError):
@@ -50,7 +58,11 @@ class GemStoneError(RuntimeError):
         msg = err.message.decode("utf-8", errors="replace").rstrip("\x00")
         reason = err.reason.decode("utf-8", errors="replace").rstrip("\x00")
         full = msg if not reason or reason == msg else f"{msg} [{reason}]"
-        return cls(full or f"GemStone error #{err.number}", number=err.number, fatal=bool(err.fatal))
+        return cls(
+            full or f"GemStone error #{err.number}",
+            number=err.number,
+            fatal=bool(err.fatal),
+        )
 
 
 class GemStoneConfigurationError(ValueError):
@@ -72,7 +84,9 @@ class TransactionPolicy(str, Enum):
             return cls(value)
         except ValueError as exc:
             options = ", ".join(policy.value for policy in cls)
-            raise ValueError(f"Unknown transaction policy {value!r}. Expected one of: {options}") from exc
+            raise ValueError(
+                f"Unknown transaction policy {value!r}. Expected one of: {options}"
+            ) from exc
 
 
 @dataclass(frozen=True)
@@ -183,6 +197,11 @@ class GemStoneSession:
         self._session_id: int = GCI_INVALID_SESSION
         self._logged_in: bool = False
         self.__string_class_oops_cache: frozenset[int] | None = None
+        self._managed_oop_counts: Counter[int] = Counter()
+        self._managed_oop_pending_removals: Counter[int] = Counter()
+        self._managed_oop_lock = threading.RLock()
+        self._managed_oop_draining = False
+        self._owner_thread_id: int | None = None
 
     def __enter__(self) -> "GemStoneSession":
         self.login()
@@ -268,14 +287,21 @@ class GemStoneSession:
 
         self._session_id = lib.GciGetSessionId()
         self._logged_in = True
+        self._owner_thread_id = threading.get_ident()
 
     def logout(self) -> None:
         if not self._logged_in or self._lib is None:
             return
         lib = self._activate_session()
-        lib.GciLogout()
-        self._logged_in = False
-        self._session_id = GCI_INVALID_SESSION
+        try:
+            lib.GciLogout()
+        finally:
+            self._logged_in = False
+            self._session_id = GCI_INVALID_SESSION
+            self._owner_thread_id = None
+            with self._managed_oop_lock:
+                self._managed_oop_counts.clear()
+                self._managed_oop_pending_removals.clear()
 
     def commit(self) -> None:
         lib = self._require_login()
@@ -320,7 +346,28 @@ class GemStoneSession:
         self._check_result(oop)
         return oop
 
-    def perform(self, receiver: int, selector: str, *args: int) -> Any:
+    def execute(self, source: str) -> int:
+        """Evaluate Smalltalk source and return the raw result OOP."""
+        return self.execute_oop(source)
+
+    def execute_oop(self, source: str) -> int:
+        """Evaluate Smalltalk source and return the raw result OOP."""
+        return self.eval_oop(source)
+
+    def execute_typed(self, source: str, cls: type[T]) -> TypedOop[T]:
+        """Evaluate source and return a phantom-typed OOP."""
+        return TypedOop(self.eval_oop(source), self, cls)
+
+    def execute_managed(self, source: str) -> ManagedOop:
+        """Evaluate source and retain the raw result OOP in the export set."""
+        return self.eval_managed(source)
+
+    def eval_managed(self, source: str) -> ManagedOop:
+        """Evaluate source and retain the raw result OOP in the export set."""
+        return self.managed_oop(self.eval_oop(source))
+
+    def perform_value(self, receiver: int, selector: str, *args: int) -> Any:
+        """Perform a selector and marshal the result to a Python value."""
         lib = self._require_login()
         arg_arr = (ctypes.c_uint64 * len(args))(*args)
         oop = int(
@@ -333,6 +380,10 @@ class GemStoneSession:
         )
         self._check_result(oop)
         return self._marshal(oop)
+
+    def perform(self, receiver: int, selector: str, *args: int) -> int:
+        """Perform a selector and return the raw result OOP."""
+        return self.perform_oop(receiver, selector, *args)
 
     def perform_oop(self, receiver: int, selector: str, *args: int) -> int:
         lib = self._require_login()
@@ -347,6 +398,20 @@ class GemStoneSession:
         )
         self._check_result(oop)
         return oop
+
+    def perform_typed(
+        self,
+        receiver: int,
+        selector: str,
+        cls: type[T],
+        *args: int,
+    ) -> TypedOop[T]:
+        """Perform a selector and return a phantom-typed OOP."""
+        return TypedOop(self.perform_oop(receiver, selector, *args), self, cls)
+
+    def perform_managed(self, receiver: int, selector: str, *args: int) -> ManagedOop:
+        """Perform a selector and retain the raw result OOP in the export set."""
+        return self.managed_oop(self.perform_oop(receiver, selector, *args))
 
     def new_string(self, value: str) -> int:
         lib = self._require_login()
@@ -431,6 +496,81 @@ class GemStoneSession:
         )
         return self._marshal(value.value)
 
+    def managed_oop(self, oop: int) -> ManagedOop:
+        """Return an automatically released export-set handle for ``oop``."""
+        return ManagedOop(oop, self)
+
+    def handle(self, oop: int) -> OopHandle:
+        """Return an explicitly scoped export-set handle for ``oop``."""
+        return OopHandle(oop, self)
+
+    def _retain_managed_oop(self, oop: int) -> None:
+        with self._managed_oop_lock:
+            previous = self._managed_oop_counts[oop]
+            if previous == 0:
+                self._add_to_export_set(oop)
+            self._managed_oop_counts[oop] = previous + 1
+
+    def _release_managed_oop(self, oop: int) -> None:
+        remove_now = False
+        with self._managed_oop_lock:
+            current = self._managed_oop_counts.get(oop, 0)
+            if current <= 0:
+                return
+            if current == 1:
+                del self._managed_oop_counts[oop]
+                if self._can_call_gci_on_current_thread():
+                    remove_now = True
+                elif self._logged_in:
+                    self._managed_oop_pending_removals[oop] += 1
+            else:
+                self._managed_oop_counts[oop] = current - 1
+        if remove_now:
+            self._remove_from_export_set(oop)
+
+    def _can_call_gci_on_current_thread(self) -> bool:
+        owner = self._owner_thread_id
+        return self._logged_in and (owner is None or owner == threading.get_ident())
+
+    def _drain_pending_managed_oop_removals(self) -> None:
+        if self._managed_oop_draining or not self._can_call_gci_on_current_thread():
+            return
+        self._managed_oop_draining = True
+        try:
+            while True:
+                with self._managed_oop_lock:
+                    if not self._managed_oop_pending_removals:
+                        return
+                    oop, count = self._managed_oop_pending_removals.popitem()
+                for _ in range(count):
+                    self._remove_from_export_set(oop)
+        finally:
+            self._managed_oop_draining = False
+
+    def _add_to_export_set(self, oop: int) -> None:
+        self._call_optional_oop_export_function(
+            ("GciAddOopToExportSet", "GciAddObjToExportSet"),
+            oop,
+        )
+
+    def _remove_from_export_set(self, oop: int) -> None:
+        self._call_optional_oop_export_function(
+            ("GciRemoveOopFromExportSet", "GciRemoveObjFromExportSet"),
+            oop,
+        )
+
+    def _call_optional_oop_export_function(self, names: tuple[str, ...], oop: int) -> None:
+        if not self._logged_in or self._lib is None:
+            return
+        lib = self._activate_session(drain_pending=False)
+        for name in names:
+            try:
+                fn = getattr(lib, name)
+            except AttributeError:
+                continue
+            fn(ctypes.c_uint64(oop))
+            return
+
     def _python_value_to_oop(self, value: object) -> int:
         if value is None:
             return int(OOP_NIL)
@@ -471,11 +611,15 @@ class GemStoneSession:
             raise GemStoneError("Not logged in. Call login() first.")
         return self._activate_session()
 
-    def _activate_session(self) -> ctypes.CDLL:
+    def _activate_session(self, *, drain_pending: bool = True) -> ctypes.CDLL:
         lib = self._require_lib()
         if self._session_id == GCI_INVALID_SESSION:
             raise GemStoneError("Not logged in. Call login() first.")
         lib.GciSetSessionId(self._session_id)
+        if self._owner_thread_id is None:
+            self._owner_thread_id = threading.get_ident()
+        if drain_pending:
+            self._drain_pending_managed_oop_removals()
         return lib
 
     def _check_result(self, oop: int) -> None:
@@ -554,13 +698,13 @@ class OopRef:
                 raw.append(cast(int, _python_to_smallint(arg)))
             else:
                 raw.append(cast(int, arg))
-        return self._session.perform(self.oop, selector, *raw)
+        return self._session.perform_value(self.oop, selector, *raw)
 
     def gs_class(self) -> int:
         return self._session.fetch_class(self.oop)
 
     def print_string(self) -> str:
-        return cast(str, self._session.perform(self.oop, "printString"))
+        return cast(str, self._session.perform_value(self.oop, "printString"))
 
 
 def connect(

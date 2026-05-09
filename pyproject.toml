@@ -7,7 +7,7 @@ name = "gemstone-py"
 version = "0.2.5"
 description = "Direct Python-to-GemStone GCI bridge and translated persistence helpers."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [{name = "gemstone-py contributors"}]
 dependencies = [
   "tomli>=2.0.1; python_version < '3.11'",
@@ -33,23 +33,36 @@ dev = [
   "build>=1.0",
   "Flask>=2.3",
   "mypy>=1.10",
+  "pytest-asyncio>=0.23",
   "ruff>=0.6",
+]
+fast = [
+  "gemstone-py-native>=0.1",
 ]
 
 [tool.setuptools]
-packages = ["gemstone_py"]
+
+[tool.setuptools.packages.find]
+include = ["gemstone_py*"]
+
+[tool.setuptools.package-data]
+gemstone_py = ["py.typed"]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 files = [
   "gemstone_py/__init__.py",
+  "gemstone_py/aio/__init__.py",
+  "gemstone_py/aio/fastapi.py",
+  "gemstone_py/aio/gsquery.py",
+  "gemstone_py/aio/persistent_root.py",
   "gemstone_py/api_contract.py",
   "gemstone_py/benchmark_baseline_register.py",
   "gemstone_py/benchmark_baselines.py",
@@ -61,12 +74,15 @@ files = [
   "gemstone_py/example_support.py",
   "gemstone_py/cli.py",
   "gemstone_py/client.py",
+  "gemstone_py/native.py",
+  "gemstone_py/oop.py",
   "gemstone_py/web.py",
   "gemstone_py/persistent_root.py",
   "gemstone_py/gsquery.py",
   "gemstone_py/gstore.py",
   "gemstone_py/concurrency.py",
   "gemstone_py/objectlog.py",
+  "examples/typed_access/simple_blog_queries.py",
 ]
 follow_imports = "skip"
 ignore_missing_imports = true
@@ -92,13 +108,19 @@ strict = true
 [[tool.mypy.overrides]]
 module = [
   "gemstone_py.client",
+  "gemstone_py.oop",
 ]
 strict = true
 
 [[tool.mypy.overrides]]
 module = [
+  "gemstone_py.aio",
+  "gemstone_py.aio.fastapi",
+  "gemstone_py.aio.gsquery",
+  "gemstone_py.aio.persistent_root",
   "gemstone_py.gsquery",
   "gemstone_py.gstore",
+  "gemstone_py.native",
 ]
 strict = true
 
@@ -117,5 +139,11 @@ strict = true
 [[tool.mypy.overrides]]
 module = [
   "gemstone_py.persistent_root",
+]
+strict = true
+
+[[tool.mypy.overrides]]
+module = [
+  "examples.typed_access.simple_blog_queries",
 ]
 strict = true

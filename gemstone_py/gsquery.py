@@ -81,7 +81,9 @@ This is the standard GemStone equality-index operation.
 """
 
 import json
-from typing import Any, ContextManager, Iterable, List, cast
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any, ContextManager, Generic, Iterable, List, TypeVar, cast, overload
 
 import gemstone_py as gemstone
 from gemstone_py.persistent_root import _from_oop, _to_oop
@@ -109,6 +111,125 @@ _OPS = {
 # Root key in UserGlobals that holds all named GSCollections
 _ROOT = 'GSQueryRoot'
 Record = dict[str, Any]
+RecordT = TypeVar("RecordT")
+
+
+@dataclass(frozen=True)
+class QueryPredicate:
+    """One typed query predicate against a GemStone record ivar path."""
+
+    ivar_path: str
+    op: str
+    value: Any
+
+
+class _FieldPath:
+    """Runtime field recorder used by ``Query.where(lambda row: ...)``."""
+
+    def __init__(self, parts: tuple[str, ...]):
+        self._parts = parts
+
+    @property
+    def ivar_path(self) -> str:
+        return ".".join(f"@{part}" for part in self._parts)
+
+    def __getattr__(self, name: str) -> "_FieldPath":
+        if name.startswith("__"):
+            raise AttributeError(name)
+        return _FieldPath((*self._parts, name))
+
+    def _predicate(self, op: str, value: Any) -> QueryPredicate:
+        return QueryPredicate(self.ivar_path, op, value)
+
+    def eq(self, value: Any) -> QueryPredicate:
+        return self._predicate("eql", value)
+
+    def ne(self, value: Any) -> QueryPredicate:
+        return self._predicate("neq", value)
+
+    def lt(self, value: Any) -> QueryPredicate:
+        return self._predicate("lt", value)
+
+    def lte(self, value: Any) -> QueryPredicate:
+        return self._predicate("lte", value)
+
+    def gt(self, value: Any) -> QueryPredicate:
+        return self._predicate("gt", value)
+
+    def gte(self, value: Any) -> QueryPredicate:
+        return self._predicate("gte", value)
+
+    def __eq__(self, value: object) -> Any:
+        return self.eq(value)
+
+    def __ne__(self, value: object) -> Any:
+        return self.ne(value)
+
+    def __lt__(self, value: Any) -> QueryPredicate:
+        return self.lt(value)
+
+    def __le__(self, value: Any) -> QueryPredicate:
+        return self.lte(value)
+
+    def __gt__(self, value: Any) -> QueryPredicate:
+        return self.gt(value)
+
+    def __ge__(self, value: Any) -> QueryPredicate:
+        return self.gte(value)
+
+
+class _QueryRow:
+    """Root field recorder for typed query lambdas."""
+
+    def __getattr__(self, name: str) -> _FieldPath:
+        if name.startswith("__"):
+            raise AttributeError(name)
+        return _FieldPath((name,))
+
+
+class _RecordProxy:
+    """Attribute facade over a materialized GemStone record dictionary."""
+
+    def __init__(self, data: Record):
+        self._data = data
+
+    def __getattr__(self, name: str) -> Any:
+        if name.startswith("__"):
+            raise AttributeError(name)
+        for key in (name, f"@{name}"):
+            if key in self._data:
+                return _wrap_record_value(self._data[key])
+        raise AttributeError(name)
+
+    def __getitem__(self, key: str) -> Any:
+        return self._data[key]
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self._data.get(key, default)
+
+    def keys(self) -> Iterable[str]:
+        return self._data.keys()
+
+    def items(self) -> Iterable[tuple[str, Any]]:
+        for key, value in self._data.items():
+            yield key, _wrap_record_value(value)
+
+    def to_dict(self) -> Record:
+        return dict(self._data)
+
+    def __repr__(self) -> str:
+        return f"<GSCollectionRecord {self._data!r}>"
+
+
+def _wrap_record_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return _RecordProxy(value)
+    if isinstance(value, list):
+        return [_wrap_record_value(item) for item in value]
+    return value
+
+
+_MISSING = object()
 
 
 def _session(
@@ -166,6 +287,15 @@ class GSCollection:
         self._name = name
         self._config = config
 
+    def query(
+        self,
+        record_type: type[RecordT] | None = None,
+        *,
+        session: gemstone.GemStoneSession | None = None,
+    ) -> "Query[RecordT]":
+        """Return a typed query facade for this collection."""
+        return Query(self, record_type=record_type, session=session)
+
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
@@ -197,7 +327,7 @@ class GSCollection:
         collection_oop: int,
     ) -> List[int]:
         array_oop = s.perform_oop(collection_oop, 'asArray')
-        size = s.perform(array_oop, 'size')
+        size = s.perform_value(array_oop, 'size')
         result = []
         for i in range(1, size + 1):
             idx_oop = gemstone._python_to_smallint(i)
@@ -573,7 +703,7 @@ class GSCollection:
     def size(self, session: gemstone.GemStoneSession | None = None) -> int:
         """Return the number of elements in the collection."""
         with _session(session, self._config) as s:
-            return cast(int, s.perform(self._set_oop(s), 'size'))
+            return cast(int, s.perform_value(self._set_oop(s), 'size'))
 
     def replace_all(
         self,
@@ -733,6 +863,92 @@ class GSCollection:
                 return []
             root_oop = s.eval_oop(f"UserGlobals at: #{root}")
             return cls._keys_from_dict_oop(s, root_oop)
+
+
+class Query(Generic[RecordT]):
+    """Typed query facade for ``GSCollection`` records."""
+
+    def __init__(
+        self,
+        collection: GSCollection,
+        *,
+        record_type: type[RecordT] | None = None,
+        session: gemstone.GemStoneSession | None = None,
+        filters: list[QueryPredicate] | None = None,
+    ):
+        self._collection = collection
+        self._record_type = record_type
+        self._session = session
+        self._filters = list(filters or [])
+
+    @overload
+    def where(self, ivar_path: str, op: str, value: Any) -> "Query[RecordT]":
+        ...
+
+    @overload
+    def where(self, ivar_path: Callable[[RecordT], object]) -> "Query[RecordT]":
+        ...
+
+    def where(
+        self,
+        ivar_path: str | Callable[[Any], object],
+        op: str | None = None,
+        value: Any = _MISSING,
+    ) -> "Query[RecordT]":
+        """
+        Return a new query with one additional GemStone indexed-search predicate.
+
+        The classic form is ``where("@age", "lt", 25)``. The typed form accepts
+        a lambda over a field recorder, such as ``where(lambda row: row.age < 25)``.
+        Attribute paths map to GemStone ivar paths, so ``row.address.zip`` becomes
+        ``@address.@zip``.
+        """
+        if callable(ivar_path):
+            if op is not None or value is not _MISSING:
+                raise TypeError("lambda query predicates do not accept op/value arguments")
+            predicate = ivar_path(_QueryRow())
+            if not isinstance(predicate, QueryPredicate):
+                raise TypeError(
+                    "query lambda must return one field comparison, "
+                    "for example: lambda row: row.status == 'booked'"
+                )
+        else:
+            if op is None or value is _MISSING:
+                raise TypeError("string query predicates require ivar_path, op, and value")
+            predicate = QueryPredicate(ivar_path, op, value)
+
+        return Query(
+            self._collection,
+            record_type=self._record_type,
+            session=self._session,
+            filters=[*self._filters, predicate],
+        )
+
+    def all(self) -> list[RecordT]:
+        """Materialize all records matching this query."""
+        if not self._filters:
+            return self._coerce_records(self._collection.all(session=self._session))
+
+        result: list[Record] | None = None
+        for predicate in self._filters:
+            current = self._collection.search(
+                predicate.ivar_path,
+                predicate.op,
+                predicate.value,
+                session=self._session,
+            )
+            result = current if result is None else self._collection.intersect(result, current)
+        return self._coerce_records(result or [])
+
+    def first(self, default: RecordT | None = None) -> RecordT | None:
+        """Return the first matching record, or ``default`` when empty."""
+        records = self.all()
+        return records[0] if records else default
+
+    def _coerce_records(self, records: list[Record]) -> list[RecordT]:
+        if self._record_type is None or self._record_type is dict:
+            return cast(list[RecordT], records)
+        return [cast(RecordT, _RecordProxy(record)) for record in records]
 
 
 # ------------------------------------------------------------------

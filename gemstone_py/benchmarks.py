@@ -10,7 +10,9 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
+from importlib import import_module
 from pathlib import Path
+from types import ModuleType
 from typing import Any, Callable, Protocol, Sequence, TypeVar, cast
 
 from gemstone_py import (
@@ -27,6 +29,7 @@ from gemstone_py.persistent_root import PersistentRoot
 DEFAULT_ENTRIES = 200
 DEFAULT_SEARCH_RUNS = 10
 DEFAULT_SUITES = ("persistent_root", "gscollection", "gstore", "rchash")
+OFFLINE_SUITES = frozenset({"gci"})
 BENCHMARK_REPORT_SCHEMA_VERSION = 1
 
 
@@ -69,6 +72,7 @@ class BenchmarkReport:
     python_version: str
     python_implementation: str
     platform: str
+    gci_backend: str
     stone: str
     host: str
     entries: int
@@ -83,9 +87,9 @@ class BenchmarkReport:
         return payload
 
 
-def _benchmark_config() -> GemStoneConfig:
+def _benchmark_config(*, require_credentials: bool = True) -> GemStoneConfig:
     try:
-        return GemStoneConfig.from_env()
+        return GemStoneConfig.from_env(require_credentials=require_credentials)
     except GemStoneConfigurationError as exc:
         raise SystemExit(
             f"{exc}\n"
@@ -355,7 +359,65 @@ def _rchash_populate(session: GemStoneSession, rc_hash: RCHash, entries: int) ->
     session.commit()
 
 
+def benchmark_gci(
+    _config: GemStoneConfig,
+    *,
+    entries: int,
+) -> list[BenchmarkResult]:
+    """Compare low-level ctypes and PyO3 helper-call overhead."""
+    backends: list[tuple[str, ModuleType | None, str | None]] = [
+        ("ctypes", import_module("gemstone_py._gci_ctypes"), None),
+    ]
+    try:
+        native_module = import_module("gemstone_py_native._gci")
+    except ImportError as exc:
+        backends.append(("native", None, f"skipped: {exc.name or 'native extension'} unavailable"))
+    else:
+        backends.append(("native", native_module, None))
+
+    results: list[BenchmarkResult] = []
+    for backend, module, missing_note in backends:
+        operation = f"{backend}_smallint_roundtrip"
+        if module is None:
+            results.append(
+                BenchmarkResult(
+                    suite="gci",
+                    operation=operation,
+                    count=0,
+                    elapsed_seconds=0.0,
+                    ops_per_second=0.0,
+                    note=missing_note,
+                )
+            )
+            continue
+
+        backend_module = module
+
+        def run_roundtrip() -> int:
+            return _gci_smallint_roundtrip(backend_module, entries)
+
+        result, checksum = _measure(
+            "gci",
+            operation,
+            entries,
+            run_roundtrip,
+        )
+        results.append(result.with_note(f"checksum={checksum}"))
+    return results
+
+
+def _gci_smallint_roundtrip(module: ModuleType, entries: int) -> int:
+    to_oop = cast(Callable[[int], int], getattr(module, "_python_to_smallint"))
+    to_python = cast(Callable[[int], int], getattr(module, "_smallint_to_python"))
+    checksum = 0
+    for index in range(entries):
+        value = (index % 200_001) - 100_000
+        checksum += to_python(to_oop(value))
+    return checksum
+
+
 SUITE_RUNNERS: dict[str, Callable[..., list[BenchmarkResult]]] = {
+    "gci": benchmark_gci,
     "persistent_root": benchmark_persistent_root,
     "gscollection": benchmark_gscollection,
     "gstore": benchmark_gstore,
@@ -397,6 +459,7 @@ def build_report(
         python_version=sys.version.split()[0],
         python_implementation=platform.python_implementation(),
         platform=platform.platform(),
+        gci_backend=_active_gci_backend(),
         stone=config.stone,
         host=config.host,
         entries=entries,
@@ -404,6 +467,12 @@ def build_report(
         suites=list(suites),
         results=list(results),
     )
+
+
+def _active_gci_backend() -> str:
+    from gemstone_py import _gci
+
+    return str(getattr(_gci, "IMPLEMENTATION", "unknown"))
 
 
 def format_results(results: Sequence[BenchmarkResult]) -> str:
@@ -452,6 +521,11 @@ def format_results(results: Sequence[BenchmarkResult]) -> str:
             f"{(result.note or ''):<{note_width}}"
         )
     return "\n".join(lines)
+
+
+def selected_suites_require_live(suites: Sequence[str]) -> bool:
+    """Return whether any selected suite needs a logged-in GemStone session."""
+    return any(suite not in OFFLINE_SUITES for suite in suites)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -504,8 +578,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.search_runs < 1:
         raise SystemExit("--search-runs must be at least 1")
 
-    config = _benchmark_config()
     suites = tuple(args.suites or DEFAULT_SUITES)
+    config = _benchmark_config(require_credentials=selected_suites_require_live(suites))
     results = run_benchmark_suite(
         config=config,
         suites=suites,

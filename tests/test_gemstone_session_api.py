@@ -101,15 +101,15 @@ class GemStoneSessionPolicyTests(unittest.TestCase):
 
 
 class OopRefTests(unittest.TestCase):
-    def test_print_string_uses_perform_on_remote_object(self):
+    def test_print_string_uses_perform_value_on_remote_object(self):
         session = mock.Mock()
-        session.perform.return_value = "anObject"
+        session.perform_value.return_value = "anObject"
         ref = gemstone.OopRef(0xABC, session)
 
         result = ref.print_string()
 
         self.assertEqual(result, "anObject")
-        session.perform.assert_called_once_with(0xABC, "printString")
+        session.perform_value.assert_called_once_with(0xABC, "printString")
 
 
 class PackagingSmokeTests(unittest.TestCase):

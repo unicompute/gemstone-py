@@ -17,9 +17,19 @@ CORE_EXPORTS: dict[str, tuple[str, str]] = {
     "GemStoneConfigurationError": ("gemstone_py.client", "GemStoneConfigurationError"),
     "GemStoneError": ("gemstone_py.client", "GemStoneError"),
     "GemStoneSession": ("gemstone_py.client", "GemStoneSession"),
+    "ManagedOop": ("gemstone_py.client", "ManagedOop"),
+    "Oop": ("gemstone_py.oop", "Oop"),
+    "OopHandle": ("gemstone_py.client", "OopHandle"),
     "OopRef": ("gemstone_py.client", "OopRef"),
+    "TypedOop": ("gemstone_py.client", "TypedOop"),
     "TransactionPolicy": ("gemstone_py.client", "TransactionPolicy"),
     "connect": ("gemstone_py.client", "connect"),
+    "GemStoneClassWrapper": ("gemstone_py.oop", "GemStoneClassWrapper"),
+    "GemStoneObjectProxy": ("gemstone_py.oop", "GemStoneObjectProxy"),
+    "gemstone_class": ("gemstone_py.oop", "gemstone_class"),
+    "gemstone_class_name": ("gemstone_py.oop", "gemstone_class_name"),
+    "registered_gemstone_classes": ("gemstone_py.oop", "registered_gemstone_classes"),
+    "typed_oop": ("gemstone_py.oop", "typed_oop"),
     "GemStoneSessionPool": ("gemstone_py.web", "GemStoneSessionPool"),
     "GemStoneSessionProvider": ("gemstone_py.web", "GemStoneSessionProvider"),
     "GemStoneSessionProviderEvent": ("gemstone_py.web", "GemStoneSessionProviderEvent"),
@@ -57,9 +67,11 @@ CORE_EXPORTS: dict[str, tuple[str, str]] = {
 }
 
 MODULE_EXPORTS: dict[str, str] = {
+    "aio": "gemstone_py.aio",
     "benchmark_baseline_register": "gemstone_py.benchmark_baseline_register",
     "benchmark_baselines": "gemstone_py.benchmark_baselines",
     "benchmark_compare": "gemstone_py.benchmark_compare",
+    "native": "gemstone_py.native",
     "release_metadata": "gemstone_py.release_metadata",
     "session_facade": "gemstone_py.session_facade",
 }
@@ -143,17 +155,28 @@ def validate_public_api_behaviors() -> list[str]:
         def __init__(self) -> None:
             self.calls: list[tuple[int, str, tuple[object, ...]]] = []
 
-        def perform(self, receiver: int, selector: str, *args: object) -> str:
+        def perform_value(self, receiver: int, selector: str, *args: object) -> str:
             self.calls.append((receiver, selector, args))
             return "printStringResult"
 
     stub_session = _StubSession()
     oop_ref = client.OopRef(0xABC, stub_session)
     if oop_ref.print_string() != "printStringResult":
-        raise AssertionError("OopRef.print_string did not delegate to session.perform")
+        raise AssertionError("OopRef.print_string did not delegate to session.perform_value")
     if stub_session.calls != [(0xABC, "printString", ())]:
-        raise AssertionError("OopRef.print_string called session.perform incorrectly")
+        raise AssertionError("OopRef.print_string called session.perform_value incorrectly")
     validated.append("oopref_print_string")
+
+    @gemstone_py.gemstone_class("ApiContractThing")
+    class _ApiContractThing:
+        pass
+
+    typed = gemstone_py.typed_oop(0xABC, _ApiContractThing)
+    if int(typed) != 0xABC or typed.gemstone_class_name != "ApiContractThing":
+        raise AssertionError("typed_oop did not preserve the OOP and class witness")
+    if gemstone_py.registered_gemstone_classes()["ApiContractThing"] is not _ApiContractThing:
+        raise AssertionError("gemstone_class did not register the wrapper")
+    validated.append("typed_oop_registry")
 
     with TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)

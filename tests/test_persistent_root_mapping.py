@@ -136,10 +136,10 @@ class GsDictMappingTests(unittest.TestCase):
 
     def test_len_uses_size_directly(self):
         gs_dict, session = _make_gs_dict()
-        session.perform.return_value = 7
+        session.perform_value.return_value = 7
 
         self.assertEqual(len(gs_dict), 7)
-        session.perform.assert_called_once_with(123, "size")
+        session.perform_value.assert_called_once_with(123, "size")
 
     def test_gs_dict_send_dispatches_and_wraps_result(self):
         gs_dict, session = _make_gs_dict()
@@ -287,10 +287,10 @@ class PersistentRootMappingTests(unittest.TestCase):
 
     def test_len_uses_size_directly(self):
         root, session = _make_persistent_root()
-        session.perform.return_value = 4
+        session.perform_value.return_value = 4
 
         self.assertEqual(len(root), 4)
-        session.perform.assert_called_once_with(456, "size")
+        session.perform_value.assert_called_once_with(456, "size")
 
 
 if __name__ == "__main__":

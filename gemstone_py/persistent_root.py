@@ -184,14 +184,14 @@ class GsDict:
     def __len__(self) -> int:
         s = object.__getattribute__(self, '_session')
         oop = object.__getattribute__(self, '_oop')
-        return cast(int, s.perform(oop, 'size'))
+        return cast(int, s.perform_value(oop, 'size'))
 
     def _call(self, selector: str, *args: Any) -> Any:
         """Send an arbitrary Smalltalk message to this dict's OOP."""
         s   = object.__getattribute__(self, '_session')
         oop = object.__getattribute__(self, '_oop')
         raw = [_to_oop(s, a) for a in args]
-        return s.perform(oop, selector, *raw)
+        return s.perform_value(oop, selector, *raw)
 
     def _call_oop(self, selector: str, *args: Any) -> int:
         s   = object.__getattribute__(self, '_session')
@@ -248,7 +248,7 @@ class GsObject:
         s   = object.__getattribute__(self, '_session')
         oop = object.__getattribute__(self, '_oop')
         raw = [_to_oop(s, a) for a in args]
-        return s.perform(oop, selector, *raw)
+        return s.perform_value(oop, selector, *raw)
 
     def _call_oop(self, selector: str, *args: Any) -> int:
         s   = object.__getattribute__(self, '_session')
@@ -441,7 +441,7 @@ class PersistentRoot:
     def __len__(self) -> int:
         s = object.__getattribute__(self, '_session')
         ug = object.__getattribute__(self, '_ug')
-        return cast(int, s.perform(ug, 'size'))
+        return cast(int, s.perform_value(ug, 'size'))
 
     def __repr__(self) -> str:
         name = object.__getattribute__(self, '_name')
@@ -552,7 +552,7 @@ def _class_oop(s: _gs.GemStoneSession, name: str) -> int | None:
 
 def _array_from_gs(s: _gs.GemStoneSession, oop: int) -> list[Any]:
     """Convert a GemStone Array into a plain Python list."""
-    size = s.perform(oop, 'size')
+    size = s.perform_value(oop, 'size')
     result: list[Any] = []
     for i in range(1, size + 1):
         idx_oop = _gs._python_to_smallint(i)

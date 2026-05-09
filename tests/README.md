@@ -17,7 +17,10 @@ python3 -m unittest discover -s tests -p 'test*.py'
 Opt-in live integration coverage:
 
 ```bash
-GS_RUN_LIVE=1 python3 -m unittest tests.test_live_smoke tests.test_live_integration
+GS_RUN_LIVE=1 python3 -m unittest \
+  tests.test_live_smoke \
+  tests.test_live_integration \
+  tests.test_live_async_integration
 ```
 
 Destructive live coverage is split behind a second flag. These tests mutate

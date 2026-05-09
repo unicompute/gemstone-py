@@ -1,0 +1,17 @@
+[package]
+name = "gemstone-py-native"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Optional PyO3 native fast path for gemstone-py"
+homepage = "https://github.com/unicompute/gemstone-py"
+repository = "https://github.com/unicompute/gemstone-py"
+documentation = "https://github.com/unicompute/gemstone-py/tree/main/gemstone-py-native"
+
+[lib]
+name = "gemstone_py_native_gci"
+crate-type = ["cdylib"]
+
+[dependencies]
+libloading = "0.8"
+pyo3 = { version = "0.28", features = ["abi3-py311", "extension-module"] }

@@ -159,7 +159,7 @@ class _GsProxy:
 
     def _call(self, selector: str, *args: Any) -> Any:
         raw = [_oop(self._s(), a) for a in args]
-        return self._s().perform(self._o(), selector, *raw)
+        return self._s().perform_value(self._o(), selector, *raw)
 
     def _call_oop(self, selector: str, *args: Any) -> int:
         raw = [_oop(self._s(), a) for a in args]

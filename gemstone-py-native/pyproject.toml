@@ -1,0 +1,38 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "gemstone-py-native"
+version = "0.1.0"
+description = "Optional PyO3 native fast path for gemstone-py."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{name = "gemstone-py contributors"}]
+license = "MIT"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Rust",
+  "Topic :: Database",
+]
+dependencies = [
+  "gemstone-py>=0.2.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/unicompute/gemstone-py"
+Repository = "https://github.com/unicompute/gemstone-py"
+Issues = "https://github.com/unicompute/gemstone-py/issues"
+
+[tool.maturin]
+features = ["pyo3/abi3-py311", "pyo3/extension-module"]
+module-name = "gemstone_py_native._gci"
+python-source = "python"
+strip = true

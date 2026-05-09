@@ -82,7 +82,7 @@ class OrderedCollection:
 
     def _call(self, selector: str, *args) -> Any:
         raw = [_to_oop(self._s(), a) for a in args]
-        return self._s().perform(self._o(), selector, *raw)
+        return self._s().perform_value(self._o(), selector, *raw)
 
     def _call_oop(self, selector: str, *args) -> int:
         raw = [_to_oop(self._s(), a) for a in args]
@@ -229,7 +229,7 @@ class OrderedCollection:
         """
         s = self._s()
         array_oop = self._call_oop('asArray')
-        size = s.perform(array_oop, 'size')
+        size = s.perform_value(array_oop, 'size')
         for i in range(size, 0, -1):
             v_oop = s.perform_oop(array_oop, 'at:', _gs._python_to_smallint(i))
             yield _from_oop(s, v_oop)

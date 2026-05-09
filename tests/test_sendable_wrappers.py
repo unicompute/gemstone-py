@@ -48,7 +48,7 @@ class OrderedCollectionBridgeTests(unittest.TestCase):
     def test_reverse_iter_uses_array_snapshot_without_eval_string_oops(self):
         col, session = _make_ordered_collection()
         session.perform_oop.side_effect = [500, 703, 702, 701]
-        session.perform.return_value = 3
+        session.perform_value.return_value = 3
 
         with mock.patch.object(ordered_collection_mod, "_from_oop", side_effect=lambda _s, oop: f"wrapped:{oop}") as from_oop:
             result = list(col.reverse_iter())
@@ -60,7 +60,7 @@ class OrderedCollectionBridgeTests(unittest.TestCase):
             mock.call(500, "at:", ordered_collection_mod._gs._python_to_smallint(2)),
             mock.call(500, "at:", ordered_collection_mod._gs._python_to_smallint(1)),
         ])
-        session.perform.assert_called_once_with(500, "size")
+        session.perform_value.assert_called_once_with(500, "size")
         session.eval.assert_not_called()
         self.assertEqual(from_oop.call_count, 3)
 

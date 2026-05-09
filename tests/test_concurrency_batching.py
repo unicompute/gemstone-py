@@ -27,7 +27,7 @@ class RCHashBatchingTests(unittest.TestCase):
         self.assertEqual(result, [("alpha", "wrapped:801"), ("beta", "wrapped:802")])
         self.assertEqual(session.eval.call_count, 2)
         session.perform_oop.assert_not_called()
-        session.perform.assert_not_called()
+        session.perform_value.assert_not_called()
 
 
 if __name__ == "__main__":

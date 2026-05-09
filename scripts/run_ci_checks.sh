@@ -14,6 +14,10 @@ fi
 
 lint_paths=(
   gemstone_py/__init__.py
+  gemstone_py/aio/__init__.py
+  gemstone_py/aio/fastapi.py
+  gemstone_py/aio/gsquery.py
+  gemstone_py/aio/persistent_root.py
   gemstone_py/api_contract.py
   gemstone_py/benchmark_baseline_register.py
   gemstone_py/benchmark_baselines.py
@@ -22,10 +26,15 @@ lint_paths=(
   gemstone_py/benchmarks.py
   gemstone_py/cli.py
   gemstone_py/example_support.py
+  gemstone_py/native.py
+  gemstone_py/oop.py
   gemstone_py/session_facade.py
+  examples/fastapi/app.py
+  examples/typed_access/simple_blog_queries.py
   examples/example.py
   examples/misc/smalltalk_demo.py
   tests/test_api_contract.py
+  tests/test_async_api.py
   tests/test_benchmark_baseline_register.py
   tests/test_benchmark_baselines.py
   tests/test_benchmark_compare.py
@@ -34,7 +43,11 @@ lint_paths=(
   tests/test_benchmarks.py
   tests/test_cli.py
   tests/test_gemstone_session_api.py
+  tests/test_live_async_integration.py
+  tests/test_native_crate.py
   tests/test_smalltalk_bridge.py
+  tests/test_typed_oop_lifetime.py
+  tests/test_workflow_configs.py
 )
 
 "${pybin}" -m ruff check "${lint_paths[@]}"

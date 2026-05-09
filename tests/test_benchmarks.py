@@ -2,6 +2,7 @@ import io
 import json
 import pathlib
 import tempfile
+import types
 import unittest
 from contextlib import redirect_stdout
 from unittest import mock
@@ -62,6 +63,7 @@ class BenchmarkCliTests(unittest.TestCase):
             benchmarks.BENCHMARK_REPORT_SCHEMA_VERSION,
         )
         self.assertEqual(payload["stone"], "gs64stone")
+        self.assertIn(payload["gci_backend"], {"ctypes", "native"})
         self.assertEqual(payload["results"][0]["suite"], "gstore")
         self.assertEqual(payload["results"][0]["operation"], "snapshot_read")
         run_suite.assert_called_once()
@@ -119,6 +121,58 @@ class BenchmarkCliTests(unittest.TestCase):
                         benchmarks.BENCHMARK_REPORT_SCHEMA_VERSION,
                     )
                     self.assertEqual(payload["results"][0]["operation"], "mapping_keys")
+
+    def test_gci_suite_does_not_require_credentials(self):
+        stream = io.StringIO()
+        config = mock.Mock(stone="gs64stone", host="localhost")
+        results = [
+            benchmarks.BenchmarkResult(
+                suite="gci",
+                operation="ctypes_smallint_roundtrip",
+                count=10,
+                elapsed_seconds=0.1,
+                ops_per_second=100.0,
+            )
+        ]
+
+        with mock.patch(
+            "gemstone_py.benchmarks.GemStoneConfig.from_env",
+            return_value=config,
+        ) as from_env:
+            with mock.patch(
+                "gemstone_py.benchmarks.run_benchmark_suite",
+                return_value=results,
+            ):
+                with redirect_stdout(stream):
+                    benchmarks.main(["--suite", "gci"])
+
+        from_env.assert_called_once_with(require_credentials=False)
+        self.assertIn("ctypes_smallint_roundtrip", stream.getvalue())
+
+    def test_gci_benchmark_compares_ctypes_and_native_modules(self):
+        def fake_module() -> types.ModuleType:
+            module = types.ModuleType("fake_gci")
+            module._python_to_smallint = lambda value: (value << 3) | 0x2
+            module._smallint_to_python = lambda oop: oop >> 3
+            return module
+
+        def import_side_effect(name):
+            if name in {"gemstone_py._gci_ctypes", "gemstone_py_native._gci"}:
+                return fake_module()
+            raise ImportError(name=name)
+
+        with mock.patch(
+            "gemstone_py.benchmarks.import_module",
+            side_effect=import_side_effect,
+        ):
+            results = benchmarks.benchmark_gci(mock.Mock(), entries=5)
+
+        self.assertEqual(
+            [result.operation for result in results],
+            ["ctypes_smallint_roundtrip", "native_smallint_roundtrip"],
+        )
+        self.assertTrue(all(result.count == 5 for result in results))
+        self.assertTrue(all(result.note == "checksum=-499990" for result in results))
 
 
 if __name__ == "__main__":

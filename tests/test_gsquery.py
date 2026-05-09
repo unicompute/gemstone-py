@@ -1,16 +1,22 @@
 import contextlib
 import unittest
+from typing import Protocol
 from unittest import mock
 
 import gemstone_py as gemstone
 from gemstone_py.gsquery import GSCollection
 
 
+class BookingRecord(Protocol):
+    status: str
+    age: int
+
+
 class GSCollectionHelpersTests(unittest.TestCase):
     def test_collection_member_oops_reads_via_as_array(self):
         session = mock.Mock()
         session.perform_oop.side_effect = [500, 101, 102]
-        session.perform.return_value = 2
+        session.perform_value.return_value = 2
 
         result = GSCollection._collection_member_oops(session, 123)
 
@@ -20,7 +26,7 @@ class GSCollectionHelpersTests(unittest.TestCase):
             mock.call(500, 'at:', gemstone._python_to_smallint(1)),
             mock.call(500, 'at:', gemstone._python_to_smallint(2)),
         ])
-        session.perform.assert_called_once_with(500, 'size')
+        session.perform_value.assert_called_once_with(500, 'size')
 
     def test_path_array_oop_builds_array_without_eval(self):
         session = mock.Mock()
@@ -97,6 +103,76 @@ class GSCollectionHelpersTests(unittest.TestCase):
 
 
 class GSCollectionQueryTests(unittest.TestCase):
+    def test_query_where_lambda_maps_attribute_comparison_to_ivar_path(self):
+        col = GSCollection('Bookings')
+
+        query = col.query(BookingRecord).where(lambda booking: booking.status == "booked")
+
+        with mock.patch.object(
+            col,
+            'search',
+            return_value=[{'@status': 'booked'}],
+        ) as search:
+            result = query.all()
+
+        self.assertEqual(result[0].status, 'booked')
+        self.assertEqual(result[0]['@status'], 'booked')
+        search.assert_called_once_with('@status', 'eql', 'booked', session=None)
+
+    def test_typed_query_materializes_nested_attribute_records(self):
+        col = GSCollection('Bookings')
+
+        query = col.query(BookingRecord)
+
+        with mock.patch.object(
+            col,
+            'all',
+            return_value=[{'@status': 'booked', '@address': {'@zip': '90210'}}],
+        ):
+            result = query.all()
+
+        self.assertEqual(result[0].status, 'booked')
+        self.assertEqual(result[0].address.zip, '90210')
+        self.assertEqual(result[0].to_dict(), {'@status': 'booked', '@address': {'@zip': '90210'}})
+
+    def test_query_where_lambda_supports_nested_paths_and_range_operators(self):
+        col = GSCollection('Bookings')
+
+        query = col.query().where(lambda booking: booking.address.zip == "90210").where(
+            lambda booking: booking.age >= 21
+        )
+
+        with mock.patch.object(
+            col,
+            'search',
+            side_effect=[
+                [{'@address': {'@zip': '90210'}, '@age': 30}],
+                [{'@address': {'@zip': '90210'}, '@age': 30}],
+            ],
+        ) as search:
+            result = query.all()
+
+        self.assertEqual(result, [{'@address': {'@zip': '90210'}, '@age': 30}])
+        self.assertEqual(
+            search.call_args_list,
+            [
+                mock.call('@address.@zip', 'eql', '90210', session=None),
+                mock.call('@age', 'gte', 21, session=None),
+            ],
+        )
+
+    def test_query_where_rejects_non_comparison_lambdas(self):
+        col = GSCollection('Bookings')
+
+        with self.assertRaisesRegex(TypeError, "field comparison"):
+            col.query().where(lambda booking: booking.status)
+
+    def test_query_where_string_form_still_requires_all_parts(self):
+        col = GSCollection('Bookings')
+
+        with self.assertRaisesRegex(TypeError, "ivar_path, op, and value"):
+            col.query().where('@status')  # type: ignore[call-overload]
+
     def test_search_oops_uses_indexed_perform_path(self):
         col = GSCollection('People')
         session = mock.Mock()

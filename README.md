@@ -33,6 +33,35 @@ from gemstone_py.session_facade import GemStoneSessionFacade
 python3 -m pip install gemstone-py
 ```
 
+The package requires Python 3.11 or newer. The default install uses the
+pure-ctypes GCI path. When native wheels are available, the opt-in fast path is:
+
+```bash
+python3 -m pip install "gemstone-py[fast]"
+```
+
+The native package source lives in `gemstone-py-native/` and builds the
+`gemstone_py_native._gci` PyO3 extension with `maturin`.
+When the native package is installed, `gemstone_py` uses it automatically.
+Set `GEMSTONE_PY_GCI_BACKEND=ctypes` or `GEMSTONE_PY_GCI_BACKEND=native` to
+force one backend while testing.
+The `Native Wheels` workflow builds Python 3.11 stable-ABI wheels for Linux
+x86_64, Linux aarch64, macOS x86_64, macOS aarch64, and Windows x86_64, with
+one native sdist and manual TestPyPI/PyPI publishing gates. Linux wheels are
+built with Maturin's Zig path and `--compatibility pypi` so the workflow rejects
+non-PyPI-compatible Linux tags instead of uploading local `linux_*` wheels. Each
+matrix job checks the built wheel's `cp311-abi3` tag and expected platform
+markers, then installs the wheel and verifies that `gemstone_py._gci` selects
+the native backend before upload. Before publishing, the publish jobs verify
+that the merged artifact set contains exactly the expected native sdist and five
+platform wheels. The publish jobs also install the just-published native package
+and verify that `gemstone_py._gci` selects the native backend, then check
+package metadata for the expected sdist and Linux/macOS/Windows wheel families.
+The sdist job also builds the native sdist back into a wheel before upload,
+catching missing source archive contents before publish. PyPI publishes require
+a native release tag that matches `gemstone-py-native`'s version, for example
+`native-v0.1.0`.
+
 For development from source:
 
 ```bash
@@ -108,6 +137,98 @@ with GemStoneSession(config=config) as session:
 ```
 
 If you want the old auto-commit behavior for a scoped unit of work, pass `TransactionPolicy.COMMIT_ON_SUCCESS` explicitly or use `session_scope(...)`.
+
+## Async Usage
+
+`gemstone_py.aio.AsyncSession` wraps one synchronous `GemStoneSession` in a
+single-worker executor so GCI calls stay on one owning thread while FastAPI or
+asyncio handlers avoid blocking the event loop:
+
+```python
+from gemstone_py import GemStoneConfig
+from gemstone_py.aio import AsyncSession
+
+config = GemStoneConfig.from_env()
+
+async with AsyncSession.connect(config=config) as session:
+    ref = await session.execute_managed("Date today")
+    print(await ref.print_string())
+    value = await session.eval("3 + 4")
+
+    async with session.transaction():
+        await session.eval("System myUserProfile")
+```
+
+For FastAPI:
+
+```python
+from fastapi import Depends, FastAPI
+from gemstone_py import GemStoneConfig
+from gemstone_py.aio import AsyncSession
+from gemstone_py.aio.fastapi import session_dependency
+
+app = FastAPI()
+get_gemstone = session_dependency(config=GemStoneConfig.from_env())
+
+@app.get("/health/gemstone")
+async def gemstone_health(session: AsyncSession = Depends(get_gemstone)):
+    return {"result": await session.eval("3 + 4")}
+```
+
+## Typed OOPs and Handles
+
+The untyped API remains available. New code can add phantom types for static
+checking and IDE hints:
+
+```python
+from typing import Protocol
+from gemstone_py import GemStoneSession, gemstone_class
+
+@gemstone_class("OkzBooking")
+class OkzBooking(Protocol):
+    status: str
+
+with GemStoneSession(config=config) as session:
+    booking = session.execute_typed("OkzBooking findById: 'x'", OkzBooking)
+    status = booking.proxy().status
+```
+
+Typed `GSCollection` queries keep the existing string form and also accept a
+field-recording lambda. The lambda is executed against a query builder, not a
+live object, so attribute access becomes a GemStone ivar path. Untyped queries
+still return dictionaries; typed queries materialize lightweight rows with
+attribute access:
+
+```python
+from typing import Protocol
+from gemstone_py.gsquery import GSCollection
+
+class BlogPostRecord(Protocol):
+    status: str
+    timestamp: float
+
+posts = GSCollection("SimplePosts").query(BlogPostRecord)
+published = posts.where(lambda post: post.status == "published").all()
+recent = posts.where(lambda post: post.status == "published").where(
+    lambda post: post.timestamp >= cutoff
+).all()
+```
+
+For long-lived raw OOPs, use managed or explicitly scoped handles:
+
+```python
+with GemStoneSession(config=config) as session:
+    ref = session.execute_managed("OrderedCollection new")
+    print(ref.print_string())
+
+    with session.handle(int(ref)) as handle:
+        print(handle.send("size"))
+```
+
+`execute()` and `perform()` keep the historic raw-OOP return behavior.
+Use `execute_managed()` / `perform_managed()` when you want automatic
+export-set lifetime management, and `perform_value()` when you want the old
+marshalled Python value from a message send.
 
 ## Flask Requests
 
@@ -207,11 +328,30 @@ Run the live lane with the optional longer soak coverage:
 GS_RUN_LIVE=1 GS_RUN_LIVE_SOAK=1 ./scripts/run_live_checks.sh
 ```
 
+The live lane includes sync coverage, concrete async/FastAPI/lifetime coverage,
+and an async-runner parity pass over the existing live integration suite.
+
 Run the maintained benchmark lane against a configured stone:
 
 ```bash
 ./scripts/run_benchmarks.sh
 gemstone-benchmarks --entries 500 --search-runs 20
+```
+
+To compare the low-level ctypes and PyO3 helper-call overhead without a live
+stone:
+
+```bash
+gemstone-benchmarks --suite gci --entries 1000000
+```
+
+To compare real GemStone workloads through each GCI backend, run the same
+benchmark twice with a forced backend and compare the saved reports:
+
+```bash
+GEMSTONE_PY_GCI_BACKEND=ctypes gemstone-benchmarks --json --output ctypes-report.json
+GEMSTONE_PY_GCI_BACKEND=native gemstone-benchmarks --json --output native-report.json
+gemstone-benchmark-compare ctypes-report.json native-report.json
 ```
 
 To capture a benchmark artifact locally:
@@ -250,6 +390,17 @@ Run the build/install artifact smoke lane directly:
 ```bash
 ./scripts/run_build_smoke.sh
 ```
+
+Run the optional native extension smoke lane directly:
+
+```bash
+./scripts/run_native_checks.sh
+```
+
+That native lane runs `cargo fmt --check`, `cargo check`, builds a local native
+wheel, verifies its abi3 tag and package metadata, installs the wheel in a temp
+environment to check native backend selection, builds the native sdist, and then
+builds a wheel back from the extracted sdist.
 
 That smoke lane now validates the installed package API contract directly from
 the built wheel and sdist via `python -m gemstone_py.api_contract`, including
@@ -387,7 +538,10 @@ For repository operations:
 - use the scheduled/manual `Runner Health` workflow to detect self-hosted runner drift and offline state
 - use `Release Dry Run` before cutting a new version
 - use `Release TestPyPI` as the full publish rehearsal
+- use `Native Wheels` with `publish-to-testpypi=true` before publishing the optional native package
+- use `./scripts/run_native_checks.sh` before starting the native wheel publish workflow
 - use `Post Release Verify` after a real PyPI publish to validate the public artifact and metadata
+- use `Native Wheels` with `publish-to-pypi=true` and a matching native `release-tag` only after the native wheel matrix passes on all target platforms
 - use the real `Release` workflow only after `CHANGELOG.md`, `pyproject.toml`, live checks, and benchmarks all match the intended version
 - keep a second Mac host or at least a documented rebuild path for the `gemstone-py-local` self-hosted runner
 
