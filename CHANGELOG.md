@@ -8,6 +8,10 @@ All notable changes to `gemstone-py` should be recorded here.
   ignores for translated example metadata and embedded long-form content.
 - Fixed full-repository Ruff findings in examples, tests, and compatibility
   modules without changing runtime behavior.
+- Made benchmark baseline matching backend-aware so ctypes and native GCI
+  benchmark reports are not compared accidentally.
+- Registered a current macOS ARM64 Python 3.14.4 ctypes benchmark baseline for
+  the self-hosted runner.
 
 ## 0.2.7 - 2026-05-10
 

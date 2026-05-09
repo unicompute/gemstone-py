@@ -14,6 +14,7 @@ def _report_payload(
     platform: str = "macOS-26-arm64",
     python_version: str = "3.14.3",
     python_implementation: str = "CPython",
+    gci_backend: str = "ctypes",
     entries: int = 200,
     search_runs: int = 10,
     suites: list[str] | None = None,
@@ -26,6 +27,7 @@ def _report_payload(
         "platform": platform,
         "python_version": python_version,
         "python_implementation": python_implementation,
+        "gci_backend": gci_backend,
         "entries": entries,
         "search_runs": search_runs,
         "suites": suites or ["persistent_root", "gscollection"],
@@ -86,6 +88,30 @@ class BenchmarkBaselineSelectionTests(unittest.TestCase):
         self.assertFalse(report.comparable)
         self.assertIsNone(report.selected_path)
         self.assertIn("No committed benchmark baseline matches", report.message)
+
+    def test_select_baseline_distinguishes_gci_backend(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = pathlib.Path(temp_dir)
+            candidate_path = temp_path / "candidate.json"
+            baseline_path = temp_path / "baseline.json"
+            manifest_path = temp_path / "index.json"
+            candidate_path.write_text(
+                json.dumps(_report_payload(gci_backend="native")),
+                encoding="utf-8",
+            )
+            baseline_path.write_text(
+                json.dumps(_report_payload(gci_backend="ctypes")),
+                encoding="utf-8",
+            )
+            _write_manifest(manifest_path, ["baseline.json"])
+
+            report = benchmark_baselines.select_baseline(
+                candidate_report_path=str(candidate_path),
+                manifest_path=str(manifest_path),
+            )
+
+        self.assertFalse(report.comparable)
+        self.assertIsNone(report.selected_path)
 
     def test_select_baseline_normalises_suite_order(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -16,6 +16,7 @@ COMPARABLE_METADATA_FIELDS: tuple[str, ...] = (
     "platform",
     "python_version",
     "python_implementation",
+    "gci_backend",
     "entries",
     "search_runs",
     "suites",

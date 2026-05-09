@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "baselines": [
-    "baseline.json"
+    "baseline.json",
+    "baseline-macos-26-arm64-python3144-ctypes.json"
   ]
 }

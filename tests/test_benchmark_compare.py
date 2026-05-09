@@ -18,6 +18,7 @@ def _report_payload(
     platform: str = "macOS-14-arm64",
     python_version: str = "3.11.9",
     python_implementation: str = "CPython",
+    gci_backend: str = "ctypes",
     entries: int = 200,
     search_runs: int = 10,
     suites: list[str] | None = None,
@@ -29,6 +30,7 @@ def _report_payload(
         "platform": platform,
         "python_version": python_version,
         "python_implementation": python_implementation,
+        "gci_backend": gci_backend,
         "entries": entries,
         "search_runs": search_runs,
         "suites": suites or [suite],
@@ -99,6 +101,29 @@ class BenchmarkCompareTests(unittest.TestCase):
         self.assertIn("platform differs", report.compatibility_issues[0])
         self.assertFalse(report.threshold_exceeded)
         self.assertEqual(report.threshold_exceeded_operations, [])
+
+    def test_compare_reports_marks_gci_backend_mismatch_non_comparable(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            baseline_path = pathlib.Path(temp_dir) / "baseline.json"
+            candidate_path = pathlib.Path(temp_dir) / "candidate.json"
+            baseline_path.write_text(
+                json.dumps(_report_payload(gci_backend="ctypes")),
+                encoding="utf-8",
+            )
+            candidate_path.write_text(
+                json.dumps(_report_payload(gci_backend="native")),
+                encoding="utf-8",
+            )
+
+            report = benchmark_compare.compare_reports(
+                baseline_path=str(baseline_path),
+                candidate_path=str(candidate_path),
+                max_regression_pct=10.0,
+            )
+
+        self.assertFalse(report.comparable)
+        self.assertIn("gci_backend differs", report.compatibility_issues[0])
+        self.assertFalse(report.threshold_exceeded)
 
     def test_compare_reports_normalises_suite_order(self):
         with tempfile.TemporaryDirectory() as temp_dir:
