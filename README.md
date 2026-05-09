@@ -60,7 +60,11 @@ package metadata for the expected sdist and Linux/macOS/Windows wheel families.
 The sdist job also builds the native sdist back into a wheel before upload,
 catching missing source archive contents before publish. PyPI publishes require
 a native release tag that matches `gemstone-py-native`'s version, for example
-`native-v0.1.0`.
+`native-v0.1.0`. Trusted Publishing is preferred for TestPyPI/PyPI because it
+produces PyPI publish attestations. If trusted publishing is not configured, the
+publish jobs can fall back to environment or repository secrets named
+`TEST_PYPI_API_TOKEN` and `PYPI_API_TOKEN`; API-token fallback disables
+attestation upload.
 
 For development from source:
 
