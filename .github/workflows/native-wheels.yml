@@ -181,7 +181,7 @@ jobs:
               raise SystemExit("Native smallint helper round trip failed")
           PY
 
-      - uses: actions/upload-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: gemstone-py-native-${{ matrix.platform }}
           path: dist/*
@@ -249,13 +249,13 @@ jobs:
               raise SystemExit(f"Native sdist-built wheel is not abi3 tagged: {wheel_name}")
           PY
 
-      - uses: actions/upload-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: gemstone-py-native-sdist
           path: dist/*
           if-no-files-found: error
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: native-sdist-build-smoke
           path: sdist-wheel/*
@@ -281,7 +281,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: gemstone-py-native-*
           path: dist
@@ -358,7 +358,7 @@ jobs:
             --json > native-pypi-release.json
           cat native-pypi-release.json
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: gemstone-py-native-testpypi-verify
           path: native-pypi-release.json
@@ -384,7 +384,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: gemstone-py-native-*
           path: dist
@@ -444,7 +444,7 @@ jobs:
             --json > native-pypi-release.json
           cat native-pypi-release.json
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: gemstone-py-native-pypi-verify
           path: native-pypi-release.json
