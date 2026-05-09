@@ -4,6 +4,10 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+## 0.2.7 - 2026-05-10
+
+- Updated the `fast` extra to require `gemstone-py-native>=0.1.2`, the first
+  native release verified through PyPI Trusted Publishing.
 - Bumped `gemstone-py-native` to 0.1.2 for the PyPI Trusted Publishing
   verification release.
 - Removed PyPI API-token fallback from the pure release workflow now that PyPI
