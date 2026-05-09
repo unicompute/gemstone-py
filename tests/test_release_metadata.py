@@ -43,6 +43,7 @@ def _native_filenames() -> list[str]:
         "gemstone_py_native-0.1.0.tar.gz",
         "gemstone_py_native-0.1.0-cp311-abi3-manylinux_2_17_x86_64.whl",
         "gemstone_py_native-0.1.0-cp311-abi3-manylinux_2_17_aarch64.whl",
+        "gemstone_py_native-0.1.0-cp311-abi3-manylinux_2_17_armv7l.whl",
         "gemstone_py_native-0.1.0-cp311-abi3-macosx_10_12_x86_64.whl",
         "gemstone_py_native-0.1.0-cp311-abi3-macosx_11_0_arm64.whl",
         "gemstone_py_native-0.1.0-cp311-abi3-win_amd64.whl",
@@ -200,7 +201,7 @@ class ReleaseMetadataTests(unittest.TestCase):
         )
 
         self.assertEqual(report.expected_sdist, "gemstone_py_native-0.1.0.tar.gz")
-        self.assertEqual(len(report.filenames), 7)
+        self.assertEqual(len(report.filenames), 8)
 
     def test_validate_native_artifact_filenames_rejects_extra_artifact(self):
         with self.assertRaisesRegex(
@@ -233,7 +234,7 @@ class ReleaseMetadataTests(unittest.TestCase):
         payload = json.loads(stream.getvalue())
         self.assertEqual(payload["package_name"], "gemstone-py-native")
         self.assertEqual(payload["version"], "0.1.0")
-        self.assertEqual(len(payload["filenames"]), 7)
+        self.assertEqual(len(payload["filenames"]), 8)
 
     def test_validate_native_pypi_release_accepts_non_latest_release(self):
         payload = _native_payload()

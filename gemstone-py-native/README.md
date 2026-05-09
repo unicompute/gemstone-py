@@ -24,7 +24,7 @@ maturin build --release
 ```
 
 The repository workflow `Native Wheels` builds platform wheels for Linux x86_64,
-Linux aarch64, macOS x86_64, macOS aarch64, Windows x86_64, and Windows ARM64.
+Linux aarch64, Linux ARMv7, macOS x86_64, macOS aarch64, Windows x86_64, and Windows ARM64.
 Manual workflow runs can publish the merged wheel set to TestPyPI or PyPI using trusted
 publishing. The workflow also builds the generated native sdist back into a
 wheel before uploading it, so missing source files fail before publish.

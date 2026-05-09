@@ -18,6 +18,7 @@ NATIVE_PACKAGE_NAME = "gemstone-py-native"
 NATIVE_REQUIRED_WHEEL_MARKERS: tuple[tuple[str, ...], ...] = (
     ("manylinux", "x86_64"),
     ("manylinux", "aarch64"),
+    ("manylinux", "armv7l"),
     ("macosx", "x86_64"),
     ("macosx", "arm64"),
     ("win_amd64",),

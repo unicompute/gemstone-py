@@ -58,6 +58,7 @@ class WorkflowConfigTests(unittest.TestCase):
         for platform in [
             "linux-x86_64",
             "linux-aarch64",
+            "linux-armv7l",
             "macos-x86_64",
             "macos-aarch64",
             "windows-x86_64",
@@ -74,6 +75,10 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertIn("wheel-markers:", content)
         self.assertIn("manylinux,x86_64", content)
         self.assertIn("manylinux,aarch64", content)
+        self.assertIn("manylinux,armv7l", content)
+        self.assertIn("armv7-unknown-linux-gnueabihf", content)
+        self.assertIn("Verify ${{ matrix.platform }} cross-compiled wheel binary", content)
+        self.assertIn("EXPECTED_BINARY_MARKERS", content)
         self.assertIn("macosx,x86_64", content)
         self.assertIn("macosx,arm64", content)
         self.assertIn("win_amd64", content)

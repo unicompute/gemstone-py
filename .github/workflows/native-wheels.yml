@@ -88,21 +88,39 @@ jobs:
           - platform: linux-x86_64
             os: ubuntu-24.04
             wheel-markers: manylinux,x86_64
+            rust-target: ""
+            import-smoke: "true"
           - platform: linux-aarch64
             os: ubuntu-24.04-arm
             wheel-markers: manylinux,aarch64
+            rust-target: ""
+            import-smoke: "true"
+          - platform: linux-armv7l
+            os: ubuntu-24.04
+            wheel-markers: manylinux,armv7l
+            rust-target: armv7-unknown-linux-gnueabihf
+            import-smoke: "false"
+            binary-markers: ARM,EABI5
           - platform: macos-x86_64
             os: macos-15-intel
             wheel-markers: macosx,x86_64
+            rust-target: ""
+            import-smoke: "true"
           - platform: macos-aarch64
             os: macos-latest
             wheel-markers: macosx,arm64
+            rust-target: ""
+            import-smoke: "true"
           - platform: windows-x86_64
             os: windows-latest
             wheel-markers: win_amd64
+            rust-target: ""
+            import-smoke: "true"
           - platform: windows-aarch64
             os: windows-11-arm
             wheel-markers: win_arm64
+            rust-target: ""
+            import-smoke: "true"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -112,7 +130,13 @@ jobs:
 
       - name: Install Rust toolchain
         shell: bash
-        run: rustup toolchain install stable --profile minimal
+        env:
+          RUST_TARGET: ${{ matrix.rust-target }}
+        run: |
+          rustup toolchain install stable --profile minimal
+          if [[ -n "${RUST_TARGET}" ]]; then
+            rustup target add "${RUST_TARGET}"
+          fi
 
       - name: Install maturin
         shell: bash
@@ -125,21 +149,22 @@ jobs:
 
       - name: Build wheels
         shell: bash
+        env:
+          RUST_TARGET: ${{ matrix.rust-target }}
         run: |
+          args=(
+            --release
+            --compatibility pypi
+            --manifest-path gemstone-py-native/Cargo.toml
+            --out dist
+          )
           if [[ "${RUNNER_OS}" == "Linux" ]]; then
-            python -m maturin build \
-              --release \
-              --zig \
-              --compatibility pypi \
-              --manifest-path gemstone-py-native/Cargo.toml \
-              --out dist
-          else
-            python -m maturin build \
-              --release \
-              --compatibility pypi \
-              --manifest-path gemstone-py-native/Cargo.toml \
-              --out dist
+            args+=(--zig)
           fi
+          if [[ -n "${RUST_TARGET}" ]]; then
+            args+=(--target "${RUST_TARGET}")
+          fi
+          python -m maturin build "${args[@]}"
 
       - name: Verify ${{ matrix.platform }} wheel artifact
         shell: bash
@@ -171,6 +196,7 @@ jobs:
           PY
 
       - name: Verify ${{ matrix.platform }} wheel import
+        if: matrix.import-smoke == 'true'
         shell: bash
         run: |
           python -m pip install --no-deps --target native-wheel-smoke dist/*.whl
@@ -188,6 +214,43 @@ jobs:
               raise SystemExit(f"Expected native backend, got {gci.IMPLEMENTATION!r}")
           if gci._smallint_to_python(gci._python_to_smallint(-42)) != -42:
               raise SystemExit("Native smallint helper round trip failed")
+          PY
+
+      - name: Verify ${{ matrix.platform }} cross-compiled wheel binary
+        if: matrix.import-smoke != 'true'
+        shell: bash
+        env:
+          EXPECTED_BINARY_MARKERS: ${{ matrix.binary-markers }}
+        run: |
+          python - <<'PY'
+          import os
+          import subprocess
+          import zipfile
+          from pathlib import Path
+
+          wheels = sorted(Path("dist").glob("gemstone_py_native-*.whl"))
+          if len(wheels) != 1:
+              raise SystemExit(f"Expected one native wheel, got {wheels!r}")
+
+          extract_root = Path("cross-wheel-smoke")
+          with zipfile.ZipFile(wheels[0]) as archive:
+              archive.extractall(extract_root)
+          extensions = sorted(extract_root.glob("**/*.so"))
+          if len(extensions) != 1:
+              raise SystemExit(f"Expected one native extension in wheel, got {extensions!r}")
+
+          report = subprocess.check_output(["file", str(extensions[0])], text=True)
+          markers = [
+              marker.strip()
+              for marker in os.environ["EXPECTED_BINARY_MARKERS"].split(",")
+              if marker.strip()
+          ]
+          missing = [marker for marker in markers if marker not in report]
+          if missing:
+              raise SystemExit(
+                  f"Native extension {extensions[0]} missing binary markers {missing!r}: {report}"
+              )
+          print(report)
           PY
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
