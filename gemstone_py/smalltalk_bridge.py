@@ -42,7 +42,7 @@ from __future__ import annotations
 from typing import Any
 
 import gemstone_py as _gs
-from gemstone_py.persistent_root import GsObject, _to_oop, _from_oop
+from gemstone_py.persistent_root import GsObject, _from_oop, _to_oop
 
 PORTING_STATUS = "plain_gemstone_port"
 RUNTIME_REQUIREMENT = "Works on plain GemStone images over GCI"

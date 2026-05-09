@@ -3,7 +3,6 @@ import unittest
 
 import gemstone_py as gemstone
 
-
 RUN_LIVE = os.environ.get("GS_RUN_LIVE") == "1"
 
 

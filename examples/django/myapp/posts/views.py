@@ -16,13 +16,13 @@ Rails respond_to format.json → Django JsonResponse
 PORTING_STATUS = "application_adaptation"
 RUNTIME_REQUIREMENT = "Works on plain GemStone images; uses Flask or Django"
 
-from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse
-from django.views import View
 from django.contrib import messages
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views import View
 
-from .models import Post
 from .forms import PostForm
+from .models import Post
 
 
 def _wants_json(request) -> bool:

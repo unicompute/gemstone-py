@@ -33,7 +33,6 @@ import math
 import random
 from typing import Any, Iterator, Optional
 
-
 # ---------------------------------------------------------------------------
 # Heap / BestK
 # ---------------------------------------------------------------------------
@@ -440,18 +439,24 @@ class TreeKD:
 
     def pre_order(self) -> Iterator['TreeKD']:
         yield self
-        if self.left:  yield from self.left.pre_order()
-        if self.right: yield from self.right.pre_order()
+        if self.left:
+            yield from self.left.pre_order()
+        if self.right:
+            yield from self.right.pre_order()
 
     def post_order(self) -> Iterator['TreeKD']:
-        if self.left:  yield from self.left.post_order()
-        if self.right: yield from self.right.post_order()
+        if self.left:
+            yield from self.left.post_order()
+        if self.right:
+            yield from self.right.post_order()
         yield self
 
     def in_order(self) -> Iterator['TreeKD']:
-        if self.left:  yield from self.left.in_order()
+        if self.left:
+            yield from self.left.in_order()
         yield self
-        if self.right: yield from self.right.in_order()
+        if self.right:
+            yield from self.right.in_order()
 
     # ------------------------------------------------------------------
     # Repr

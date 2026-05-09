@@ -55,7 +55,12 @@ from dataclasses import dataclass
 from typing import Optional
 
 import gemstone_py as gemstone
-from ._smalltalk_batch import decode_escaped_field, escaped_field_encoder_source, object_for_oop_expr
+
+from ._smalltalk_batch import (
+    decode_escaped_field,
+    escaped_field_encoder_source,
+    object_for_oop_expr,
+)
 
 # Priority constants — match GemStone ObjectLogEntry class
 TRACE = 6

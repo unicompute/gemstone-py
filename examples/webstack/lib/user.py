@@ -13,6 +13,7 @@ PORTING_STATUS = "application_adaptation"
 RUNTIME_REQUIREMENT = "Works on plain GemStone images; uses Flask or Django"
 
 from examples.flask.magtag import models as _shared
+
 Tweet = _shared.Tweet
 UserException = _shared.UserException
 

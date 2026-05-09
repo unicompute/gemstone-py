@@ -22,7 +22,6 @@ from gemstone_py.concurrency import (
     CommitConflictError,
     RCCounter,
     RCHash,
-    commit as commit_transaction,
     list_instances,
     lock,
     nested_transaction,
@@ -32,6 +31,9 @@ from gemstone_py.concurrency import (
     shared_counter_get,
     shared_counter_increment,
     shared_counter_set,
+)
+from gemstone_py.concurrency import (
+    commit as commit_transaction,
 )
 from gemstone_py.gsquery import GSCollection
 from gemstone_py.gstore import GStore

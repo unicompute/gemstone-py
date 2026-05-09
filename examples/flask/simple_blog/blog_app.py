@@ -17,7 +17,6 @@ Run:
 PORTING_STATUS = "translated_example"
 RUNTIME_REQUIREMENT = "Runs as translated example code on plain GemStone images or standard Python web stacks"
 
-import gemstone_py as gemstone
 from flask import (
     Flask,
     abort,
@@ -26,6 +25,8 @@ from flask import (
     request,
     url_for,
 )
+
+import gemstone_py as gemstone
 from examples.flask.simple_blog.blog import SimplePost, SimpleTag
 
 app = Flask(__name__)

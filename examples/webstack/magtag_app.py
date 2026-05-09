@@ -29,6 +29,7 @@ from flask import (
     session,
     url_for,
 )
+
 import gemstone_py as gemstone
 from examples.webstack.lib.tweet import twitterize_date
 from examples.webstack.lib.user import Tweet, User, UserException

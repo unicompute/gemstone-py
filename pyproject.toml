@@ -55,6 +55,18 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
 
+[tool.ruff.lint.per-file-ignores]
+# Porting metadata is intentionally kept immediately after module docstrings
+# in translated examples and compatibility modules.
+"examples/**/*.py" = ["E402", "E501"]
+"gemstone_py/migrations.py" = ["E402"]
+"gemstone_py/objectlog.py" = ["E402", "E501"]
+"gemstone_py/ordered_collection.py" = ["E402"]
+
+# These files contain generated/embedded content where wrapping harms readability.
+"docs/build_pdf_docs.py" = ["E501"]
+"tests/**/*.py" = ["E501"]
+
 [tool.mypy]
 python_version = "3.11"
 files = [

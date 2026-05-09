@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-
 DOCS_DIR = Path(__file__).resolve().parent
 ASSETS_DIR = DOCS_DIR / "assets"
 PDF_DIR = DOCS_DIR / "pdf"

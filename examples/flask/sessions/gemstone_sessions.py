@@ -15,7 +15,6 @@ Usage:
 PORTING_STATUS = "application_adaptation"
 RUNTIME_REQUIREMENT = "Works on plain GemStone images; uses Flask or Django"
 
-import json
 import uuid
 
 from flask.sessions import SessionInterface, SessionMixin

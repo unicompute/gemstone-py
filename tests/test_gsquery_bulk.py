@@ -119,7 +119,7 @@ class GSCollectionBulkInsertTests(unittest.TestCase):
         ):
             with mock.patch.object(GSCollection, '_set_oop', autospec=True, return_value=111) as set_oop:
                 with mock.patch.object(GSCollection, '_search_oops', autospec=True, side_effect=[[301], [302]]) as search:
-                    with mock.patch.object(GSCollection, '_remove_member_oops', autospec=True) as remove:
+                    with mock.patch.object(GSCollection, '_remove_member_oops', autospec=True):
                         with mock.patch.object(GSCollection, '_insert_into_set_oop', autospec=True) as insert_into:
                             total = col.bulk_upsert_unique('@id', elements)
 

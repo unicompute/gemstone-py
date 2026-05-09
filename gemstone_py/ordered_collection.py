@@ -44,7 +44,7 @@ from typing import Any, Iterator
 
 import gemstone_py as _gs
 from gemstone_py._smalltalk_batch import object_for_oop_expr
-from gemstone_py.persistent_root import _to_oop, _from_oop
+from gemstone_py.persistent_root import _from_oop, _to_oop
 
 
 def _python_name_to_selector(name: str) -> str:

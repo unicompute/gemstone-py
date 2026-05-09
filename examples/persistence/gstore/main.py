@@ -18,9 +18,8 @@ backend.
 PORTING_STATUS = "translated_example"
 RUNTIME_REQUIREMENT = "Runs as translated example code on plain GemStone images or standard Python web stacks"
 
-import time
-import json
 import random
+import time
 
 from gemstone_py.example_support import example_config
 from gemstone_py.gstore import GStore

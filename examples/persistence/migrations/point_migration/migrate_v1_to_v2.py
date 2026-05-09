@@ -22,6 +22,7 @@ PORTING_STATUS = "translated_example"
 RUNTIME_REQUIREMENT = "Runs as translated example code on plain GemStone images or standard Python web stacks"
 
 import math
+
 import gemstone_py as gemstone
 from gemstone_py.example_support import MANUAL_POLICY, example_session
 from gemstone_py.persistent_root import PersistentRoot

@@ -18,7 +18,7 @@ Run:
 PORTING_STATUS = "translated_example"
 RUNTIME_REQUIREMENT = "Runs as translated example code on plain GemStone images or standard Python web stacks"
 
-from flask import Flask, redirect, url_for, session, abort, request
+from flask import Flask, redirect, session, url_for
 
 app = Flask(__name__)
 app.secret_key = 'gemstone-example-secret'

@@ -7,6 +7,7 @@ PORTING_STATUS = "translated_example"
 RUNTIME_REQUIREMENT = "Runs as translated example code on plain GemStone images or standard Python web stacks"
 
 import time
+
 import gemstone_py as gemstone
 from examples.flask.simple_blog.gemstone_model import GemStoneModel
 

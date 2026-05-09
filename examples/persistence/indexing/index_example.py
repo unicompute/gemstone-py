@@ -14,7 +14,6 @@ import time
 
 from examples.persistence.indexing.lib.person import Person
 from gemstone_py.example_support import example_config, example_session
-from gemstone_py.persistent_root import PersistentRoot
 from gemstone_py.gsquery import GSCollection
 
 POPULATION = 1_000
@@ -30,8 +29,6 @@ def bench(label, fn):
 def main():
     config = example_config()
     with example_session() as s:
-        root = PersistentRoot(s)
-
         print(f'\nCreating {POPULATION:,} people in GemStone...')
         col = GSCollection('IndexExamplePeople', config=config)
 
@@ -50,7 +47,7 @@ def main():
         bench(f'Insert {POPULATION:,} people', create)
 
         col.add_index_for_class('@age', 'SmallInt', session=s)
-        print(f'  Index on @age created')
+        print('  Index on @age created')
         print(f'  Total in GemStone: {col.size(session=s):,}')
 
         print('\nQuerying...')

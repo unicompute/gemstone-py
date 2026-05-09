@@ -32,10 +32,10 @@ RUNTIME_REQUIREMENT = "Runs as translated example code on plain GemStone images 
 import os
 import sys
 
-from flask import Flask, render_template_string, redirect, url_for, abort
+from flask import Flask, abort, redirect, render_template_string, url_for
 
 from gemstone_py.example_support import example_config
-from gemstone_py.objectlog import ObjectLog, ObjectLogEntry
+from gemstone_py.objectlog import ObjectLog
 
 app = Flask(__name__)
 _log = ObjectLog(config=example_config())

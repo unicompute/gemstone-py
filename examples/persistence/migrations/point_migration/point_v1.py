@@ -12,7 +12,6 @@ Run this to seed the store with v1 Cartesian points:
 PORTING_STATUS = "translated_example"
 RUNTIME_REQUIREMENT = "Runs as translated example code on plain GemStone images or standard Python web stacks"
 
-import math
 import uuid
 
 from gemstone_py.example_support import example_session

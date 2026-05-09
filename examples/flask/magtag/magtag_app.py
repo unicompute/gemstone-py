@@ -22,11 +22,12 @@ PORTING_STATUS = "translated_example"
 RUNTIME_REQUIREMENT = "Runs as translated example code on plain GemStone images or standard Python web stacks"
 
 import platform
+import sys
+
+from flask import Flask, abort, flash, redirect, render_template_string, request, session, url_for
 
 import gemstone_py as gemstone
-from flask import (Flask, render_template_string, redirect, url_for,
-                   request, session, flash, abort)
-from examples.flask.magtag.models import User, Tweet, UserException
+from examples.flask.magtag.models import Tweet, User, UserException
 
 app = Flask(__name__)
 app.secret_key = 'magtag-gemstone-secret'

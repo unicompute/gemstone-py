@@ -10,7 +10,6 @@ RUNTIME_REQUIREMENT = "Works on plain GemStone images; uses Flask or Django"
 
 from pathlib import Path
 
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'gemstone-py-myapp-dev-secret-key'

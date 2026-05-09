@@ -6,6 +6,7 @@ PORTING_STATUS = "translated_example"
 RUNTIME_REQUIREMENT = "Runs as translated example code on plain GemStone images or standard Python web stacks"
 
 import random
+
 from .address import Address
 
 FIRST_NAMES_MALE   = ['James', 'John', 'Robert', 'Michael', 'William',

@@ -36,7 +36,6 @@ Usage
 PORTING_STATUS = "plain_gemstone_port"
 RUNTIME_REQUIREMENT = "Works on plain GemStone images over GCI"
 
-import sys
 import time
 from typing import Optional
 
@@ -173,7 +172,7 @@ class Migration:
         session.abort()
         self.down(session)
         self._commit_with_retry(session)
-        self._log(f"[migration] rollback done")
+        self._log("[migration] rollback done")
 
     # ------------------------------------------------------------------
     # Internal
@@ -189,7 +188,8 @@ class Migration:
         NOT call up() again — the changes written by up() are still present
         in the session's object space and will be included in the retry.
         """
-        from gemstone_py.concurrency import commit as _commit, CommitConflictError
+        from gemstone_py.concurrency import CommitConflictError
+        from gemstone_py.concurrency import commit as _commit
         for attempt in range(1, self.max_retries + 1):
             try:
                 _commit(session)

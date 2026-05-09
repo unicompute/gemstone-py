@@ -29,7 +29,7 @@ import json
 import sys
 
 import gemstone_py as gemstone
-from examples.persistence.kdtree.kdtree import Point2D, SearchResult, Tree2D
+from examples.persistence.kdtree.kdtree import Point2D, Tree2D
 from gemstone_py.example_support import READ_POLICY, example_session
 from gemstone_py.persistent_root import PersistentRoot
 
@@ -79,7 +79,7 @@ def cmd_query(x: float, y: float, k: int = 5) -> None:
         s.abort()
         root = PersistentRoot(s)
         if _KEY not in root:
-            print(f"No tree stored. Run: python3 persist.py commit")
+            print("No tree stored. Run: python3 persist.py commit")
             return
         record = root[_KEY]
         raw    = record['points']
@@ -98,7 +98,7 @@ def cmd_stats() -> None:
         s.abort()
         root = PersistentRoot(s)
         if _KEY not in root:
-            print(f"No tree stored. Run: python3 persist.py commit")
+            print("No tree stored. Run: python3 persist.py commit")
             return
         record = root[_KEY]
         raw    = record['points']

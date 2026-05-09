@@ -13,7 +13,7 @@ Run:
 PORTING_STATUS = "translated_example"
 RUNTIME_REQUIREMENT = "Runs as translated example code on plain GemStone images or standard Python web stacks"
 
-from flask import Flask, session, render_template_string
+from flask import Flask, render_template_string, session
 
 import gemstone_py as gemstone
 from examples.flask.sessions.gemstone_sessions import (
