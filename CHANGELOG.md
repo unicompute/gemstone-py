@@ -12,6 +12,8 @@ All notable changes to `gemstone-py` should be recorded here.
   benchmark reports are not compared accidentally.
 - Registered a current macOS ARM64 Python 3.14.4 ctypes benchmark baseline for
   the self-hosted runner.
+- Added post-release PyPI verification for `gemstone-py[fast]` so the workflow
+  confirms the published native backend is installed and selected.
 
 ## 0.2.7 - 2026-05-10
 

@@ -48,6 +48,11 @@ class WorkflowConfigTests(unittest.TestCase):
         )
         self.assertIn("release-version:", content)
         self.assertIn("pypi-release.json", content)
+        self.assertIn("Verify fast extra native backend from PyPI", content)
+        self.assertIn("${PACKAGE_NAME}[fast]==${RELEASE_VERSION}", content)
+        self.assertIn("fast-backend.json", content)
+        self.assertIn("gci.IMPLEMENTATION", content)
+        self.assertIn("native_fast_path_available", content)
         self.assertIn("gemstone-py-post-release-verify", content)
 
     def test_release_workflows_use_trusted_publishing(self) -> None:
