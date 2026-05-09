@@ -348,7 +348,6 @@ jobs:
       name: testpypi
     env:
       NATIVE_VERSION: ${{ needs.metadata.outputs.package-version }}
-      TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -370,18 +369,7 @@ jobs:
             --json > native-publish-artifacts.json
           cat native-publish-artifacts.json
 
-      - name: Publish native wheels to TestPyPI with API token
-        if: env.TEST_PYPI_API_TOKEN != ''
-        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
-        with:
-          packages-dir: dist
-          repository-url: https://test.pypi.org/legacy/
-          password: ${{ env.TEST_PYPI_API_TOKEN }}
-          skip-existing: true
-          attestations: false
-
       - name: Publish native wheels to TestPyPI with trusted publishing
-        if: env.TEST_PYPI_API_TOKEN == ''
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
         with:
           packages-dir: dist

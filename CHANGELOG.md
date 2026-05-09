@@ -6,6 +6,8 @@ All notable changes to `gemstone-py` should be recorded here.
 
 - Scoped the native wheel workflow's automatic push trigger to branch pushes so
   pure release tags do not start redundant native builds.
+- Removed TestPyPI API-token fallback from pure and native release workflows now
+  that TestPyPI publishes use GitHub OIDC trusted publishing.
 
 ## 0.2.6 - 2026-05-09
 

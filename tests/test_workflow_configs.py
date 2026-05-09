@@ -50,7 +50,7 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertIn("pypi-release.json", content)
         self.assertIn("gemstone-py-post-release-verify", content)
 
-    def test_release_workflows_support_api_token_fallback(self) -> None:
+    def test_release_workflows_use_testpypi_oidc_and_pypi_token_fallback(self) -> None:
         testpypi_content = pathlib.Path(
             ".github/workflows/release-testpypi.yml"
         ).read_text(encoding="utf-8")
@@ -58,11 +58,11 @@ class WorkflowConfigTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn("TEST_PYPI_API_TOKEN", testpypi_content)
-        self.assertIn("Publish to TestPyPI with API token", testpypi_content)
         self.assertIn("Publish to TestPyPI with trusted publishing", testpypi_content)
-        self.assertIn("password: ${{ env.TEST_PYPI_API_TOKEN }}", testpypi_content)
-        self.assertIn("attestations: false", testpypi_content)
+        self.assertIn("id-token: write", testpypi_content)
+        self.assertIn("repository-url: https://test.pypi.org/legacy/", testpypi_content)
+        self.assertNotIn("TEST_PYPI_API_TOKEN", testpypi_content)
+        self.assertNotIn("Publish to TestPyPI with API token", testpypi_content)
 
         self.assertIn("PYPI_API_TOKEN", pypi_content)
         self.assertIn("Publish to PyPI with API token", pypi_content)
@@ -121,9 +121,9 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertIn('"maturin"', content)
         self.assertIn("sdist-src", content)
         self.assertIn("native-sdist-build-smoke", content)
-        self.assertIn("TEST_PYPI_API_TOKEN", content)
+        self.assertNotIn("TEST_PYPI_API_TOKEN", content)
         self.assertIn("PYPI_API_TOKEN", content)
-        self.assertIn("Publish native wheels to TestPyPI with API token", content)
+        self.assertNotIn("Publish native wheels to TestPyPI with API token", content)
         self.assertIn("Publish native wheels to TestPyPI with trusted publishing", content)
         self.assertIn("Publish native wheels to PyPI with API token", content)
         self.assertIn("Publish native wheels to PyPI with trusted publishing", content)
