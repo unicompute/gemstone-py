@@ -50,7 +50,7 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertIn("pypi-release.json", content)
         self.assertIn("gemstone-py-post-release-verify", content)
 
-    def test_release_workflows_use_testpypi_oidc_and_pypi_token_fallback(self) -> None:
+    def test_release_workflows_use_trusted_publishing(self) -> None:
         testpypi_content = pathlib.Path(
             ".github/workflows/release-testpypi.yml"
         ).read_text(encoding="utf-8")
@@ -64,11 +64,12 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertNotIn("TEST_PYPI_API_TOKEN", testpypi_content)
         self.assertNotIn("Publish to TestPyPI with API token", testpypi_content)
 
-        self.assertIn("PYPI_API_TOKEN", pypi_content)
-        self.assertIn("Publish to PyPI with API token", pypi_content)
+        self.assertNotIn("PYPI_API_TOKEN", pypi_content)
+        self.assertNotIn("Publish to PyPI with API token", pypi_content)
         self.assertIn("Publish to PyPI with trusted publishing", pypi_content)
-        self.assertIn("password: ${{ env.PYPI_API_TOKEN }}", pypi_content)
-        self.assertIn("attestations: false", pypi_content)
+        self.assertIn("id-token: write", pypi_content)
+        self.assertNotIn("password:", pypi_content)
+        self.assertNotIn("attestations: false", pypi_content)
 
     def test_native_wheels_workflow_exists(self) -> None:
         content = pathlib.Path(".github/workflows/native-wheels.yml").read_text(
