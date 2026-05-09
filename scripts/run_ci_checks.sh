@@ -11,46 +11,7 @@ else
 fi
 
 "${pybin}" -m compileall gemstone_py tests examples
-
-lint_paths=(
-  gemstone_py/__init__.py
-  gemstone_py/aio/__init__.py
-  gemstone_py/aio/fastapi.py
-  gemstone_py/aio/gsquery.py
-  gemstone_py/aio/persistent_root.py
-  gemstone_py/api_contract.py
-  gemstone_py/benchmark_baseline_register.py
-  gemstone_py/benchmark_baselines.py
-  gemstone_py/benchmark_compare.py
-  gemstone_py/release_metadata.py
-  gemstone_py/benchmarks.py
-  gemstone_py/cli.py
-  gemstone_py/example_support.py
-  gemstone_py/native.py
-  gemstone_py/oop.py
-  gemstone_py/session_facade.py
-  examples/fastapi/app.py
-  examples/typed_access/simple_blog_queries.py
-  examples/example.py
-  examples/misc/smalltalk_demo.py
-  tests/test_api_contract.py
-  tests/test_async_api.py
-  tests/test_benchmark_baseline_register.py
-  tests/test_benchmark_baselines.py
-  tests/test_benchmark_compare.py
-  tests/test_release_metadata.py
-  examples/hello_gemstone.py
-  tests/test_benchmarks.py
-  tests/test_cli.py
-  tests/test_gemstone_session_api.py
-  tests/test_live_async_integration.py
-  tests/test_native_crate.py
-  tests/test_smalltalk_bridge.py
-  tests/test_typed_oop_lifetime.py
-  tests/test_workflow_configs.py
-)
-
-"${pybin}" -m ruff check "${lint_paths[@]}"
+"${pybin}" -m ruff check .
 "${pybin}" -m mypy
 "${pybin}" -m unittest discover -s tests -p 'test*.py'
 "${pybin}" -m gemstone_py.api_contract --help >/dev/null
