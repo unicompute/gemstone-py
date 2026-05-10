@@ -30,6 +30,17 @@ def create_app() -> Any:
         config=GemStoneConfig.from_env(require_credentials=False)
     )
 
+    @app.get("/")
+    async def index() -> dict[str, Any]:
+        return {
+            "name": "gemstone-py FastAPI example",
+            "endpoints": {
+                "health": "/health/gemstone",
+                "docs": "/docs",
+                "openapi": "/openapi.json",
+            },
+        }
+
     @app.exception_handler(GemStoneConfigurationError)
     async def gemstone_configuration_error(
         _request: Any,

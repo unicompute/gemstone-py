@@ -1,3 +1,5 @@
+import asyncio
+import importlib.util
 import io
 import sys
 import types
@@ -74,6 +76,28 @@ class FastApiExampleRunnerTests(unittest.TestCase):
             host="0.0.0.0",
             port=9000,
             reload=True,
+        )
+
+
+@unittest.skipIf(
+    importlib.util.find_spec("fastapi") is None,
+    "FastAPI is not installed",
+)
+class FastApiExampleAppTests(unittest.TestCase):
+    def test_root_endpoint_points_to_available_routes(self):
+        app = fastapi_example.create_app()
+        route = next(route for route in app.routes if route.path == "/")
+
+        self.assertEqual(
+            asyncio.run(route.endpoint()),
+            {
+                "name": "gemstone-py FastAPI example",
+                "endpoints": {
+                    "health": "/health/gemstone",
+                    "docs": "/docs",
+                    "openapi": "/openapi.json",
+                },
+            },
         )
 
 

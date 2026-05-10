@@ -15,6 +15,10 @@ python -m pip install "gemstone-py[fastapi]"
 gemstone-fastapi-example --reload
 ```
 
+Open `http://127.0.0.1:8000/` for the example index,
+`http://127.0.0.1:8000/docs` for the interactive FastAPI docs, or
+`http://127.0.0.1:8000/health/gemstone` for the GemStone health check.
+
 The example uses `gemstone_py.aio.fastapi.session_dependency`, which opens one
 `AsyncSession` per request, commits successful handlers, aborts failed handlers,
 and logs out at the end of the request.

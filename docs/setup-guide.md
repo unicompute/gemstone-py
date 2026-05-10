@@ -222,7 +222,9 @@ python -m pip install -e ".[examples]"
 python -m examples.fastapi.run --reload
 ```
 
-Visit `http://127.0.0.1:8000/health/gemstone`.
+Visit `http://127.0.0.1:8000/` for the example index,
+`http://127.0.0.1:8000/docs` for the interactive FastAPI docs, or
+`http://127.0.0.1:8000/health/gemstone` for the GemStone health check.
 
 ## Typed and Lifetime Examples
 

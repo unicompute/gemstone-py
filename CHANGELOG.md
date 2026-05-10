@@ -18,6 +18,8 @@ All notable changes to `gemstone-py` should be recorded here.
   a failing global-install path.
 - Made the FastAPI source-checkout runner automatically hand off to the local
   `.venv` Python when the current interpreter is missing FastAPI or uvicorn.
+- Added a FastAPI example index at `/` so opening the base URL shows the
+  available docs and health-check routes instead of FastAPI's default 404.
 - Made the FastAPI example start without GemStone credentials and report missing
   `GS_USERNAME` or `GS_PASSWORD` as a 503 response when the endpoint is called.
 - Updated the VS Code workbench FastAPI example launcher to use the dependency
