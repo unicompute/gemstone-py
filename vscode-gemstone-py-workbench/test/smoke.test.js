@@ -282,6 +282,21 @@ test("tree providers expose expected commands and mask environment secrets", () 
     ],
   );
 
+  const jasper = ide.find((item) => item.label === "Jasper");
+  assert.ok(jasper);
+  assert.deepEqual(
+    jasper.children.map((item) => item.options.command),
+    ["gemstonePy.openJasper", "gemstonePy.openJasper"],
+  );
+  const jasperHandoff = jasper.children.find(
+    (item) => item.label === "Use Jasper for Smalltalk IDE work",
+  );
+  assert.ok(jasperHandoff);
+  assert.equal(
+    providers.createIdeProvider().getTreeItem(jasperHandoff).command.command,
+    "gemstonePy.openJasper",
+  );
+
   const treeItem = providers.createExamplesProvider().getTreeItem(examples[0]);
   assert.equal(treeItem.command.command, "gemstonePy.runGrandTour");
   assert.equal(treeItem.iconPath.id, "play");

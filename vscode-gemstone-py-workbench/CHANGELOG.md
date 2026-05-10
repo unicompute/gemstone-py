@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5
+
+- Made the "Use Jasper for Smalltalk IDE work" IDE tree row open Jasper instead of acting as inert descriptive text.
+- Added smoke coverage so both Jasper rows remain wired to the Jasper command.
+
 ## 0.1.4
 
 - Changed the database explorer launcher to start the explorer Python process directly in the VS Code terminal instead of typing a shell command with `sendText`.
