@@ -19,6 +19,20 @@ This extension focuses on the `gemstone-py` repository:
 - run database explorer tests and UI tests
 - run maintainer CI, live, benchmark, and native-check scripts explicitly
 
+## Screenshots
+
+### Example Runner
+
+![gemstone-py Workbench example runner](https://raw.githubusercontent.com/unicompute/gemstone-py/main/vscode-gemstone-py-workbench/media/screenshots/examples-runner.png)
+
+### Environment and Backend Checks
+
+![gemstone-py Workbench environment and backend checks](https://raw.githubusercontent.com/unicompute/gemstone-py/main/vscode-gemstone-py-workbench/media/screenshots/environment-checks.png)
+
+### Database Explorer Launcher
+
+![gemstone-py Workbench database explorer launcher](https://raw.githubusercontent.com/unicompute/gemstone-py/main/vscode-gemstone-py-workbench/media/screenshots/database-explorer.png)
+
 ## Development
 
 From this directory:
@@ -128,6 +142,10 @@ Studio Marketplace.
 To enable Marketplace publishing, set a repository secret named `VSCE_PAT` with
 a Visual Studio Marketplace personal access token for the `unicompute`
 publisher. Then run the workflow with `publish-to-marketplace=true`.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## Roadmap
 
