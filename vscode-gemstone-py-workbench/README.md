@@ -1,7 +1,7 @@
 # gemstone-py Workbench
 
 <p align="center">
-  <img src="media/emerald-logo.png" alt="gemstone-py Workbench logo" width="96" height="96">
+  <img src="https://raw.githubusercontent.com/unicompute/gemstone-py/main/vscode-gemstone-py-workbench/media/emerald-logo.png" alt="gemstone-py Workbench logo" width="96" height="96">
 </p>
 
 `gemstone-py Workbench` is a small companion Visual Studio Code extension for
@@ -30,6 +30,17 @@ npm run compile
 
 Open this folder in VS Code and press `F5` to start an extension development
 host.
+
+## Install
+
+Install it from the Visual Studio Marketplace:
+
+```bash
+code --install-extension unicompute.gemstone-py-workbench
+```
+
+Marketplace page:
+https://marketplace.visualstudio.com/items?itemName=unicompute.gemstone-py-workbench
 
 ## Settings
 

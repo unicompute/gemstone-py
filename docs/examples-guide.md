@@ -68,6 +68,15 @@ with example runners, environment/backend checks, docs/PDF launchers,
 maintainer scripts, Jasper links, and a launcher for
 `python-gemstone-database-explorer`.
 
+Install it from the Visual Studio Marketplace:
+
+```bash
+code --install-extension unicompute.gemstone-py-workbench
+```
+
+Marketplace page:
+https://marketplace.visualstudio.com/items?itemName=unicompute.gemstone-py-workbench
+
 During extension development:
 
 ```bash

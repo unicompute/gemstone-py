@@ -99,6 +99,15 @@ docs/PDFs, launching the Python database explorer, and running maintainer checks
 Use Jasper for full GemStone/S Smalltalk IDE work; use this workbench for the
 Python-facing `gemstone-py` workflow.
 
+Install it from the Visual Studio Marketplace:
+
+```bash
+code --install-extension unicompute.gemstone-py-workbench
+```
+
+Marketplace page:
+https://marketplace.visualstudio.com/items?itemName=unicompute.gemstone-py-workbench
+
 The extension uses the current VS Code workspace as the default `gemstone-py`
 checkout. Configure `gemstonePy.explorerPath` if you want the workbench to
 launch a local `python-gemstone-database-explorer` checkout.
