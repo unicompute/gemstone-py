@@ -226,6 +226,16 @@ Visit `http://127.0.0.1:8000/` for the example index,
 `http://127.0.0.1:8000/docs` for the interactive FastAPI docs, or
 `http://127.0.0.1:8000/health/gemstone` for the GemStone health check.
 
+With the server running, verify it from a second terminal:
+
+```bash
+curl -i http://127.0.0.1:8000/
+curl -i http://127.0.0.1:8000/health/gemstone
+```
+
+The index should return `HTTP/1.1 200 OK` and the health check should return
+`{"result":7}` when GemStone credentials and the stone are reachable.
+
 ## Typed and Lifetime Examples
 
 Once basic reads and writes work, these examples show the newer type and

@@ -630,6 +630,36 @@ Open `http://127.0.0.1:8000/` for the example index,
 `http://127.0.0.1:8000/docs` for the interactive FastAPI docs, or
 `http://127.0.0.1:8000/health/gemstone` for the GemStone health check.
 
+Verify from a second terminal while the server is running:
+
+```bash
+curl -i http://127.0.0.1:8000/
+```
+
+Expected status:
+
+```text
+HTTP/1.1 200 OK
+```
+
+The body should include:
+
+```json
+{"name":"gemstone-py FastAPI example","endpoints":{"health":"/health/gemstone","docs":"/docs","openapi":"/openapi.json"}}
+```
+
+Then test the GemStone endpoint:
+
+```bash
+curl -i http://127.0.0.1:8000/health/gemstone
+```
+
+Expected when GemStone credentials and the stone are reachable:
+
+```json
+{"result":7}
+```
+
 Endpoint shape:
 
 ```python

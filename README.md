@@ -205,6 +205,17 @@ python -m pip install "gemstone-py[fastapi]"
 gemstone-fastapi-example --reload
 ```
 
+With the server running, verify it from a second terminal:
+
+```bash
+curl -i http://127.0.0.1:8000/
+curl -i http://127.0.0.1:8000/health/gemstone
+```
+
+Open `http://127.0.0.1:8000/docs` for the interactive FastAPI docs. The
+GemStone health endpoint returns `{"result":7}` when credentials and the stone
+are reachable.
+
 ```python
 from fastapi import Depends, FastAPI
 from gemstone_py import GemStoneConfig
