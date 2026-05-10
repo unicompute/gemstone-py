@@ -143,6 +143,13 @@ To enable Marketplace publishing, set a repository secret named `VSCE_PAT` with
 a Visual Studio Marketplace personal access token for the `unicompute`
 publisher. Then run the workflow with `publish-to-marketplace=true`.
 
+Before publishing a new version, the workflow runs release preflight checks for
+`package.json`, `package-lock.json`, `CHANGELOG.md`, README screenshot links,
+and the packaged VSIX metadata. Keep the Marketplace publisher owner account,
+`VSCE_PAT` owner account, and `unicompute.com` domain verification documented in
+the publisher admin notes so future releases do not depend on a single browser
+session or a stale personal access token.
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md).

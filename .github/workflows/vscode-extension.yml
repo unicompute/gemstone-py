@@ -43,8 +43,14 @@ jobs:
       - name: Type-check extension
         run: npm run check
 
+      - name: Release preflight
+        run: npm run release:preflight
+
       - name: Package VSIX
         run: npx vsce package --no-dependencies
+
+      - name: Verify packaged VSIX
+        run: npm run release:verify-vsix
 
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -82,4 +88,3 @@ jobs:
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: npx vsce publish --packagePath gemstone-py-workbench-*.vsix --no-dependencies
-

@@ -284,6 +284,8 @@
   "scripts": {
     "compile": "tsc -p ./",
     "check": "tsc -p ./ --noEmit",
+    "release:preflight": "node scripts/check-release.js",
+    "release:verify-vsix": "node scripts/check-release.js --vsix",
     "watch": "tsc -watch -p ./"
   },
   "devDependencies": {
