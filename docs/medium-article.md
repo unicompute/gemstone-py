@@ -89,9 +89,14 @@ Or load credentials from environment variables:
 
 ```bash
 export GS_STONE=gs64stone
+export GS_STONE_NAME=gs64stone
 export GS_USERNAME=DataCurator
 export GS_PASSWORD=swordfish
 ```
+
+`GS_STONE` is the canonical stone variable. `GS_STONE_NAME` is accepted as an
+alias when `GS_STONE` is absent, so setting both to the same value keeps shell
+usage, VS Code settings, and helper tools consistent.
 
 ```python
 config = gemstone.GemStoneConfig.from_env()
@@ -646,8 +651,8 @@ By default, the extension treats the current VS Code workspace as the
 `gemstone-py` checkout. If you want it to launch the browser-based database
 explorer, set `gemstonePy.explorerPath` to a local
 `python-gemstone-database-explorer` checkout. Set `gemstonePy.env` with the
-same `GS_STONE`, `GS_USERNAME`, `GS_PASSWORD`, `GS_LIB`, and library-path values
-you would use at the shell.
+same `GS_STONE` or `GS_STONE_NAME`, `GS_USERNAME`, `GS_PASSWORD`, `GS_LIB`, and
+library-path values you would use at the shell.
 
 That makes VS Code a convenient Python control panel: use the workbench for
 examples, docs, backend checks, and test commands; use the database explorer for

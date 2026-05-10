@@ -33,7 +33,7 @@
   <circle cx="130" cy="175" r="20" fill="#255f88"/>
   <text x="130" y="181" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#fff">1</text>
   <text x="168" y="185" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="700" fill="#17344f">Load config</text>
-  <text x="168" y="218" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#17344f">GemStoneConfig.from_env() reads GS_STONE, GS_USERNAME, GS_PASSWORD, and GS_LIB</text>
+  <text x="168" y="218" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#17344f">GemStoneConfig.from_env() reads GS_STONE or GS_STONE_NAME, GS_USERNAME, GS_PASSWORD, and GS_LIB</text>
   <text x="168" y="242" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#17344f">from environment variables. Raises GemStoneConfigurationError when required vars are absent.</text>
 
   <!-- Arrow 1→2 -->

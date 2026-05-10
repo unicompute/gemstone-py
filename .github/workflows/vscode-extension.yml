@@ -38,6 +38,14 @@ jobs:
           cache: npm
           cache-dependency-path: vscode-gemstone-py-workbench/package-lock.json
 
+      - name: Cache VS Code test host
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: vscode-gemstone-py-workbench/.vscode-test
+          key: vscode-test-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('vscode-gemstone-py-workbench/package-lock.json') }}
+          restore-keys: |
+            vscode-test-${{ runner.os }}-${{ runner.arch }}-
+
       - name: Install extension dependencies
         run: npm ci
 

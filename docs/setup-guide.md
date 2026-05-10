@@ -82,9 +82,14 @@ minimum set for most local work is:
 ```bash
 export GS_LIB=/opt/gemstone/product/lib
 export GS_STONE=gs64stone
+export GS_STONE_NAME=gs64stone
 export GS_USERNAME=DataCurator
 export GS_PASSWORD=swordfish
 ```
+
+`GS_STONE` is the canonical stone variable. `GS_STONE_NAME` is accepted as an
+alias when `GS_STONE` is absent; setting both to the same value keeps tools that
+use either spelling in sync.
 
 Common optional variables:
 

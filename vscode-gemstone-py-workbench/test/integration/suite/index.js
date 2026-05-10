@@ -16,6 +16,7 @@ async function run() {
     "gemstonePy.runFastApiExample",
     "gemstonePy.launchDatabaseExplorer",
     "gemstonePy.configureWorkbench",
+    "gemstonePy.verifyWorkbenchSetup",
     "gemstonePy.openJasper",
   ]) {
     assert.ok(commands.includes(command), `expected command ${command}`);
@@ -54,6 +55,20 @@ async function run() {
   );
   assert.equal(explorerResult, false);
   assert.equal(vscode.window.terminals.length, explorerTerminalCount);
+
+  const setupReport = await vscode.commands.executeCommand(
+    "gemstonePy.verifyWorkbenchSetup",
+  );
+  assert.ok(Array.isArray(setupReport), "expected setup verification report");
+  assert.ok(
+    setupReport.some(
+      (check) =>
+        check.name === "GemStone connectivity" &&
+        check.status === "warning" &&
+        String(check.detail).includes("skipped"),
+    ),
+    "expected setup verification to skip GemStone connectivity without a password",
+  );
 
   const jasperResult = await vscode.commands.executeCommand("gemstonePy.openJasper");
   assert.match(String(jasperResult), /^(extensions-search|jasper-sidebar)$/);

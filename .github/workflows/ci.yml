@@ -46,3 +46,23 @@ jobs:
 
       - name: Run wheel/sdist install smoke
         run: ./scripts/run_build_smoke.sh
+
+  release-wrapper-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: vscode-gemstone-py-workbench/package-lock.json
+
+      - name: Smoke-test release wrapper
+        env:
+          SKIP_VSCODE_INTEGRATION: "1"
+        run: scripts/release_all.sh --skip-ci --skip-native --skip-public-verify

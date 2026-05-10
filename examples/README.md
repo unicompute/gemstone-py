@@ -21,9 +21,13 @@ Runnable examples for `gemstone-py`.
 pip install flask django pytest
 export GS_LIB=/Users/tariq/GemStone64Bit3.7.4.3-arm64.Darwin/lib
 export GS_STONE=gs64stone
+export GS_STONE_NAME=gs64stone
 export GS_USERNAME=DataCurator
 export GS_PASSWORD=swordfish
 ```
+
+`GS_STONE_NAME` is accepted as an alias when `GS_STONE` is absent. Setting both
+to the same value keeps these examples and companion tools aligned.
 
 ## Scope
 

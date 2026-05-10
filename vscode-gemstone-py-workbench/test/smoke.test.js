@@ -22,6 +22,8 @@ let inputBoxValues = [];
 let informationMessages = [];
 let configUpdates = [];
 let refreshedProviders = 0;
+let outputLines = [];
+let outputShown = false;
 
 function resetState() {
   configurationValues = {
@@ -50,6 +52,8 @@ function resetState() {
   informationMessages = [];
   configUpdates = [];
   refreshedProviders = 0;
+  outputLines = [];
+  outputShown = false;
 }
 
 class EventEmitter {
@@ -137,10 +141,16 @@ const fakeVscode = {
   window: {
     createOutputChannel() {
       return {
-        appendLine() {},
-        clear() {},
+        appendLine(value = "") {
+          outputLines.push(String(value));
+        },
+        clear() {
+          outputLines = [];
+        },
         dispose() {},
-        show() {},
+        show() {
+          outputShown = true;
+        },
       };
     },
     createTerminal(options) {
@@ -328,6 +338,11 @@ test("tree providers expose expected commands and mask environment secrets", () 
   const environment = providers.createEnvironmentProvider().getChildren();
   assert.ok(
     environment.find((item) => item.options.command === "gemstonePy.configureWorkbench"),
+  );
+  assert.ok(
+    environment.find(
+      (item) => item.options.command === "gemstonePy.verifyWorkbenchSetup",
+    ),
   );
   const envGroup = environment.find((item) => item.label === "Configured environment");
   assert.ok(envGroup);
@@ -519,6 +534,30 @@ test("configureWorkbench writes workspace settings and refreshes views", async (
   assert.equal(configurationValues.env.GS_STONE, "seaside");
   assert.equal(refreshedProviders, 1);
   assert.deepEqual(informationMessages, ["gemstone-py Workbench settings updated."]);
+});
+
+test("verifyWorkbenchSetup reports paths packages and skipped connectivity", async () => {
+  configurationValues.env.GS_PASSWORD = "";
+
+  const result = await registeredCommand("gemstonePy.verifyWorkbenchSetup")();
+
+  assert.equal(outputShown, true);
+  assert.ok(Array.isArray(result));
+  assert.ok(result.find((check) => check.name === "Python executable"));
+  assert.ok(result.find((check) => check.name === "Native backend package"));
+  assert.ok(
+    result.find(
+      (check) =>
+        check.name === "GemStone connectivity" &&
+        check.status === "warning" &&
+        check.detail.includes("skipped"),
+    ),
+  );
+  assert.match(outputLines.join("\n"), /Workbench setup verification/);
+  assert.deepEqual(informationMessages, [
+    "gemstone-py setup verification complete.",
+  ]);
+  assert.equal(terminals.length, 0);
 });
 
 test("configureWorkbench cancels without writing settings", async () => {

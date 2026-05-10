@@ -27,6 +27,14 @@ const JASPER_VIEW_COMMAND = "workbench.view.extension.gemstone";
 const execFileAsync = promisify(execFile);
 const output = vscode.window.createOutputChannel("gemstone-py Workbench");
 
+type SetupCheckStatus = "ok" | "warning" | "error";
+
+interface SetupCheck {
+  name: string;
+  status: SetupCheckStatus;
+  detail: string;
+}
+
 export function registerCommands(
   context: vscode.ExtensionContext,
   providers: WorkbenchTreeProvider[],
@@ -71,6 +79,10 @@ export function registerCommands(
     vscode.commands.registerCommand("gemstonePy.showEnvironment", showEnvironment),
     vscode.commands.registerCommand("gemstonePy.configureWorkbench", () =>
       configureWorkbench(providers),
+    ),
+    vscode.commands.registerCommand(
+      "gemstonePy.verifyWorkbenchSetup",
+      verifyWorkbenchSetup,
     ),
     vscode.commands.registerCommand("gemstonePy.copyEnvScript", copyEnvScript),
     vscode.commands.registerCommand("gemstonePy.checkBackend", checkBackend),
@@ -272,6 +284,105 @@ async function showEnvironment(): Promise<void> {
   output.show(true);
 }
 
+async function verifyWorkbenchSetup(): Promise<SetupCheck[]> {
+  const config = getConfig();
+  const checks: SetupCheck[] = [];
+
+  checks.push({
+    name: "Python executable",
+    status: config.pythonPath ? "ok" : "error",
+    detail: config.pythonPath || "missing",
+  });
+  checks.push({
+    name: "gemstone-py checkout",
+    status: pathExists(config.repoPath) ? "ok" : "error",
+    detail: `${config.repoPath || "missing"} (${status(config.repoPath)})`,
+  });
+  checks.push({
+    name: "Database explorer checkout",
+    status:
+      config.explorerPath && pathExists(config.explorerPath) ? "ok" : "warning",
+    detail: config.explorerPath
+      ? `${config.explorerPath} (${status(config.explorerPath)})`
+      : "not configured",
+  });
+  checks.push({
+    name: "GS_USERNAME",
+    status: configured(config.env.GS_USERNAME) ? "ok" : "warning",
+    detail: configured(config.env.GS_USERNAME) ? config.env.GS_USERNAME : "missing",
+  });
+  checks.push({
+    name: "GS_PASSWORD",
+    status: configured(config.env.GS_PASSWORD) ? "ok" : "warning",
+    detail: configured(config.env.GS_PASSWORD) ? "configured" : "missing",
+  });
+  checks.push({
+    name: "GemStone stone",
+    status: configured(stoneName(config.env)) ? "ok" : "warning",
+    detail: configured(stoneName(config.env))
+      ? `${stoneName(config.env)} (GS_STONE or GS_STONE_NAME)`
+      : "missing GS_STONE or GS_STONE_NAME",
+  });
+  checks.push({
+    name: "GCI library path",
+    status: configured(gciLibraryPath(config.env))
+      ? pathExists(gciLibraryPath(config.env))
+        ? "ok"
+        : "warning"
+      : "warning",
+    detail: configured(gciLibraryPath(config.env))
+      ? `${gciLibraryPath(config.env)} (${status(gciLibraryPath(config.env))})`
+      : "not configured via GS_LIB or GS_LIB_PATH",
+  });
+
+  const probe = await probePython();
+  checks.push({
+    name: "gemstone-py package",
+    status: probeStatus(probe.gemstone_py),
+    detail: probe.gemstone_py ?? "unknown",
+  });
+  checks.push({
+    name: "Native backend package",
+    status: nativeProbeStatus(probe.gemstone_py_native),
+    detail: probe.gemstone_py_native ?? "unknown",
+  });
+  checks.push({
+    name: "Active GCI backend",
+    status: probeStatus(probe.gci_backend),
+    detail: probe.gci_backend ?? "unknown",
+  });
+
+  if (hasGemStoneCredentials(config.env)) {
+    const connection = await probeGemStoneConnection();
+    checks.push({
+      name: "GemStone connectivity",
+      status: connection.ok ? "ok" : "error",
+      detail: connection.ok
+        ? `3 + 4 returned ${connection.result}`
+        : connection.error,
+    });
+  } else {
+    checks.push({
+      name: "GemStone connectivity",
+      status: "warning",
+      detail:
+        "skipped: set GS_USERNAME, GS_PASSWORD, and GS_STONE or GS_STONE_NAME",
+    });
+  }
+
+  output.clear();
+  output.appendLine("gemstone-py Workbench setup verification");
+  output.appendLine("");
+  for (const check of checks) {
+    output.appendLine(
+      `[${check.status.toUpperCase()}] ${check.name}: ${check.detail}`,
+    );
+  }
+  output.show(true);
+  void vscode.window.showInformationMessage("gemstone-py setup verification complete.");
+  return checks;
+}
+
 async function copyEnvScript(): Promise<void> {
   const config = getConfig();
   const script = envExportScript(config.env);
@@ -441,8 +552,88 @@ print(json.dumps(data, sort_keys=True))
   }
 }
 
+async function probeGemStoneConnection(): Promise<
+  { ok: true; result: unknown } | { ok: false; error: string }
+> {
+  const config = getConfig();
+  const code = `
+import json
+
+try:
+    from gemstone_py import GemStoneConfig, GemStoneSession, TransactionPolicy
+    config = GemStoneConfig.from_env()
+    with GemStoneSession(config=config, transaction_policy=TransactionPolicy.ABORT_ON_EXIT) as session:
+        result = session.eval("3 + 4")
+    print(json.dumps({"ok": True, "result": result}, sort_keys=True))
+except Exception as exc:
+    print(json.dumps({"ok": False, "error": exc.__class__.__name__ + ": " + str(exc)}, sort_keys=True))
+`;
+
+  try {
+    const result = await execFileAsync(config.pythonPath, ["-c", code], {
+      cwd: config.repoPath,
+      env: buildEnv(config),
+      timeout: 15000,
+    });
+    const payload = JSON.parse(lastJsonLine(result.stdout));
+    if (payload.ok) {
+      return { ok: true, result: payload.result };
+    }
+    return { ok: false, error: String(payload.error ?? "connection failed") };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, error: message };
+  }
+}
+
+function lastJsonLine(stdout: string): string {
+  const lines = stdout
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  return lines[lines.length - 1] ?? "{}";
+}
+
 function status(candidate: string): string {
   return pathExists(candidate) ? "exists" : "missing";
+}
+
+function configured(value: string | undefined): boolean {
+  return value !== undefined && value.trim().length > 0;
+}
+
+function stoneName(env: Record<string, string>): string {
+  return configured(env.GS_STONE) ? env.GS_STONE : (env.GS_STONE_NAME ?? "");
+}
+
+function gciLibraryPath(env: Record<string, string>): string {
+  return configured(env.GS_LIB_PATH) ? env.GS_LIB_PATH : (env.GS_LIB ?? "");
+}
+
+function hasGemStoneCredentials(env: Record<string, string>): boolean {
+  return (
+    configured(env.GS_USERNAME) &&
+    configured(env.GS_PASSWORD) &&
+    configured(stoneName(env))
+  );
+}
+
+function probeStatus(value: string | undefined): SetupCheckStatus {
+  if (!value) {
+    return "warning";
+  }
+  return /^(error:|not installed:|probe failed)/i.test(value) ? "error" : "ok";
+}
+
+function nativeProbeStatus(value: string | undefined): SetupCheckStatus {
+  if (!value) {
+    return "warning";
+  }
+  if (/^(error:|probe failed)/i.test(value)) {
+    return "error";
+  }
+  return /^not installed:/i.test(value) ? "warning" : "ok";
 }
 
 function ensureExplorerPath(explorerPath: string): boolean {

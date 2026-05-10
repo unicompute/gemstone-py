@@ -88,12 +88,27 @@ temporary-virtualenv installs. It also cache-busts JSON reads so stale
 TestPyPI project metadata is less likely to hide a good release, and retries
 each package/index pair while fresh publishes propagate.
 
-13. Run the optional live soak lane if you want higher confidence before a production release:
+13. Verify release checksums after downloading artifacts from GitHub.
+
+For Python release assets, download `SHA256SUMS` beside the `dist/` artifacts
+and run:
+
+```bash
+shasum -a 256 -c SHA256SUMS
+```
+
+For VS Code workbench assets, download the VSIX and its checksum file, then run:
+
+```bash
+shasum -a 256 -c gemstone-py-workbench-<version>.vsix.sha256
+```
+
+14. Run the optional live soak lane if you want higher confidence before a production release:
 ```bash
 GS_RUN_LIVE=1 GS_RUN_LIVE_SOAK=1 ./scripts/run_live_checks.sh
 ```
 
-14. Publish the VS Code workbench if extension docs, screenshots, or behavior changed:
+15. Publish the VS Code workbench if extension docs, screenshots, or behavior changed:
 ```bash
 gh workflow run vscode-extension.yml \
   --ref main \
@@ -106,13 +121,13 @@ Marketplace listing, and can create or update the scoped GitHub release
 `vscode-workbench-v<version>`. The release upload includes the VSIX and a
 matching `.vsix.sha256` checksum file.
 
-15. Update external documentation surfaces:
+16. Update external documentation surfaces:
 
 - GitHub release notes for the package tag
 - Visual Studio Marketplace release notes/screenshots when the VSIX changed
 - Medium article Markdown/PDF when docs changed
 
-16. Tag and publish only after the checks above are green.
+17. Tag and publish only after the checks above are green.
 
 For GitHub automation:
 

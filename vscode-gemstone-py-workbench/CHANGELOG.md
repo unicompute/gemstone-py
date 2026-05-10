@@ -4,6 +4,9 @@
 
 - Added `gemstone-py: Configure Workbench`, a first-run setup command for
   Python, checkout, database explorer, and GemStone connection settings.
+- Added `gemstone-py: Verify Workbench Setup`, which reports Python path,
+  checkout, explorer, credential, stone alias, GCI library, native backend, and
+  optional live GemStone connectivity status in one output report.
 - Added VS Code extension-host integration smoke tests with
   `@vscode/test-electron`.
 - Added VSIX checksum generation for GitHub release assets.

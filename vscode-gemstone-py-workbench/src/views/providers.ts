@@ -150,6 +150,7 @@ export function createEnvironmentProvider(): WorkbenchTreeProvider {
         icon: !gsLibPath || pathExists(gsLibPath) ? "check" : "warning",
       }),
       commandItem("Configure workbench", "gemstonePy.configureWorkbench", "", "settings-gear"),
+      commandItem("Verify workbench setup", "gemstonePy.verifyWorkbenchSetup", "", "verified"),
       new WorkbenchTreeItem("Configured environment", {
         icon: "settings-gear",
         children: envChildren,

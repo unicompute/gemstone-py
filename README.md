@@ -143,7 +143,9 @@ The extension uses the current VS Code workspace as the default `gemstone-py`
 checkout. Configure `gemstonePy.explorerPath` if you want the workbench to
 launch a local `python-gemstone-database-explorer` checkout, or run
 `gemstone-py: Configure Workbench` from the Command Palette for a guided
-first-run setup.
+first-run setup. After configuration, run `gemstone-py: Verify Workbench Setup`
+to check Python paths, `GS_STONE`/`GS_STONE_NAME`, credentials, native backend
+state, and live GemStone connectivity from one output report.
 
 Operational helper scripts:
 
@@ -159,9 +161,14 @@ Set explicit GemStone connection settings in the environment:
 ```bash
 export GS_LIB=/opt/gemstone/product/lib
 export GS_STONE=gs64stone
+export GS_STONE_NAME=gs64stone
 export GS_USERNAME=DataCurator
 export GS_PASSWORD=swordfish
 ```
+
+`GS_STONE` is the canonical stone variable. `GS_STONE_NAME` is accepted as an
+alias when `GS_STONE` is absent; setting both to the same value keeps older and
+newer tooling aligned.
 
 Optional settings:
 
@@ -586,6 +593,21 @@ gemstone-publish-verify --gemstone-version 0.2.10 --native-version 0.1.2
 
 Use `--skip-install` when you only want the metadata/index checks, or
 `--index pypi` / `--index testpypi` to narrow the target.
+
+GitHub releases include SHA-256 checksum assets. Download the Python artifacts
+and `SHA256SUMS` into the same directory, then verify them with:
+
+```bash
+shasum -a 256 -c SHA256SUMS
+```
+
+For a VS Code workbench release, download both
+`gemstone-py-workbench-<version>.vsix` and
+`gemstone-py-workbench-<version>.vsix.sha256`, then run:
+
+```bash
+shasum -a 256 -c gemstone-py-workbench-<version>.vsix.sha256
+```
 
 On GitHub, use the manual `Benchmarks` workflow to run the same lane against a
 configured stone and upload `benchmark-report.json` as an artifact. The

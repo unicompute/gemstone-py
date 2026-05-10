@@ -14,6 +14,8 @@ This extension focuses on the `gemstone-py` repository:
 - run the maintained Python examples from a sidebar
 - pass configured `GS_*` variables into every example terminal
 - check the active `gemstone_py._gci` backend
+- verify Python paths, GemStone settings, native backend state, and live
+  connectivity from one report
 - open the setup, manual, examples, Medium article, and generated PDF docs
 - launch a configured `python-gemstone-database-explorer` checkout
 - run database explorer tests and UI tests
@@ -100,6 +102,13 @@ name.
 Set `GS_PASSWORD` locally in your VS Code user settings or workspace settings
 before running live examples. The environment view masks password, token,
 secret, and key values when it prints a report.
+
+Run `gemstone-py: Verify Workbench Setup` after configuration. It checks the
+Python executable, `gemstone-py` checkout, database explorer checkout,
+`GS_USERNAME`, `GS_PASSWORD`, `GS_STONE`/`GS_STONE_NAME`,
+`GS_LIB`/`GS_LIB_PATH`, the installed `gemstone_py` and `gemstone_py_native`
+packages, the active GCI backend, and a live GemStone `3 + 4` probe when
+credentials are available.
 
 ## Example Runner
 
@@ -191,6 +200,13 @@ the packaged VSIX metadata, and VS Code extension-host integration smoke tests.
 After publishing, it verifies that the public Marketplace listing is reachable
 and still renders `gemstone-py Workbench`. GitHub releases include the packaged
 VSIX and a matching `.vsix.sha256` checksum asset.
+
+To verify a downloaded VSIX checksum:
+
+```bash
+shasum -a 256 -c gemstone-py-workbench-<version>.vsix.sha256
+```
+
 Keep the Marketplace publisher owner account, `VSCE_PAT` owner account, and
 `unicompute.com` domain verification documented in the publisher admin notes so
 future releases do not depend on a single browser session or a stale personal

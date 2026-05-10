@@ -36,9 +36,14 @@ Most live examples expect the same GemStone environment:
 ```bash
 export GS_LIB=/opt/gemstone/product/lib
 export GS_STONE=gs64stone
+export GS_STONE_NAME=gs64stone
 export GS_USERNAME=DataCurator
 export GS_PASSWORD=swordfish
 ```
+
+`GS_STONE_NAME` is accepted as a stone-name alias when `GS_STONE` is absent.
+Setting both to the same value is harmless and keeps the examples, VS Code
+workbench, and database explorer aligned.
 
 Run examples as modules from the repository root so imports resolve exactly as
 they do in CI:

@@ -45,6 +45,7 @@
     "onCommand:gemstonePy.runFastApiExample",
     "onCommand:gemstonePy.showEnvironment",
     "onCommand:gemstonePy.configureWorkbench",
+    "onCommand:gemstonePy.verifyWorkbenchSetup",
     "onCommand:gemstonePy.copyEnvScript",
     "onCommand:gemstonePy.checkBackend",
     "onCommand:gemstonePy.openSetupGuide",
@@ -163,6 +164,10 @@
       {
         "command": "gemstonePy.configureWorkbench",
         "title": "gemstone-py: Configure Workbench"
+      },
+      {
+        "command": "gemstonePy.verifyWorkbenchSetup",
+        "title": "gemstone-py: Verify Workbench Setup"
       },
       {
         "command": "gemstonePy.copyEnvScript",

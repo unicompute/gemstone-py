@@ -67,6 +67,10 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertIn("already (exists|published)|version.*(exists|published)", content)
         self.assertIn("Integration-test extension in VS Code", content)
         self.assertIn("xvfb-run -a npm run test:integration", content)
+        self.assertIn("Cache VS Code test host", content)
+        self.assertIn("actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae", content)
+        self.assertIn("vscode-gemstone-py-workbench/.vscode-test", content)
+        self.assertIn("vscode-test-${{ runner.os }}-${{ runner.arch }}-", content)
         self.assertIn("Generate VSIX checksum", content)
         self.assertIn("*.vsix.sha256", content)
         self.assertIn("CHECKSUM_PATH", content)
@@ -83,6 +87,19 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertIn("gemstone-py Workbench", content)
         self.assertIn("## Changelog", content)
         self.assertIn("vscode-gemstone-py-workbench/CHANGELOG.md", content)
+
+    def test_ci_workflow_smoke_tests_release_wrapper(self) -> None:
+        content = pathlib.Path(".github/workflows/ci.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("release-wrapper-smoke:", content)
+        self.assertIn(
+            "scripts/release_all.sh --skip-ci --skip-native --skip-public-verify",
+            content,
+        )
+        self.assertIn("actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e", content)
+        self.assertIn("node-version: \"24\"", content)
+        self.assertIn("SKIP_VSCODE_INTEGRATION: \"1\"", content)
 
     def test_release_workflows_use_trusted_publishing(self) -> None:
         testpypi_content = pathlib.Path(
