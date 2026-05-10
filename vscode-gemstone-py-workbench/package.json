@@ -284,6 +284,7 @@
   "scripts": {
     "compile": "tsc -p ./",
     "check": "tsc -p ./ --noEmit",
+    "test:smoke": "npm run compile && node --test test/*.test.js",
     "release:preflight": "node scripts/check-release.js",
     "release:verify-vsix": "node scripts/check-release.js --vsix",
     "watch": "tsc -watch -p ./"

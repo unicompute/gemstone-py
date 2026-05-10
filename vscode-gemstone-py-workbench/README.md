@@ -40,6 +40,7 @@ From this directory:
 ```bash
 npm install
 npm run compile
+npm run test:smoke
 ```
 
 Open this folder in VS Code and press `F5` to start an extension development

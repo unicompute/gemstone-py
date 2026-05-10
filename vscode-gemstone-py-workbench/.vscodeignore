@@ -2,10 +2,11 @@
 .vscode-test/**
 node_modules/**
 node_modules/@types/**
+scripts/**
 src/**
+test/**
 tsconfig.json
 *.vsix
 **/*.map
 .gitignore
 npm-debug.log
-

@@ -43,6 +43,9 @@ jobs:
       - name: Type-check extension
         run: npm run check
 
+      - name: Smoke-test extension helpers
+        run: npm run test:smoke
+
       - name: Release preflight
         run: npm run release:preflight
 
