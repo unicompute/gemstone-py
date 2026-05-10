@@ -62,10 +62,15 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertIn("publish-to-marketplace", content)
         self.assertIn("VSCE_PAT", content)
         self.assertIn("--pat \"${VSCE_PAT}\"", content)
+        self.assertIn("Check Marketplace version before publish", content)
+        self.assertIn("steps.marketplace-precheck.outputs.visible != 'true'", content)
+        self.assertIn("already (exists|published)|version.*(exists|published)", content)
         self.assertIn("Verify Marketplace version", content)
         self.assertIn("npx vsce show unicompute.gemstone-py-workbench --json", content)
         self.assertIn("EXPECTED_VERSION", content)
         self.assertIn("versions[0]", content)
+        self.assertIn("seq 1 20", content)
+        self.assertIn("sleep 60", content)
         self.assertIn(
             "https://marketplace.visualstudio.com/items?itemName=unicompute.gemstone-py-workbench",
             content,

@@ -94,21 +94,57 @@ jobs:
           name: gemstone-py-workbench-vsix
           path: vscode-gemstone-py-workbench
 
+      - name: Check Marketplace version before publish
+        id: marketplace-precheck
+        shell: bash
+        run: |
+          expected_version="$(node -p "require('./package.json').version")"
+          echo "visible=false" >> "${GITHUB_OUTPUT}"
+          if npx vsce show unicompute.gemstone-py-workbench --json > marketplace.json; then
+            if EXPECTED_VERSION="${expected_version}" node -e '
+            const fs = require("fs");
+            const expected = process.env.EXPECTED_VERSION;
+            const payload = JSON.parse(fs.readFileSync("marketplace.json", "utf8"));
+            const versions = (payload.versions || []).map((entry) => entry.version);
+            if (versions.includes(expected)) {
+              process.exit(0);
+            }
+            process.exit(1);
+            '
+            then
+              echo "Marketplace version ${expected_version} is already visible; skipping publish."
+              echo "visible=true" >> "${GITHUB_OUTPUT}"
+            fi
+          fi
+
       - name: Publish to Visual Studio Marketplace
+        if: steps.marketplace-precheck.outputs.visible != 'true'
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        shell: bash
         run: |
           test -n "${VSCE_PAT}"
-          npx vsce publish \
+          set +e
+          publish_output="$(npx vsce publish \
             --packagePath gemstone-py-workbench-*.vsix \
             --pat "${VSCE_PAT}" \
-            --no-dependencies
+            --no-dependencies 2>&1)"
+          publish_status=$?
+          set -e
+          printf '%s\n' "${publish_output}"
+          if test "${publish_status}" -ne 0; then
+            if printf '%s\n' "${publish_output}" | grep -Eiq "already (exists|published)|version.*(exists|published)"; then
+              echo "Marketplace reports this version is already published; continuing to public listing verification."
+            else
+              exit "${publish_status}"
+            fi
+          fi
 
       - name: Verify Marketplace version
         shell: bash
         run: |
           expected_version="$(node -p "require('./package.json').version")"
-          for attempt in 1 2 3 4 5 6; do
+          for attempt in $(seq 1 20); do
             if npx vsce show unicompute.gemstone-py-workbench --json > marketplace.json; then
               if EXPECTED_VERSION="${expected_version}" node -e '
               const fs = require("fs");
@@ -130,8 +166,8 @@ jobs:
                 exit 0
               fi
             fi
-            echo "Marketplace version ${expected_version} not visible yet; retrying (${attempt}/6)..."
-            sleep 30
+            echo "Marketplace version ${expected_version} not visible yet; retrying (${attempt}/20)..."
+            sleep 60
           done
           echo "Marketplace version ${expected_version} did not become visible."
           exit 1
