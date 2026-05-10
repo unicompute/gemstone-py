@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+
+- Changed the database explorer launcher to start the explorer Python process directly in the VS Code terminal instead of typing a shell command with `sendText`.
+- Avoided races with VS Code Python terminal auto-activation that could inject `source .venv/bin/activate` and interrupt the running Flask server.
+- Added smoke coverage for the direct launcher behavior.
+
 ## 0.1.3
 
 - Added Marketplace screenshot assets for the examples runner, environment/backend checks, and database explorer launcher.
@@ -21,4 +27,3 @@
 - Initial gemstone-py Workbench MVP.
 - Added examples, environment, docs, maintainer, and IDE sidebar views.
 - Added commands for running examples, checking the backend, opening docs, launching the database explorer, and handing off to Jasper.
-

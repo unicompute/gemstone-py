@@ -12,7 +12,12 @@ import {
   shellQuote,
 } from "../config";
 import { WorkbenchTreeProvider } from "../views/providers";
-import { runInTerminal, runRepoPythonModule, runRepoScript } from "./terminal";
+import {
+  runInTerminal,
+  runProcessInTerminal,
+  runRepoPythonModule,
+  runRepoScript,
+} from "./terminal";
 
 const execFileAsync = promisify(execFile);
 const output = vscode.window.createOutputChannel("gemstone-py Workbench");
@@ -198,16 +203,15 @@ function launchExplorer(): void {
   }
 
   const python = explorerPython(config);
-  const command = [
-    shellQuote(python),
+  const args = [
     "-m",
     "gemstone_p.cli",
     "--host",
-    shellQuote(config.explorerHost),
+    config.explorerHost,
     "--port",
     String(config.explorerPort),
-  ].join(" ");
-  runInTerminal("Database explorer", command, config.explorerPath);
+  ];
+  runProcessInTerminal("Database explorer", python, args, config.explorerPath);
 }
 
 async function openExplorer(): Promise<void> {

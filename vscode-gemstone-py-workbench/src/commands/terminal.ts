@@ -17,6 +17,24 @@ export function runInTerminal(
   terminal.sendText(command);
 }
 
+export function runProcessInTerminal(
+  title: string,
+  shellPath: string,
+  shellArgs: string[],
+  cwd: string,
+  extraEnv: EnvMap = {},
+): void {
+  const config = getConfig();
+  const terminal = vscode.window.createTerminal({
+    name: `GemStone: ${title}`,
+    cwd: cwd || undefined,
+    env: buildEnv(config, extraEnv),
+    shellPath,
+    shellArgs,
+  });
+  terminal.show(true);
+}
+
 export function runRepoPythonModule(
   title: string,
   moduleName: string,

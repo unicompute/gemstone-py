@@ -1,7 +1,9 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
 const Module = require("node:module");
+const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 
@@ -313,6 +315,31 @@ test("launchDatabaseExplorer warns when explorerPath is not configured", () => {
   assert.deepEqual(warnings, [
     "Set gemstonePy.explorerPath before launching the database explorer.",
   ]);
+});
+
+test("launchDatabaseExplorer starts Python directly without shell sendText", () => {
+  const explorerPath = fs.mkdtempSync(path.join(os.tmpdir(), "gemstone-explorer-"));
+  const pythonPath = path.join(explorerPath, ".venv", "bin", "python");
+  fs.mkdirSync(path.dirname(pythonPath), { recursive: true });
+  fs.writeFileSync(pythonPath, "");
+
+  configurationValues.explorerPath = explorerPath;
+  registeredCommand("gemstonePy.launchDatabaseExplorer")();
+
+  assert.equal(terminals.length, 1);
+  assert.equal(terminals[0].options.name, "GemStone: Database explorer");
+  assert.equal(terminals[0].options.cwd, explorerPath);
+  assert.equal(terminals[0].options.shellPath, pythonPath);
+  assert.deepEqual(terminals[0].options.shellArgs, [
+    "-m",
+    "gemstone_p.cli",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "9292",
+  ]);
+  assert.deepEqual(terminals[0].sentText, []);
+  assert.equal(terminals[0].shown, true);
 });
 
 function registeredCommand(command) {

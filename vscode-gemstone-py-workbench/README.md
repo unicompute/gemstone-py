@@ -115,6 +115,11 @@ cd /path/to/python-gemstone-database-explorer
 python -m gemstone_p.cli --host 127.0.0.1 --port 9292
 ```
 
+The launch command starts the explorer Python executable directly as the VS Code
+terminal process. It does not type the command into an interactive shell, which
+avoids VS Code Python environment auto-activation interrupting the running Flask
+server.
+
 It also opens `http://127.0.0.1:9292/` and can run:
 
 ```bash
