@@ -637,10 +637,6 @@ INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 ```
 
-Open `http://127.0.0.1:8000/` for the example index,
-`http://127.0.0.1:8000/docs` for the interactive FastAPI docs, or
-`http://127.0.0.1:8000/health/gemstone` for the GemStone health check.
-
 With that server running, test it from a second terminal.
 
 Basic checks:
@@ -671,6 +667,14 @@ Expected if GemStone credentials/environment are set and the stone is reachable:
 
 ```json
 {"result":7}
+```
+
+Also open these in a browser:
+
+```text
+http://127.0.0.1:8000/
+http://127.0.0.1:8000/docs
+http://127.0.0.1:8000/health/gemstone
 ```
 
 Endpoint shape:

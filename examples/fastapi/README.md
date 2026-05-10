@@ -19,17 +19,6 @@ INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 ```
 
-For an installed package rather than a repository checkout:
-
-```bash
-python -m pip install "gemstone-py[fastapi]"
-gemstone-fastapi-example --reload
-```
-
-Open `http://127.0.0.1:8000/` for the example index,
-`http://127.0.0.1:8000/docs` for the interactive FastAPI docs, or
-`http://127.0.0.1:8000/health/gemstone` for the GemStone health check.
-
 ## Verify
 
 With that server running, test it from a second terminal.
@@ -70,6 +59,13 @@ Also open these in a browser:
 http://127.0.0.1:8000/
 http://127.0.0.1:8000/docs
 http://127.0.0.1:8000/health/gemstone
+```
+
+For an installed package rather than a repository checkout:
+
+```bash
+python -m pip install "gemstone-py[fastapi]"
+gemstone-fastapi-example --reload
 ```
 
 The example uses `gemstone_py.aio.fastapi.session_dependency`, which opens one
