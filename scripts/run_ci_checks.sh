@@ -19,6 +19,7 @@ fi
 "${pybin}" -m gemstone_py.benchmark_baselines --help >/dev/null
 "${pybin}" -m gemstone_py.benchmark_compare --help >/dev/null
 "${pybin}" -m gemstone_py.release_metadata --help >/dev/null
+"${pybin}" -m gemstone_py.publish_verify --help >/dev/null
 "${pybin}" -m gemstone_py.benchmarks --help >/dev/null
 if [[ "${GS_SKIP_BUILD_SMOKE:-0}" != "1" ]]; then
   "${repo_root}/scripts/run_build_smoke.sh"

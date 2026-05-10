@@ -116,6 +116,52 @@ class FastApiExampleAppTests(unittest.TestCase):
             },
         )
 
+    @unittest.skipIf(
+        importlib.util.find_spec("httpx") is None,
+        "FastAPI TestClient dependencies are not installed",
+    )
+    def test_http_smoke_routes_include_docs_and_gemstone_health(self):
+        from fastapi.testclient import TestClient
+
+        class FakeSession:
+            async def eval(self, expression):
+                self.expression = expression
+                return 7
+
+        def fake_session_dependency(*, config):
+            async def dependency():
+                yield FakeSession()
+
+            return dependency
+
+        with mock.patch(
+            "gemstone_py.aio.fastapi.session_dependency",
+            side_effect=fake_session_dependency,
+        ):
+            app = fastapi_example.create_app()
+
+        with TestClient(app) as client:
+            index = client.get("/")
+            docs = client.get("/docs")
+            health = client.get("/health/gemstone")
+
+        self.assertEqual(index.status_code, 200)
+        self.assertEqual(
+            index.json(),
+            {
+                "name": "gemstone-py FastAPI example",
+                "endpoints": {
+                    "health": "/health/gemstone",
+                    "docs": "/docs",
+                    "openapi": "/openapi.json",
+                },
+            },
+        )
+        self.assertEqual(docs.status_code, 200)
+        self.assertIn("text/html", docs.headers["content-type"])
+        self.assertEqual(health.status_code, 200)
+        self.assertEqual(health.json(), {"result": 7})
+
 
 if __name__ == "__main__":
     unittest.main()

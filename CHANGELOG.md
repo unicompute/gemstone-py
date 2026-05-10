@@ -4,6 +4,20 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+- Added `gemstone-publish-verify`, an end-to-end PyPI/TestPyPI verifier for
+  project JSON, version-specific JSON, simple index pages, and temporary
+  virtualenv install smoke checks.
+- Added smoke coverage for the FastAPI example's `/`, `/docs`, and
+  `/health/gemstone` routes.
+- Tightened the VS Code workbench Marketplace workflow to publish with
+  `VSCE_PAT` explicitly and verify the public Marketplace listing after
+  publishing.
+- Made the VS Code workbench database explorer launcher warn before startup
+  when `GS_USERNAME` or `GS_PASSWORD` is missing from `gemstonePy.env`.
+- Expanded install, release, and verification docs for installed packages,
+  source checkouts, native acceleration, VSIX publishing, and release
+  checklists.
+
 ## 0.2.10 - 2026-05-10
 
 - Added `fastapi` and `examples` extras so new installs can opt into FastAPI

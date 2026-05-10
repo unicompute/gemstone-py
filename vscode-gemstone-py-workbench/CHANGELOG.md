@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.10
+
+- Added a pre-launch settings check for the database explorer so missing
+  `GS_USERNAME` or `GS_PASSWORD` is reported as a workbench warning.
+- Updated the Marketplace workflow to verify the public listing after publish.
+
 ## 0.1.9
 
 - Updated Marketplace screenshots for the examples runner, environment/backend checks, and database explorer launcher.

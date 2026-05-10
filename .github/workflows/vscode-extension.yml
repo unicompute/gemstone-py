@@ -97,7 +97,30 @@ jobs:
       - name: Publish to Visual Studio Marketplace
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: npx vsce publish --packagePath gemstone-py-workbench-*.vsix --no-dependencies
+        run: |
+          test -n "${VSCE_PAT}"
+          npx vsce publish \
+            --packagePath gemstone-py-workbench-*.vsix \
+            --pat "${VSCE_PAT}" \
+            --no-dependencies
+
+      - name: Verify Marketplace listing
+        shell: bash
+        env:
+          MARKETPLACE_URL: https://marketplace.visualstudio.com/items?itemName=unicompute.gemstone-py-workbench
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsSL "${MARKETPLACE_URL}" -o marketplace.html; then
+              if grep -q "gemstone-py Workbench" marketplace.html; then
+                echo "Marketplace listing is visible: ${MARKETPLACE_URL}"
+                exit 0
+              fi
+            fi
+            echo "Marketplace listing not visible yet; retrying (${attempt}/6)..."
+            sleep 30
+          done
+          echo "Marketplace listing did not become visible: ${MARKETPLACE_URL}"
+          exit 1
 
   github-release:
     needs:

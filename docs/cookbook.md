@@ -308,6 +308,15 @@ python -m gemstone_py.api_contract --json
 This is useful after installation, after release, and after any moment when you
 feel your package metadata may have become sentient.
 
+For a full PyPI/TestPyPI release check:
+
+```bash
+gemstone-publish-verify --gemstone-version 0.2.10 --native-version 0.1.2
+```
+
+That command checks project JSON, version-specific JSON, the simple index, and
+temporary-virtualenv installs for both the pure package and native package.
+
 ## Recipe 24: Run the Live Test Lane
 
 ```bash

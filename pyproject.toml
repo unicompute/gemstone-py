@@ -27,6 +27,7 @@ gemstone-benchmarks = "gemstone_py.benchmarks:main_entry"
 gemstone-examples = "gemstone_py.cli:main_entry"
 gemstone-fastapi-example = "gemstone_py.fastapi_example:main_entry"
 gemstone-hello = "gemstone_py.cli:hello_entry"
+gemstone-publish-verify = "gemstone_py.publish_verify:main_entry"
 gemstone-smalltalk-demo = "gemstone_py.cli:smalltalk_demo_entry"
 
 [project.optional-dependencies]
@@ -107,6 +108,7 @@ files = [
   "gemstone_py/gstore.py",
   "gemstone_py/concurrency.py",
   "gemstone_py/objectlog.py",
+  "gemstone_py/publish_verify.py",
   "examples/typed_access/simple_blog_queries.py",
 ]
 follow_imports = "skip"
@@ -128,6 +130,7 @@ module = [
   "gemstone_py.fastapi_example",
   "gemstone_py.cli",
   "gemstone_py.objectlog",
+  "gemstone_py.publish_verify",
 ]
 strict = true
 

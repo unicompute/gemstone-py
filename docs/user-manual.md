@@ -485,10 +485,20 @@ The package now has:
 - TestPyPI rehearsal
 - post-release verification against real PyPI
 - installed-artifact API contract checks
+- local PyPI/TestPyPI index verification with `gemstone-publish-verify`
 - optional PyO3 native wheels through `gemstone-py[fast]`
 
 That means you can treat the package as a real distributable unit, not just a
 working directory with ambition.
+
+After publishing, verify both public indexes from a clean shell:
+
+```bash
+gemstone-publish-verify --gemstone-version 0.2.10 --native-version 0.1.2
+```
+
+The command checks project JSON, version-specific JSON, the simple index, and
+temporary-virtualenv installs for PyPI and TestPyPI.
 
 ### Native Fast Path
 

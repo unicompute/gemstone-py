@@ -48,6 +48,12 @@ python -m examples.misc.smalltalk_demo
 python -m examples.async_features.session_root_and_collection
 ```
 
+For a normal installed package:
+
+```bash
+python -m pip install gemstone-py
+```
+
 For a source checkout with development tools:
 
 ```bash
@@ -58,6 +64,20 @@ For the optional native backend example:
 
 ```bash
 python -m pip install "gemstone-py[fast]"
+```
+
+For FastAPI examples from an installed package:
+
+```bash
+python -m pip install "gemstone-py[fastapi]"
+gemstone-fastapi-example --reload
+```
+
+For FastAPI examples from a source checkout:
+
+```bash
+python -m pip install -e ".[examples]"
+python -m examples.fastapi.run --reload
 ```
 
 ## Running Examples From VS Code

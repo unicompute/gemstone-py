@@ -55,6 +55,20 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertIn("native_fast_path_available", content)
         self.assertIn("gemstone-py-post-release-verify", content)
 
+    def test_vscode_extension_workflow_publishes_and_verifies_marketplace(self) -> None:
+        content = pathlib.Path(".github/workflows/vscode-extension.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("publish-to-marketplace", content)
+        self.assertIn("VSCE_PAT", content)
+        self.assertIn("--pat \"${VSCE_PAT}\"", content)
+        self.assertIn("Verify Marketplace listing", content)
+        self.assertIn(
+            "https://marketplace.visualstudio.com/items?itemName=unicompute.gemstone-py-workbench",
+            content,
+        )
+        self.assertIn("gemstone-py Workbench", content)
+
     def test_release_workflows_use_trusted_publishing(self) -> None:
         testpypi_content = pathlib.Path(
             ".github/workflows/release-testpypi.yml"

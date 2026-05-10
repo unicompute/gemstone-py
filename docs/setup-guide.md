@@ -21,6 +21,8 @@ For the full local development experience, you will also want:
 
 ## Install the Package
 
+### Installed Package
+
 From PyPI:
 
 ```bash
@@ -38,6 +40,15 @@ python -c "from gemstone_py import _gci; print(_gci.IMPLEMENTATION)"
 From a repository checkout, the fuller backend example is
 `python -m examples.native_backend.check_backend`.
 
+For web examples from an installed environment:
+
+```bash
+python3 -m pip install "gemstone-py[fastapi]"
+gemstone-fastapi-example --reload
+```
+
+### Source Checkout
+
 From a repo checkout:
 
 ```bash
@@ -45,6 +56,13 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
 python -m pip install -e .[dev]
+```
+
+For source-checkout examples without the full development toolchain:
+
+```bash
+python -m pip install -e ".[examples]"
+python -m examples.fastapi.run --reload
 ```
 
 ## Required Environment Variables

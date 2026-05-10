@@ -28,6 +28,7 @@ function resetState() {
     explorerPort: 9292,
     env: {
       GS_STONE: "gs64stone",
+      GS_USERNAME: "DataCurator",
       GS_PASSWORD: "secret",
       GEMSTONE_PY_SMOKE_EMPTY: "",
     },
@@ -399,7 +400,7 @@ test("copyEnvScript copies only non-empty configured variables", async () => {
 
   assert.equal(
     clipboardText,
-    "export GS_STONE=gs64stone\nexport GS_PASSWORD=secret",
+    "export GS_STONE=gs64stone\nexport GS_USERNAME=DataCurator\nexport GS_PASSWORD=secret",
   );
 });
 
@@ -410,6 +411,19 @@ test("launchDatabaseExplorer warns when explorerPath is not configured", () => {
   assert.equal(terminals.length, 0);
   assert.deepEqual(warnings, [
     "Set gemstonePy.explorerPath before launching the database explorer.",
+  ]);
+});
+
+test("launchDatabaseExplorer warns when GemStone credentials are not configured", () => {
+  const explorerPath = fs.mkdtempSync(path.join(os.tmpdir(), "gemstone-explorer-"));
+  configurationValues.explorerPath = explorerPath;
+  configurationValues.env.GS_PASSWORD = "";
+
+  registeredCommand("gemstonePy.launchDatabaseExplorer")();
+
+  assert.equal(terminals.length, 0);
+  assert.deepEqual(warnings, [
+    "Set gemstonePy.env.GS_PASSWORD before launching the database explorer.",
   ]);
 });
 
@@ -435,6 +449,7 @@ test("launchDatabaseExplorer starts Python directly without shell sendText", () 
     "9292",
   ]);
   assert.deepEqual(terminals[0].sentText, []);
+  assert.equal(terminals[0].options.env.GS_PASSWORD, "secret");
   assert.equal(terminals[0].shown, true);
 });
 

@@ -29,15 +29,26 @@ from gemstone_py.session_facade import GemStoneSessionFacade
 
 ## Install
 
+For a normal installed package:
+
 ```bash
 python3 -m pip install gemstone-py
 ```
 
 The package requires Python 3.11 or newer. The default install uses the
-pure-ctypes GCI path. When native wheels are available, the opt-in fast path is:
+pure-ctypes GCI path.
+
+For the optional native PyO3 fast path:
 
 ```bash
 python3 -m pip install "gemstone-py[fast]"
+```
+
+That installs `gemstone-py-native` when a wheel is available for your platform.
+Check the selected backend with:
+
+```bash
+python -c "from gemstone_py import _gci; print(_gci.IMPLEMENTATION)"
 ```
 
 The native package source lives in `gemstone-py-native/` and builds the
@@ -68,6 +79,8 @@ For development from source:
 ```bash
 git clone https://github.com/unicompute/gemstone-py.git
 cd gemstone-py
+python3 -m venv .venv
+source .venv/bin/activate
 python3 -m pip install -e ".[dev]"
 ```
 
@@ -88,6 +101,7 @@ gemstone-examples hello
 gemstone-examples smalltalk-demo
 gemstone-examples fastapi --reload
 gemstone-fastapi-example --reload
+gemstone-publish-verify --gemstone-version 0.2.10 --native-version 0.1.2 --skip-install
 ```
 
 Feature examples from the repository checkout:
@@ -551,6 +565,17 @@ package from real PyPI, runs `python -m gemstone_py.api_contract --json`,
 checks the public CLI entry points, and validates the PyPI JSON metadata plus
 long description.
 
+For local end-to-end index verification across PyPI and TestPyPI, use the
+packaged verifier. It checks project JSON, version-specific JSON, the simple
+index, and temporary-virtualenv installs:
+
+```bash
+gemstone-publish-verify --gemstone-version 0.2.10 --native-version 0.1.2
+```
+
+Use `--skip-install` when you only want the metadata/index checks, or
+`--index pypi` / `--index testpypi` to narrow the target.
+
 On GitHub, use the manual `Benchmarks` workflow to run the same lane against a
 configured stone and upload `benchmark-report.json` as an artifact. The
 workflow now supports named policy profiles:
@@ -654,6 +679,7 @@ For repository operations:
 - use `Native Wheels` with `publish-to-testpypi=true` before publishing the optional native package
 - use `./scripts/run_native_checks.sh` before starting the native wheel publish workflow
 - use `Post Release Verify` after a real PyPI publish to validate the public artifact and metadata
+- use `gemstone-publish-verify --gemstone-version <version> --native-version <native-version>` to check PyPI and TestPyPI from your shell
 - use `Native Wheels` with `publish-to-pypi=true` and a matching native `release-tag` only after the native wheel matrix passes on all target platforms
 - use the real `Release` workflow only after `CHANGELOG.md`, `pyproject.toml`, live checks, and benchmarks all match the intended version
 - keep a second Mac host or at least a documented rebuild path for the `gemstone-py-local` self-hosted runner

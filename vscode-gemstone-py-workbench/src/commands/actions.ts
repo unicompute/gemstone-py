@@ -202,6 +202,9 @@ function launchExplorer(): void {
   if (!ensureExplorerPath(config.explorerPath)) {
     return;
   }
+  if (!ensureExplorerCredentials(config.env)) {
+    return;
+  }
 
   const python = explorerPython(config);
   const args = [
@@ -351,4 +354,18 @@ function ensureExplorerPath(explorerPath: string): boolean {
   }
 
   return true;
+}
+
+function ensureExplorerCredentials(env: Record<string, string>): boolean {
+  const missing = ["GS_USERNAME", "GS_PASSWORD"].filter(
+    (key) => !env[key] || env[key].trim().length === 0,
+  );
+  if (missing.length === 0) {
+    return true;
+  }
+
+  void vscode.window.showWarningMessage(
+    `Set ${missing.map((key) => `gemstonePy.env.${key}`).join(" and ")} before launching the database explorer.`,
+  );
+  return false;
 }

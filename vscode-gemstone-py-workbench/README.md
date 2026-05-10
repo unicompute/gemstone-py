@@ -128,6 +128,11 @@ terminal process. It does not type the command into an interactive shell, which
 avoids VS Code Python environment auto-activation interrupting the running Flask
 server.
 
+Before launching, the command checks that `gemstonePy.explorerPath` exists and
+that `gemstonePy.env.GS_USERNAME` and `gemstonePy.env.GS_PASSWORD` are set. This
+keeps missing-credential failures as VS Code settings warnings instead of
+Flask startup tracebacks.
+
 It also opens `http://127.0.0.1:9292/` and can run:
 
 ```bash
@@ -173,10 +178,12 @@ Marketplace publish should also create or update the scoped GitHub release tag
 
 Before publishing a new version, the workflow runs release preflight checks for
 `package.json`, `package-lock.json`, `CHANGELOG.md`, README screenshot links,
-and the packaged VSIX metadata. Keep the Marketplace publisher owner account,
-`VSCE_PAT` owner account, and `unicompute.com` domain verification documented in
-the publisher admin notes so future releases do not depend on a single browser
-session or a stale personal access token.
+and the packaged VSIX metadata. After publishing, it verifies that the public
+Marketplace listing is reachable and still renders `gemstone-py Workbench`.
+Keep the Marketplace publisher owner account, `VSCE_PAT` owner account, and
+`unicompute.com` domain verification documented in the publisher admin notes so
+future releases do not depend on a single browser session or a stale personal
+access token.
 
 ## Changelog
 
