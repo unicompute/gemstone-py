@@ -11,6 +11,10 @@ All notable changes to `gemstone-py` should be recorded here.
 - Added `gemstone-fastapi-example`, `gemstone-examples fastapi`, and
   `python -m examples.fastapi.run` runners that check optional dependencies
   before starting uvicorn.
+- Made the FastAPI dependency message use the exact Python executable that is
+  missing the optional dependencies.
+- Made the FastAPI example start without GemStone credentials and report missing
+  `GS_USERNAME` or `GS_PASSWORD` as a 503 response when the endpoint is called.
 - Updated the VS Code workbench FastAPI example launcher to use the dependency
   checking repository runner instead of calling `python -m uvicorn` directly.
 

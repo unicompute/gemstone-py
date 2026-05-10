@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import shlex
 import sys
 from collections.abc import Sequence
 from typing import Any
@@ -15,13 +16,29 @@ FASTAPI_DEPENDENCIES = ("fastapi", "uvicorn")
 def create_app() -> Any:
     """Create the minimal FastAPI app used by the packaged example."""
     from fastapi import Depends, FastAPI
+    from fastapi.responses import JSONResponse
 
-    from gemstone_py import GemStoneConfig
+    from gemstone_py import GemStoneConfig, GemStoneConfigurationError
     from gemstone_py.aio import AsyncSession
     from gemstone_py.aio.fastapi import session_dependency
 
     app = FastAPI()
-    get_gemstone_session = session_dependency(config=GemStoneConfig.from_env())
+    get_gemstone_session = session_dependency(
+        config=GemStoneConfig.from_env(require_credentials=False)
+    )
+
+    @app.exception_handler(GemStoneConfigurationError)
+    async def gemstone_configuration_error(
+        _request: Any,
+        exc: GemStoneConfigurationError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": str(exc),
+                "hint": "Set GS_USERNAME and GS_PASSWORD before calling GemStone endpoints.",
+            },
+        )
 
     @app.get("/health/gemstone")
     async def gemstone_health(
@@ -65,15 +82,16 @@ def add_runner_arguments(parser: argparse.ArgumentParser) -> None:
 def dependency_help(missing: Sequence[str]) -> str:
     """Build a clear install hint for missing optional dependencies."""
     missing_list = ", ".join(missing)
+    pip_command = f"{shlex.quote(sys.executable)} -m pip"
     return "\n".join(
         [
             f"Missing optional FastAPI dependencies: {missing_list}",
             "",
             "For an installed gemstone-py package, run:",
-            '  python -m pip install "gemstone-py[fastapi]"',
+            f'  {pip_command} install "gemstone-py[fastapi]"',
             "",
             "For a source checkout, run:",
-            '  python -m pip install -e ".[examples]"',
+            f'  {pip_command} install -e ".[examples]"',
         ]
     )
 
