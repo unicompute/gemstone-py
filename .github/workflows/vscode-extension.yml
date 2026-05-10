@@ -23,6 +23,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build-vsix:
     runs-on: ubuntu-latest
@@ -153,6 +156,8 @@ jobs:
         run: |
           git fetch --force origin "+refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}" || true
           if ! git rev-parse --verify --quiet "${RELEASE_TAG}" >/dev/null; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git tag -a "${RELEASE_TAG}" -m "VS Code workbench ${RELEASE_VERSION}"
             git push origin "${RELEASE_TAG}"
           fi
