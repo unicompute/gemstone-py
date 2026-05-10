@@ -3,17 +3,24 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import importlib.util
 import os
 import shlex
 import sys
 from collections.abc import Sequence
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
 DEFAULT_APP_PATH = "gemstone_py.fastapi_example:create_app"
 DEFAULT_MODULE_NAME = "gemstone_py.fastapi_example"
 FASTAPI_DEPENDENCIES = ("fastapi", "uvicorn")
+STARTUP_INSTRUCTIONS_ENV = "GEMSTONE_PY_FASTAPI_EXAMPLE_BASE_URL"
+INDEX_BODY_EXAMPLE = (
+    '{"name":"gemstone-py FastAPI example","endpoints":'
+    '{"health":"/health/gemstone","docs":"/docs","openapi":"/openapi.json"}}'
+)
 
 
 def create_app() -> Any:
@@ -25,7 +32,12 @@ def create_app() -> Any:
     from gemstone_py.aio import AsyncSession
     from gemstone_py.aio.fastapi import session_dependency
 
-    app = FastAPI()
+    @asynccontextmanager
+    async def lifespan(_app: Any) -> Any:
+        asyncio.create_task(print_startup_instructions())
+        yield
+
+    app = FastAPI(lifespan=lifespan)
     get_gemstone_session = session_dependency(
         config=GemStoneConfig.from_env(require_credentials=False)
     )
@@ -61,6 +73,51 @@ def create_app() -> Any:
         return {"result": await session.eval("3 + 4")}
 
     return app
+
+
+def startup_instructions(base_url: str) -> str:
+    """Return post-startup verification instructions for the FastAPI example."""
+    clean_base_url = base_url.rstrip("/")
+    return "\n".join(
+        [
+            "",
+            "• With that server running, test it from a second terminal.",
+            "",
+            "  Basic checks:",
+            "",
+            f"  curl -i {clean_base_url}/",
+            "",
+            "  Expected:",
+            "",
+            "  HTTP/1.1 200 OK",
+            "",
+            "  Body should include:",
+            "",
+            f"  {INDEX_BODY_EXAMPLE}",
+            "",
+            "  Then test the GemStone endpoint:",
+            "",
+            f"  curl -i {clean_base_url}/health/gemstone",
+            "",
+            "  Expected if GemStone credentials/environment are set and the stone is reachable:",
+            "",
+            '  {"result":7}',
+            "",
+            "  Also open these in a browser:",
+            "",
+            f"  {clean_base_url}/",
+            f"  {clean_base_url}/docs",
+            f"  {clean_base_url}/health/gemstone",
+            "",
+        ]
+    )
+
+
+async def print_startup_instructions() -> None:
+    """Print verification instructions after Uvicorn has completed startup."""
+    await asyncio.sleep(0.1)
+    base_url = os.environ.get(STARTUP_INSTRUCTIONS_ENV, "http://127.0.0.1:8000")
+    print(startup_instructions(base_url), flush=True)
 
 
 def missing_dependencies() -> list[str]:
@@ -159,6 +216,8 @@ def main(
 
     import uvicorn
 
+    display_host = "127.0.0.1" if args.host in {"0.0.0.0", "::"} else args.host
+    os.environ[STARTUP_INSTRUCTIONS_ENV] = f"http://{display_host}:{args.port}"
     uvicorn.run(
         app_path,
         factory=factory,

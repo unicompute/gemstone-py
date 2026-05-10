@@ -22,6 +22,8 @@ All notable changes to `gemstone-py` should be recorded here.
   available docs and health-check routes instead of FastAPI's default 404.
 - Documented expected startup output plus curl and browser checks for verifying
   `examples.fastapi.run`.
+- Made the FastAPI example print the same verification checks when the server
+  starts.
 - Made the FastAPI example start without GemStone credentials and report missing
   `GS_USERNAME` or `GS_PASSWORD` as a 503 response when the endpoint is called.
 - Updated the VS Code workbench FastAPI example launcher to use the dependency

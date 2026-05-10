@@ -1,6 +1,7 @@
 import asyncio
 import importlib.util
 import io
+import os
 import sys
 import types
 import unittest
@@ -11,6 +12,17 @@ from gemstone_py import fastapi_example
 
 
 class FastApiExampleRunnerTests(unittest.TestCase):
+    def test_startup_instructions_include_curl_browser_and_expected_output(self):
+        output = fastapi_example.startup_instructions("http://127.0.0.1:9000")
+
+        self.assertIn("• With that server running, test it from a second terminal.", output)
+        self.assertIn("curl -i http://127.0.0.1:9000/", output)
+        self.assertIn("HTTP/1.1 200 OK", output)
+        self.assertIn(fastapi_example.INDEX_BODY_EXAMPLE, output)
+        self.assertIn("curl -i http://127.0.0.1:9000/health/gemstone", output)
+        self.assertIn('{"result":7}', output)
+        self.assertIn("http://127.0.0.1:9000/docs", output)
+
     def test_main_reports_missing_optional_dependencies(self):
         stream = io.StringIO()
 
@@ -70,6 +82,10 @@ class FastApiExampleRunnerTests(unittest.TestCase):
                 )
 
         self.assertEqual(result, 0)
+        self.assertEqual(
+            os.environ[fastapi_example.STARTUP_INSTRUCTIONS_ENV],
+            "http://127.0.0.1:9000",
+        )
         fake_uvicorn.run.assert_called_once_with(
             "gemstone_py.fastapi_example:create_app",
             factory=True,
