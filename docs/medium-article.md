@@ -614,6 +614,48 @@ The first line of the response is the entry count; each subsequent line is a pip
 
 ---
 
+## Visual Studio Code Workbench
+
+If you prefer to stay inside Visual Studio Code, **gemstone-py Workbench** adds a
+small GemStone Py sidebar for the Python-facing workflow. It is not meant to
+replace Jasper, which remains the right tool for full GemStone/S Smalltalk IDE
+work such as browsers, inspectors, debuggers, SUnit, and server management.
+
+Install it from the Visual Studio Marketplace:
+
+```bash
+code --install-extension unicompute.gemstone-py-workbench
+```
+
+Marketplace page:
+https://marketplace.visualstudio.com/items?itemName=unicompute.gemstone-py-workbench
+
+The extension gives you one-click commands for the things you usually do while
+learning or maintaining `gemstone-py`:
+
+- run the maintained example modules from `examples/`
+- check the active `ctypes` or native PyO3 GCI backend
+- inspect the configured `GS_*` environment
+- open the setup guide, user manual, examples guide, Medium article, and PDFs
+- rebuild the documentation PDFs
+- run CI, live checks, benchmarks, and native checks explicitly
+- launch a configured `python-gemstone-database-explorer` checkout
+- open Jasper when you need Smalltalk IDE tooling
+
+By default, the extension treats the current VS Code workspace as the
+`gemstone-py` checkout. If you want it to launch the browser-based database
+explorer, set `gemstonePy.explorerPath` to a local
+`python-gemstone-database-explorer` checkout. Set `gemstonePy.env` with the
+same `GS_STONE`, `GS_USERNAME`, `GS_PASSWORD`, `GS_LIB`, and library-path values
+you would use at the shell.
+
+That makes VS Code a convenient Python control panel: use the workbench for
+examples, docs, backend checks, and test commands; use the database explorer for
+browser-based object inspection; and use Jasper when you need a full Smalltalk
+IDE.
+
+---
+
 ## The Full Picture
 
 Here is everything gemstone-py gives you in one diagram:
@@ -659,6 +701,8 @@ gemstone-py
 
 - **gemstone-py** — https://github.com/unicompute/gemstone-py
 - **GemStone Database Explorer** — https://github.com/unicompute/python-gemstone-database-explorer
+- **gemstone-py Workbench for VS Code** — https://marketplace.visualstudio.com/items?itemName=unicompute.gemstone-py-workbench
+- **Jasper** — https://github.com/jgfoster/Jasper
 - **PyPI** — https://pypi.org/project/gemstone-py/
 - **GemStone/S** — https://gemtalksystems.com/products/gs64/
 

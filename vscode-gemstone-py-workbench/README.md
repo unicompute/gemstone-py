@@ -118,3 +118,20 @@ Use this workbench for Python examples, docs, tests, benchmarks, backend checks,
 and launching the Python database explorer:
 
 https://github.com/unicompute/python-gemstone-database-explorer
+
+## Publishing
+
+The repository includes a GitHub Actions workflow named `VS Code Extension`.
+It builds a VSIX on extension changes and can publish manually to the Visual
+Studio Marketplace.
+
+To enable Marketplace publishing, set a repository secret named `VSCE_PAT` with
+a Visual Studio Marketplace personal access token for the `unicompute`
+publisher. Then run the workflow with `publish-to-marketplace=true`.
+
+## Roadmap
+
+The MVP opens the database explorer in an external browser. A later richer UI
+can add a VS Code webview command that embeds a running explorer instance,
+checks whether the Flask server is already available, starts it when needed,
+and keeps the external-browser command as a fallback.
