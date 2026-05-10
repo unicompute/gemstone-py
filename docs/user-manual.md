@@ -94,6 +94,38 @@ Why it exists:
 - it composes naturally with service-layer code
 - it avoids sprinkling `commit()` everywhere like nervous confetti
 
+### `AsyncSession`
+
+`gemstone_py.aio.AsyncSession` is the async facade for applications built on
+`asyncio`, FastAPI, or Starlette-style request handling.
+
+It does not make GCI itself async. Instead, it runs all calls for one session on
+one dedicated worker thread. That keeps the GemStone session on its owning
+thread while letting your event loop continue serving other work.
+
+```python
+from gemstone_py import GemStoneConfig
+from gemstone_py.aio import AsyncSession
+
+config = GemStoneConfig.from_env()
+
+async with AsyncSession.connect(config=config) as session:
+    value = await session.eval("3 + 4")
+
+    async with session.transaction():
+        root = session.root()
+        await root.set("AsyncManualExample", {"value": value})
+```
+
+Use `AsyncSession` when:
+
+- request handlers are already async
+- you want FastAPI dependency injection
+- you need to keep blocking GCI work out of the event loop
+
+The runnable repository example is
+`examples/async_features/session_root_and_collection.py`.
+
 ## Transaction Policies
 
 `TransactionPolicy` exists so you do not have to guess what a context manager
@@ -169,15 +201,88 @@ Typical pattern:
 from gemstone_py.gsquery import GSCollection
 
 people = GSCollection("People", config=config)
-people.insert({"name": "Tariq", "city": "London"})
-people.create_equality_index("city")
-matches = people.search("city", "London")
+people.insert({"@name": "Tariq", "@city": "London"})
+people.add_index("@city")
+matches = people.search("@city", "eql", "London")
 ```
 
 Think of it as the package's middle ground between:
 
 - raw repository objects
 - and a full ORM that wants to restructure your life
+
+### Typed Queries
+
+`GSCollection.query(...)` can accept a Python `Protocol` as a type witness. The
+query still runs against GemStone indexed paths, but your Python code gets
+attribute names and better editor help.
+
+```python
+from typing import Protocol
+from gemstone_py.gsquery import GSCollection
+
+class BlogPostRecord(Protocol):
+    title: str
+    status: str
+
+posts = GSCollection("SimplePosts", config=config).query(BlogPostRecord)
+published = posts.where(lambda post: post.status == "published").all()
+
+for post in published:
+    print(post.title)
+```
+
+The lambda is a query builder expression, not a live object callback.
+`post.status` becomes the GemStone ivar path `@status`.
+
+See `examples/typed_access/typed_oops_and_queries.py` for a runnable typed query
+and `examples/typed_access/simple_blog_queries.py` for importable helper
+functions.
+
+## Typed OOPs and Lifetime Handles
+
+Raw integer OOPs remain supported for compatibility. New code can opt into
+typed or managed wrappers when the extra structure is useful.
+
+`TypedOop[T]` carries a phantom Python type:
+
+```python
+from typing import Protocol
+from gemstone_py import GemStoneSession, gemstone_class
+
+@gemstone_class("Date")
+class GemStoneDate(Protocol):
+    @property
+    def printString(self) -> str: ...
+
+with GemStoneSession(config=config) as session:
+    today = session.execute_typed("Date today", GemStoneDate)
+    print(today.proxy().printString)
+```
+
+For object lifetime, use `execute_managed(...)` when a raw OOP should stay in
+GemStone's export set while Python holds a handle:
+
+```python
+with GemStoneSession(config=config) as session:
+    collection = session.execute_managed("OrderedCollection new")
+    collection.send("add:", session.new_string("kept alive"))
+    print(collection.print_string())
+    collection.close()
+```
+
+Use `session.handle(oop)` when you already have a raw OOP and want an explicit
+scope:
+
+```python
+with session.handle(raw_oop) as handle:
+    print(handle.send("printString"))
+```
+
+`execute()` and `perform()` still return raw OOP integers. The managed variants
+are additive and make lifetime intent visible.
+
+The runnable repository example is `examples/lifetime/managed_oop_handles.py`.
 
 ## `GStore`
 
@@ -323,6 +428,29 @@ Use `GemStoneThreadLocalSessionProvider` when:
 - your threading model is simple and stable
 - one session per thread is the clearest fit
 
+### FastAPI
+
+FastAPI integration lives in `gemstone_py.aio.fastapi`.
+
+```python
+from fastapi import Depends, FastAPI
+from gemstone_py import GemStoneConfig
+from gemstone_py.aio import AsyncSession
+from gemstone_py.aio.fastapi import session_dependency
+
+app = FastAPI()
+get_gemstone = session_dependency(config=GemStoneConfig.from_env())
+
+@app.get("/health/gemstone")
+async def gemstone_health(session: AsyncSession = Depends(get_gemstone)):
+    return {"result": await session.eval("3 + 4")}
+```
+
+Use this when your web stack is async-first. Use the Flask integration when your
+application is Flask-first.
+
+The runnable repository example is `examples/fastapi/app.py`.
+
 ## Benchmarks and Build Lanes
 
 This package has both examples and maintained operational lanes. Keep them
@@ -357,9 +485,30 @@ The package now has:
 - TestPyPI rehearsal
 - post-release verification against real PyPI
 - installed-artifact API contract checks
+- optional PyO3 native wheels through `gemstone-py[fast]`
 
 That means you can treat the package as a real distributable unit, not just a
 working directory with ambition.
+
+### Native Fast Path
+
+The default install uses the pure-ctypes GCI backend:
+
+```bash
+python -m pip install gemstone-py
+```
+
+The optional native fast path installs the PyO3 extension package:
+
+```bash
+python -m pip install "gemstone-py[fast]"
+```
+
+Backend selection happens at import time. For comparisons, set
+`GEMSTONE_PY_GCI_BACKEND=ctypes` or `GEMSTONE_PY_GCI_BACKEND=native` before
+starting Python.
+
+The runnable repository example is `examples/native_backend/check_backend.py`.
 
 ## Recommended Adoption Path
 
@@ -369,8 +518,11 @@ If you are bringing `gemstone-py` into a project, a sensible order is:
 2. move most application work into `session_scope(...)`
 3. use `PersistentRoot` first for obvious top-level state
 4. introduce `GSCollection` only when indexed queries are justified
-5. use web providers once request lifecycles matter
-6. add benchmarks and live tests once the system is real
+5. add `TypedOop[T]`, typed queries, or managed handles when the code benefits
+   from clearer object identity and lifetime
+6. use Flask or FastAPI providers once request lifecycles matter
+7. install `gemstone-py[fast]` only after the ctypes path is working
+8. add benchmarks and live tests once the system is real
 
 That order keeps the learning curve honest without making the first week feel
 like a database theology seminar.
@@ -381,6 +533,6 @@ If you remember only five things:
 
 1. Be explicit about transaction policy.
 2. Use `PersistentRoot` first unless you need something more specialized.
-3. Let Flask request teardown decide commit vs abort.
-4. Treat concurrency helpers as real shared state, not cute toys.
+3. Use async wrappers for async frameworks, not for shared-session threading.
+4. Use typed and managed OOP wrappers when raw integers hide too much intent.
 5. The examples teach the package; the maintained workflows prove it.

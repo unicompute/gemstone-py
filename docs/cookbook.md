@@ -73,15 +73,15 @@ This is the recipe to prefer in application code.
 from gemstone_py.gsquery import GSCollection
 
 people = GSCollection("CookbookPeople", config=config)
-people.insert({"name": "Ada", "city": "London"})
-people.insert({"name": "Grace", "city": "New York"})
-people.create_equality_index("city")
+people.insert({"@name": "Ada", "@city": "London"})
+people.insert({"@name": "Grace", "@city": "New York"})
+people.add_index("@city")
 ```
 
 ## Recipe 6: Search an Indexed Collection
 
 ```python
-matches = people.search("city", "London")
+matches = people.search("@city", "eql", "London")
 for row in matches:
     print(row)
 ```
@@ -181,7 +181,97 @@ def gemstone_health():
 
 Operational visibility is better than optimism.
 
-## Recipe 14: Run the Maintained Benchmarks
+## Recipe 14: Open an Async Session
+
+```python
+from gemstone_py import GemStoneConfig
+from gemstone_py.aio import AsyncSession
+
+config = GemStoneConfig.from_env()
+
+async with AsyncSession.connect(config=config) as session:
+    print(await session.eval("3 + 4"))
+```
+
+Use this when the surrounding application is already async.
+
+## Recipe 15: Use an Async Transaction
+
+```python
+async with AsyncSession.connect(config=config) as session:
+    async with session.transaction():
+        root = session.root()
+        await root.set("AsyncCookbook", {"status": "ok"})
+```
+
+The transaction context commits on success and aborts on exception.
+
+## Recipe 16: Add FastAPI Dependency Injection
+
+```python
+from fastapi import Depends, FastAPI
+from gemstone_py import GemStoneConfig
+from gemstone_py.aio import AsyncSession
+from gemstone_py.aio.fastapi import session_dependency
+
+app = FastAPI()
+get_gemstone = session_dependency(config=GemStoneConfig.from_env())
+
+@app.get("/health/gemstone")
+async def gemstone_health(session: AsyncSession = Depends(get_gemstone)):
+    return {"result": await session.eval("3 + 4")}
+```
+
+## Recipe 17: Query With a Typed Protocol
+
+```python
+from typing import Protocol
+from gemstone_py.gsquery import GSCollection
+
+class PostRecord(Protocol):
+    title: str
+    status: str
+
+posts = GSCollection("SimplePosts", config=config).query(PostRecord)
+for post in posts.where(lambda row: row.status == "published").all():
+    print(post.title)
+```
+
+The lambda records an indexed GemStone path. It is not called for every row in
+Python.
+
+## Recipe 18: Keep an OOP Alive Explicitly
+
+```python
+with GemStoneSession(config=config) as session:
+    ref = session.execute_managed("OrderedCollection new")
+    ref.send("add:", session.new_string("kept"))
+    print(ref.print_string())
+    ref.close()
+```
+
+For a raw OOP:
+
+```python
+with session.handle(raw_oop) as handle:
+    print(handle.send("printString"))
+```
+
+## Recipe 19: Check the Native Backend
+
+```bash
+python -m pip install "gemstone-py[fast]"
+python -m examples.native_backend.check_backend
+```
+
+Force a backend before Python starts:
+
+```bash
+GEMSTONE_PY_GCI_BACKEND=ctypes python -m examples.native_backend.check_backend
+GEMSTONE_PY_GCI_BACKEND=native python -m examples.native_backend.check_backend
+```
+
+## Recipe 20: Run the Maintained Benchmarks
 
 ```bash
 gemstone-benchmarks --entries 500 --search-runs 20
@@ -193,7 +283,7 @@ Or emit JSON:
 gemstone-benchmarks --json --output benchmark-report.json
 ```
 
-## Recipe 15: Compare Benchmark Reports
+## Recipe 21: Compare Benchmark Reports
 
 ```bash
 gemstone-benchmark-compare old.json new.json --json --output compare.json
@@ -201,7 +291,7 @@ gemstone-benchmark-compare old.json new.json --json --output compare.json
 
 That turns performance arguments into evidence, which is disappointingly healthy.
 
-## Recipe 16: Register a New Accepted Benchmark Baseline
+## Recipe 22: Register a New Accepted Benchmark Baseline
 
 ```bash
 gemstone-benchmark-baseline-register \
@@ -209,7 +299,7 @@ gemstone-benchmark-baseline-register \
   --manifest .github/benchmarks/index.json
 ```
 
-## Recipe 17: Verify the Installed Artifact
+## Recipe 23: Verify the Installed Artifact
 
 ```bash
 python -m gemstone_py.api_contract --json
@@ -218,7 +308,7 @@ python -m gemstone_py.api_contract --json
 This is useful after installation, after release, and after any moment when you
 feel your package metadata may have become sentient.
 
-## Recipe 18: Run the Live Test Lane
+## Recipe 24: Run the Live Test Lane
 
 ```bash
 GS_RUN_LIVE=1 ./scripts/run_live_checks.sh
@@ -230,7 +320,7 @@ Longer soak run:
 GS_RUN_LIVE=1 GS_RUN_LIVE_SOAK=1 ./scripts/run_live_checks.sh
 ```
 
-## Recipe 19: Handle Commit Conflicts Without Pretending They Are Rare
+## Recipe 25: Handle Commit Conflicts Without Pretending They Are Rare
 
 When multiple sessions modify overlapping state, conflicts are normal. The right
 pattern:
@@ -263,18 +353,20 @@ Rules:
 - bound the retry count — do not loop forever
 - log conflicts — frequent conflicts signal a design smell, not bad luck
 
-## Recipe 20: Learn a Queue With a Hat
+## Recipe 26: Learn a Queue With a Hat
 
 The hat trick example is memorable because it teaches a real primitive through a
 slightly ridiculous scenario. You should keep more examples like that in your
 own codebase than you probably do.
 
-## Recipe 21: Explain `gemstone-py` to a New Teammate
+## Recipe 27: Explain `gemstone-py` to a New Teammate
 
 Use this sentence:
 
 > "It is a Python package that talks directly to GemStone Smalltalk, keeps
-> transactions explicit, gives us persistence helpers instead of a fake ORM, and
-> already has real CI, release, benchmark, and live verification lanes."
+> transactions explicit, gives us persistence helpers instead of a fake ORM,
+> supports async, typed access, managed OOP lifetimes, and optional native
+> wheels, and already has real CI, release, benchmark, and live verification
+> lanes."
 
 That sentence has rescued several meetings already. At minimum, it should rescue yours.

@@ -7,7 +7,7 @@ Python and run the examples without muttering at the terminal."
 
 At minimum:
 
-- Python 3.10 or newer
+- Python 3.11 or newer
 - access to a GemStone/S 64 stone
 - the GemStone client library (`libgcirpc`)
 - a username and password that can log into the stone
@@ -26,6 +26,17 @@ From PyPI:
 ```bash
 python3 -m pip install gemstone-py
 ```
+
+If you want the optional PyO3 native fast path and a wheel exists for your
+platform:
+
+```bash
+python3 -m pip install "gemstone-py[fast]"
+python -c "from gemstone_py import _gci; print(_gci.IMPLEMENTATION)"
+```
+
+From a repository checkout, the fuller backend example is
+`python -m examples.native_backend.check_backend`.
 
 From a repo checkout:
 
@@ -98,7 +109,7 @@ That is enough to start.
 
 ## Recommended First Commands
 
-The package ships with a few small CLI helpers:
+The installed package ships with a few small CLI helpers:
 
 ```bash
 gemstone-hello
@@ -106,6 +117,12 @@ gemstone-smalltalk-demo
 gemstone-examples hello
 gemstone-examples smalltalk-demo
 gemstone-benchmarks --help
+```
+
+From a repository checkout, these examples are also useful first checks:
+
+```bash
+python -m examples.native_backend.check_backend
 ```
 
 What they are good for:
@@ -118,6 +135,8 @@ What they are good for:
   A stable wrapper for the example entry points.
 - `gemstone-benchmarks`
   The maintained benchmark lane, distinct from the teaching examples.
+- `examples.native_backend.check_backend`
+  Shows whether the current process selected ctypes or the optional native GCI backend.
 
 ## Transaction Policy: Read This Early
 
@@ -184,6 +203,40 @@ with GemStoneSession(config=config) as session:
 
 If that round trip works, the rest of the package will feel much less mysterious.
 
+## First Async Check
+
+If your application is async-first, run the async example after the basic sync
+login works:
+
+```bash
+python -m examples.async_features.session_root_and_collection
+```
+
+The example opens an `AsyncSession`, writes through `AsyncPersistentRoot`, keeps
+a managed OOP alive, and exercises `AsyncGSCollection`.
+
+For FastAPI:
+
+```bash
+python -m pip install fastapi uvicorn
+uvicorn examples.fastapi.app:app --reload
+```
+
+Visit `http://127.0.0.1:8000/health/gemstone`.
+
+## Typed and Lifetime Examples
+
+Once basic reads and writes work, these examples show the newer type and
+export-set APIs:
+
+```bash
+python -m examples.typed_access.typed_oops_and_queries
+python -m examples.lifetime.managed_oop_handles
+```
+
+Use them to confirm that `TypedOop[T]`, typed `GSCollection` predicates,
+`execute_managed(...)`, and `session.handle(...)` behave against your stone.
+
 ## Running the Tests
 
 Unit tests:
@@ -242,6 +295,20 @@ for you. Re-check the transaction policy.
 Use the request-session integration from `gemstone_py.web` and let request
 teardown own the final commit-or-abort decision. The web helpers were hardened
 exactly to avoid this problem.
+
+### The native backend is not selected
+
+Check the current process:
+
+```bash
+python -m examples.native_backend.check_backend
+```
+
+If `selected backend` is `ctypes`, either the optional package is not installed
+or `GEMSTONE_PY_GCI_BACKEND=ctypes` was set before Python started. Install
+`gemstone-py[fast]` and start a fresh Python process. Use
+`GEMSTONE_PY_GCI_BACKEND=native` when you want import failure instead of silent
+fallback.
 
 ## Where to Go Next
 

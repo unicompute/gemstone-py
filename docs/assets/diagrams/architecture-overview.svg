@@ -44,7 +44,7 @@
   <rect x="60" y="190" width="270" height="22" fill="#295d8a"/>
   <text x="195" y="199" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#ffffff">Your Python App</text>
   <text x="90" y="237" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#17344f">• CLI scripts and notebooks</text>
-  <text x="90" y="262" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#17344f">• Flask or Django web apps</text>
+  <text x="90" y="262" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#17344f">• Flask, FastAPI, Django apps</text>
   <text x="90" y="287" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#17344f">• Background workers</text>
   <text x="90" y="312" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#17344f">• Data pipelines</text>
   <text x="90" y="349" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#4a7ab5" font-style="italic">pip install gemstone-py</text>
@@ -58,9 +58,9 @@
   <text x="468" y="242" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b3410">• PersistentRoot / GSCollection</text>
   <text x="468" y="266" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b3410">• GStore / ObjectLog</text>
   <text x="468" y="290" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b3410">• RCCounter / RCHash / RCQueue</text>
-  <text x="468" y="314" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b3410">• Flask hooks and web providers</text>
-  <text x="468" y="338" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b3410">• Benchmark + release tooling</text>
-  <text x="468" y="372" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#c47a30" font-style="italic">ctypes bindings — no middleware</text>
+  <text x="468" y="314" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b3410">• AsyncSession / FastAPI helpers</text>
+  <text x="468" y="338" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#5b3410">• Typed + managed OOP handles</text>
+  <text x="468" y="372" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#c47a30" font-style="italic">ctypes or native PyO3 backend — no middleware</text>
 
   <!-- Box 3: libgcirpc  x=850..1140, y=168..360  cx=995,cy=264 -->
   <rect x="850" y="168" width="290" height="192" rx="22" fill="url(#libGrad)" stroke="#56337f" stroke-width="3" filter="url(#drop)"/>

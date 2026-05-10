@@ -82,7 +82,7 @@ class User:
     '@name' for O(log n) find_by_name lookups:
 
         ALL_USERS = IdentitySet.new
-        ALL_USERS.create_equality_index('@name', String)
+        ALL_USERS addIndex: #('@name') withLastElementClass: String
     """
 
     _collection: GSCollection | None = None

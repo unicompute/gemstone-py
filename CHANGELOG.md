@@ -4,6 +4,16 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+## 0.2.9 - 2026-05-10
+
+- Added runnable examples for async sessions/FastAPI support, typed OOPs and
+  typed queries, managed OOP lifetime handles, and native backend selection.
+- Updated the README and documentation set to cover async, typed access,
+  managed lifetimes, native backend selection, and the new examples.
+- Expanded the examples guide with concrete usage commands and code snippets.
+- Added a generated PDF for the Medium-style article and linked the article to
+  its PNG header image asset.
+
 ## 0.2.8 - 2026-05-10
 
 - Made the local/CI Ruff gate cover the whole repository with explicit legacy

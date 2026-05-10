@@ -7,6 +7,10 @@ Runnable examples for `gemstone-py`.
 | GemStone / app concept | Python example surface |
 |------------------------|------------------------|
 | Session-bound persistence | `PersistentRoot(session)` or `GemStoneSessionFacade(session).persistent_root` |
+| Async sessions and request-friendly access | `examples/async_features/` and `examples/fastapi/` |
+| Typed OOPs and typed collection queries | `examples/typed_access/` |
+| Export-set lifetime handles | `examples/lifetime/` |
+| Optional native backend discovery | `examples/native_backend/` |
 | Model-style helpers | `gemstone_model.py` |
 | Request transaction wrapper | Flask `SessionInterface` / `before_request` |
 | Web application examples | Flask / Django |
@@ -49,6 +53,67 @@ gemstone-smalltalk-demo
 For Flask examples that install request-session handling, use
 `flask_request_session_provider_snapshot(app)` to inspect pool/provider state
 and `close_flask_request_session_provider(app)` during explicit shutdown.
+
+---
+
+## async_features/
+
+Runs the async session facade, async persistent root, async managed OOP handles,
+and async `GSCollection` wrapper against a configured stone.
+
+```
+python -m examples.async_features.session_root_and_collection
+```
+
+---
+
+## typed_access/
+
+Shows both static typing surfaces:
+
+- `TypedOop[T]` with `@gemstone_class(...)`
+- typed `GSCollection.query(Protocol)` predicates
+
+```
+python -m examples.typed_access.typed_oops_and_queries
+```
+
+`simple_blog_queries.py` also contains importable helper functions for the
+existing simple-blog data shape.
+
+---
+
+## lifetime/
+
+Demonstrates `execute_managed(...)` for automatic export-set retention and
+`session.handle(...)` for explicit scoped retention of a raw OOP.
+
+```
+python -m examples.lifetime.managed_oop_handles
+```
+
+---
+
+## native_backend/
+
+Prints whether the optional PyO3 native backend is importable and which GCI
+backend the current Python process selected.
+
+```
+python -m examples.native_backend.check_backend
+GEMSTONE_PY_GCI_BACKEND=ctypes python -m examples.native_backend.check_backend
+GEMSTONE_PY_GCI_BACKEND=native python -m examples.native_backend.check_backend
+```
+
+---
+
+## fastapi/
+
+Minimal FastAPI app using `gemstone_py.aio.fastapi.session_dependency`.
+
+```
+uvicorn examples.fastapi.app:app --reload
+```
 
 ---
 

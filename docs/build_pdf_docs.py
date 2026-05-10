@@ -307,6 +307,7 @@ def main() -> int:
         BuildTarget("user-manual", "gemstone-py User Manual", "Core APIs, transaction model, persistence helpers, and web integration", (DOCS_DIR / "user-manual.md",)),
         BuildTarget("examples-guide", "gemstone-py Examples Guide", "A tour of the examples tree with diagrams and screenshots", (DOCS_DIR / "examples-guide.md",)),
         BuildTarget("cookbook", "gemstone-py Cookbook", "Task-focused recipes for daily use", (DOCS_DIR / "cookbook.md",)),
+        BuildTarget("medium-article", "Talking to GemStone/S from Python", "A complete article-style guide to gemstone-py", (DOCS_DIR / "medium-article.md",)),
         BuildTarget(
             "core-guides-companion",
             "gemstone-py Companion Manual",

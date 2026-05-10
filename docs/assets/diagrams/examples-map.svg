@@ -71,14 +71,14 @@
   <text x="985" y="740" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#3b2554">request lifecycle demos</text>
   <text x="985" y="782" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#7a52a0" font-style="italic">web-developer study path</text>
 
-  <!-- ── Bottom-centre: django/ and webstack/  x=430..770, y=680..810  cx=600,cy=745 ── -->
+  <!-- ── Bottom-centre: feature demos  x=430..770, y=680..810  cx=600,cy=745 ── -->
   <rect x="430" y="680" width="340" height="130" rx="20" fill="#ffe3e3" stroke="#8a2f2f" stroke-width="3" filter="url(#drop)"/>
   <rect x="430" y="680" width="340" height="42" rx="20" fill="#8a2f2f"/>
   <rect x="430" y="700" width="340" height="22" fill="#8a2f2f"/>
-  <text x="600" y="710" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#fff">django/ and webstack/</text>
-  <text x="600" y="752" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5b1717">full app translations</text>
-  <text x="600" y="776" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5b1717">and route demos</text>
-  <text x="600" y="800" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#c04040" font-style="italic">broader framework compat</text>
+  <text x="600" y="710" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#fff">feature demos</text>
+  <text x="600" y="752" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5b1717">async · typed access</text>
+  <text x="600" y="776" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5b1717">lifetime · native backend</text>
+  <text x="600" y="800" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#c04040" font-style="italic">new plan/spec feature path</text>
 
   <!-- ── Arrows from centre circle ── -->
 
@@ -94,12 +94,12 @@
   <!-- → flask/  circle boundary at ~(693,508) → box top-left (810,620) -->
   <line x1="693" y1="507" x2="809" y2="619" stroke="#31261f" stroke-width="2.5" marker-end="url(#arr)"/>
 
-  <!-- → django/  circle bottom (600,560) → box top (600,678) -->
+  <!-- → feature demos  circle bottom (600,560) → box top (600,678) -->
   <line x1="600" y1="562" x2="600" y2="678" stroke="#31261f" stroke-width="2.5" marker-end="url(#arr)"/>
 
   <!-- ── Study path footer ── -->
   <rect x="50" y="845" width="1100" height="38" rx="12" fill="#f8f4ec" stroke="#c8b89e" stroke-width="1.5"/>
-  <text x="600" y="869" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#6c5b4f">Suggested paths: new user → example.py → misc/ · persistence-focused → persistence/ · web dev → flask/ · operations → django/ + benchmarks</text>
+  <text x="600" y="869" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#6c5b4f">Suggested paths: new user → example.py → misc/ · async/typed/native → feature demos · persistence → persistence/ · web → flask/ or fastapi/</text>
 
   </g>
 </svg>

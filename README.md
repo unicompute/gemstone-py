@@ -82,6 +82,16 @@ gemstone-examples hello
 gemstone-examples smalltalk-demo
 ```
 
+Feature examples from the repository checkout:
+
+```bash
+python -m examples.async_features.session_root_and_collection
+python -m examples.typed_access.typed_oops_and_queries
+python -m examples.lifetime.managed_oop_handles
+python -m examples.native_backend.check_backend
+uvicorn examples.fastapi.app:app --reload
+```
+
 Operational helper scripts:
 
 ```bash
@@ -176,6 +186,11 @@ async def gemstone_health(session: AsyncSession = Depends(get_gemstone)):
     return {"result": await session.eval("3 + 4")}
 ```
 
+See `examples/async_features/session_root_and_collection.py` for async
+sessions, async persistent-root access, async `GSCollection`, and managed async
+OOP handles in one runnable script. See `examples/fastapi/app.py` for the
+minimal FastAPI dependency-injection shape.
+
 ## Typed OOPs and Handles
 
 The untyped API remains available. New code can add phantom types for static
@@ -230,6 +245,19 @@ with GemStoneSession(config=config) as session:
 Use `execute_managed()` / `perform_managed()` when you want automatic
 export-set lifetime management, and `perform_value()` when you want the old
 marshalled Python value from a message send.
+
+Runnable examples:
+
+```bash
+python -m examples.typed_access.typed_oops_and_queries
+python -m examples.lifetime.managed_oop_handles
+```
+
+To inspect native backend selection after installing `gemstone-py[fast]`:
+
+```bash
+python -m examples.native_backend.check_backend
+```
 
 ## Flask Requests
 

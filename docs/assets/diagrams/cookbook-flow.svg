@@ -16,7 +16,7 @@
 
   <!-- Title -->
   <text x="650" y="62" text-anchor="middle" font-family="Georgia, serif" font-size="34" font-weight="700" fill="#32261f">Cookbook Recipe Flow</text>
-  <text x="650" y="96" text-anchor="middle" font-family="Georgia, serif" font-size="17" fill="#68594d">From config to production: how the 21 cookbook recipes connect.</text>
+  <text x="650" y="96" text-anchor="middle" font-family="Georgia, serif" font-size="17" fill="#68594d">From config to production: how the 27 cookbook recipes connect.</text>
 
   <!-- ── Top row: main pipeline  y=150..290 ── -->
 
@@ -35,8 +35,8 @@
   <rect x="290" y="170" width="200" height="20" fill="#9b5f1e"/>
   <text x="390" y="178" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#fff">Connect</text>
   <text x="390" y="218" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5b3410">GemStoneSession</text>
-  <text x="390" y="242" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5b3410">or session_scope()</text>
-  <text x="390" y="272" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#c47a30" font-style="italic">recipes 2–4</text>
+  <text x="390" y="242" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5b3410">AsyncSession · scope</text>
+  <text x="390" y="272" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#c47a30" font-style="italic">recipes 2–4, 14–15</text>
 
   <!-- Persist  x=540..740 -->
   <rect x="540" y="150" width="200" height="140" rx="20" fill="#e1f6df" stroke="#2c6b3e" stroke-width="3" filter="url(#drop)"/>
@@ -45,7 +45,7 @@
   <text x="640" y="178" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#fff">Persist</text>
   <text x="640" y="215" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#1b4829">root · store</text>
   <text x="640" y="239" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#1b4829">query · log</text>
-  <text x="640" y="272" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#3a8050" font-style="italic">recipes 5–10</text>
+  <text x="640" y="272" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#3a8050" font-style="italic">recipes 5–10, 17–18</text>
 
   <!-- Share  x=790..990 -->
   <rect x="790" y="150" width="200" height="140" rx="20" fill="#eadfff" stroke="#56337f" stroke-width="3" filter="url(#drop)"/>
@@ -54,7 +54,7 @@
   <text x="890" y="178" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#fff">Share</text>
   <text x="890" y="215" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#3b2554">locks · queues</text>
   <text x="890" y="239" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#3b2554">counters</text>
-  <text x="890" y="272" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#7a52a0" font-style="italic">recipes 9–10, 19</text>
+  <text x="890" y="272" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#7a52a0" font-style="italic">recipes 9–10, 25</text>
 
   <!-- Verify  x=1040..1240 -->
   <rect x="1040" y="150" width="200" height="140" rx="20" fill="#fff8dc" stroke="#b0860a" stroke-width="3" filter="url(#drop)"/>
@@ -63,7 +63,7 @@
   <text x="1140" y="178" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#fff">Verify</text>
   <text x="1140" y="215" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#7a5800">api_contract</text>
   <text x="1140" y="239" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#7a5800">live tests</text>
-  <text x="1140" y="272" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#b08010" font-style="italic">recipes 17–18</text>
+  <text x="1140" y="272" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#b08010" font-style="italic">recipes 19, 23–24</text>
 
   <!-- ── Top row arrows ── -->
   <line x1="242" y1="220" x2="288" y2="220" stroke="#32261f" stroke-width="2.5" marker-end="url(#arr)"/>
@@ -78,9 +78,9 @@
   <rect x="220" y="470" width="220" height="40" rx="20" fill="#9b5f1e"/>
   <rect x="220" y="490" width="220" height="20" fill="#9b5f1e"/>
   <text x="330" y="498" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#fff">Expose</text>
-  <text x="330" y="538" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5b3410">Flask request</text>
+  <text x="330" y="538" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5b3410">Flask / FastAPI</text>
   <text x="330" y="562" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5b3410">sessions</text>
-  <text x="330" y="592" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#c47a30" font-style="italic">recipes 11–13</text>
+  <text x="330" y="592" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#c47a30" font-style="italic">recipes 11–16</text>
 
   <!-- Measure  x=510..730 -->
   <rect x="510" y="470" width="220" height="140" rx="20" fill="#fce8ff" stroke="#7a3f8a" stroke-width="3" filter="url(#drop)"/>
@@ -89,7 +89,7 @@
   <text x="620" y="498" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#fff">Measure</text>
   <text x="620" y="538" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5a1f7a">benchmarks</text>
   <text x="620" y="562" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5a1f7a">compare · baseline</text>
-  <text x="620" y="592" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#9a4ab0" font-style="italic">recipes 14–16</text>
+  <text x="620" y="592" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#9a4ab0" font-style="italic">recipes 20–22</text>
 
   <!-- Recover  x=800..1020 -->
   <rect x="800" y="470" width="220" height="140" rx="20" fill="#ffe3e3" stroke="#8a2f2f" stroke-width="3" filter="url(#drop)"/>
@@ -98,7 +98,7 @@
   <text x="910" y="498" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#fff">Recover</text>
   <text x="910" y="538" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5b1717">abort · retry</text>
   <text x="910" y="562" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#5b1717">conflict handling</text>
-  <text x="910" y="592" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#c04040" font-style="italic">recipes 19–20</text>
+  <text x="910" y="592" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#c04040" font-style="italic">recipes 25–26</text>
 
   <!-- ── Connecting arrows from top to bottom row ── -->
 
@@ -117,9 +117,9 @@
   <rect x="918" y="356" width="60" height="22" rx="8" fill="#fffaf2" stroke="#d1c1ac" stroke-width="1"/>
   <text x="948" y="371" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#32261f">conflicts</text>
 
-  <!-- ── Recipe 21 at bottom: "Explain" ── -->
+  <!-- ── Recipe 27 at bottom: "Explain" ── -->
   <rect x="430" y="690" width="440" height="110" rx="20" fill="#f0f8ff" stroke="#5580aa" stroke-width="2.5" filter="url(#drop)"/>
-  <text x="650" y="730" text-anchor="middle" font-family="Georgia, serif" font-size="20" font-weight="700" fill="#2d4f6b">Recipe 21: Explain gemstone-py</text>
+  <text x="650" y="730" text-anchor="middle" font-family="Georgia, serif" font-size="20" font-weight="700" fill="#2d4f6b">Recipe 27: Explain gemstone-py</text>
   <text x="650" y="760" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="#4a6880">to a new teammate in one sentence</text>
   <text x="650" y="787" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#5580aa" font-style="italic">"A Python bridge to an industrial-strength Smalltalk object database."</text>
 

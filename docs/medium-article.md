@@ -1,5 +1,7 @@
 # Talking to GemStone/S from Python — A Complete Guide to gemstone-py
 
+![Browser to Python to GemStone](assets/cartoons/medium-python-gemstone.png)
+
 *GemStone/S is one of the most capable object databases ever built. This article shows you how to drive it from Python — no Smalltalk IDE required.*
 
 ---
@@ -36,6 +38,19 @@ The GemStone Client Interface (GCI) is a C shared library that ships with every 
 ```bash
 pip install gemstone-py
 ```
+
+For the optional PyO3 native fast path:
+
+```bash
+pip install "gemstone-py[fast]"
+python -c "from gemstone_py import _gci; print(_gci.IMPLEMENTATION)"
+```
+
+The default backend is the pure `ctypes` GCI binding. The native package is
+selected automatically when it is installed. Set `GEMSTONE_PY_GCI_BACKEND` to
+`ctypes` or `native` before Python starts when you want an explicit comparison.
+The repository checkout also includes `examples/native_backend/check_backend.py`
+for a fuller backend report.
 
 **Prerequisites:**
 
@@ -134,7 +149,7 @@ with gemstone.GemStoneSession(
 
 `session.eval()` evaluates any Smalltalk expression and marshals the result back to Python automatically. The core session marshaller is intentionally small: scalar values become native Python values, and live GemStone objects become `OopRef` handles. Higher-level APIs such as `PersistentRoot`, `GsDict`, and the collection wrappers use a richer read path when they fetch object references from GemStone.
 
-| GemStone value or class | `session.eval()` / `perform()` result | `PersistentRoot` / wrapper read result | Python value accepted on write |
+| GemStone value or class | `session.eval()` / `perform_value()` result | `PersistentRoot` / wrapper read result | Python value accepted on write |
 |---|---|---|---|
 | `nil` | `None` | `None` | `None` |
 | `Boolean` (`true`, `false`) | `bool` | `bool` | `bool` |
@@ -155,7 +170,7 @@ with gemstone.GemStoneSession(
 | `Dictionary` / `IdentityDictionary` / `Set` / other collections without a dedicated wrapper | `OopRef` | `GsObject` | Not automatic |
 | Any other GemStone object | `OopRef` | `GsObject` | Not automatic, unless you pass an existing Python wrapper that exposes `_oop` |
 
-This table is about automatic conversion. If a value comes back as `OopRef` or `GsObject`, you can still work with it by sending Smalltalk messages through `send()`, `perform()`, or `perform_oop()`.
+This table is about automatic conversion. If a value comes back as `OopRef` or `GsObject`, you can still work with it by sending Smalltalk messages through `send()`, `perform_value()`, or `perform_oop()`.
 
 ```python
 session.eval("'Hello' , ' world'")   # 'Hello world'
@@ -181,14 +196,14 @@ Once you have an OOP (either from `eval_oop` or an `OopRef`), you can send Small
 ```python
 coll_oop = session.eval_oop("OrderedCollection new")
 
-# perform() marshals the result
-session.perform(coll_oop, "add:", session.int_oop(42))
-size = session.perform(coll_oop, "size")
+# perform_value() marshals the result
+session.perform_value(coll_oop, "add:", session.int_oop(42))
+size = session.perform_value(coll_oop, "size")
 print(size)  # 1
 
-# perform_oop() keeps it as an integer OOP
+# perform() and perform_oop() keep the result as an integer OOP
 item_oop = session.perform_oop(coll_oop, "first")
-print(session.perform(item_oop, "printString"))  # '42'
+print(session.perform_value(item_oop, "printString"))  # '42'
 ```
 
 `OopRef` objects have a convenience `.send()` method:
@@ -197,6 +212,35 @@ print(session.perform(item_oop, "printString"))  # '42'
 ref = session.eval("OrderedCollection new")  # returns OopRef
 ref.send("add:", session.int_oop(99))
 print(ref.print_string())  # 'OrderedCollection (99 )'
+```
+
+For long-lived raw OOPs, prefer managed or scoped handles. They retain the OOP
+in the GemStone export set while Python is still using it:
+
+```python
+collection = session.execute_managed("OrderedCollection new")
+collection.send("add:", session.new_string("managed"))
+print(collection.print_string())
+collection.close()
+
+raw_oop = session.execute_oop("OrderedCollection new")
+with session.handle(raw_oop) as handle:
+    print(handle.send("printString"))
+```
+
+Typed OOPs add a static type witness without changing the raw OOP model:
+
+```python
+from typing import Protocol
+from gemstone_py import gemstone_class
+
+@gemstone_class("Date")
+class GemStoneDate(Protocol):
+    @property
+    def printString(self) -> str: ...
+
+today = session.execute_typed("Date today", GemStoneDate)
+print(today.proxy().printString)
 ```
 
 ---
@@ -266,6 +310,64 @@ with db.transaction() as t:
     t["draft"] = "in progress"
     raise GStoreAbortTransaction   # nothing committed
 ```
+
+---
+
+## Typed Collection Queries
+
+`GSCollection` supports the classic string predicate style and a typed query
+style that records attribute access as GemStone ivar paths:
+
+```python
+from typing import Protocol
+from gemstone_py.gsquery import GSCollection
+
+class BlogPostRecord(Protocol):
+    title: str
+    status: str
+
+posts = GSCollection("SimplePosts", config=config).query(BlogPostRecord)
+published = posts.where(lambda post: post.status == "published").all()
+
+for post in published:
+    print(post.title)
+```
+
+The lambda is a query expression builder. `post.status` becomes `@status`; the
+filter still runs through GemStone's collection/index path.
+
+---
+
+## Async and FastAPI
+
+GCI remains synchronous and session-owned. The async API wraps a synchronous
+session in a one-worker executor so the event loop does not block:
+
+```python
+from gemstone_py.aio import AsyncSession
+
+async with AsyncSession.connect(config=config) as session:
+    async with session.transaction():
+        root = session.root()
+        await root.set("AsyncArticleExample", {"status": "ok"})
+```
+
+FastAPI uses that async session surface:
+
+```python
+from fastapi import Depends, FastAPI
+from gemstone_py.aio import AsyncSession
+from gemstone_py.aio.fastapi import session_dependency
+
+app = FastAPI()
+get_gemstone = session_dependency(config=config)
+
+@app.get("/health/gemstone")
+async def gemstone_health(session: AsyncSession = Depends(get_gemstone)):
+    return {"result": await session.eval("3 + 4")}
+```
+
+Runnable examples live in `examples/async_features/` and `examples/fastapi/`.
 
 ---
 
@@ -432,7 +534,7 @@ Browser  ──HTTP──►  Flask (gemstone_p/app.py)
 - **Transaction control** — Commit and Abort buttons on both tabs.
 - **Fast** — uses batched GCI evaluation: a single `session.eval()` call returns all fields for an object view, keeping the UI snappy even over a network connection.
 
-### Installation
+### Explorer Installation
 
 ```bash
 git clone https://github.com/unicompute/python-gemstone-database-explorer
@@ -522,6 +624,9 @@ gemstone-py
 ├── GemStoneConfig           connection settings + from_env()
 ├── TransactionPolicy        MANUAL | COMMIT_ON_SUCCESS | ABORT_ON_EXIT
 ├── OopRef                   wraps a GemStone OOP; .send(), .print_string()
+├── TypedOop / ManagedOop    typed OOPs and export-set lifetime handles
+├── aio                      AsyncSession, AsyncPersistentRoot, AsyncGSCollection
+├── native                   optional PyO3 backend discovery
 │
 ├── persistent_root
 │   ├── PersistentRoot       dict-like wrapper for a SymbolDictionary
@@ -543,6 +648,7 @@ gemstone-py
 │   ├── GemStoneSessionPool          pool of reusable sessions
 │   ├── install_flask_request_session  Flask integration
 │   └── current_flask_request_session  get the session for this request
+├── aio.fastapi              FastAPI dependency and middleware helpers
 │
 └── benchmarks               benchmark CLIs + GitHub workflow tooling
 ```

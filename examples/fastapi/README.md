@@ -10,3 +10,9 @@ uvicorn examples.fastapi.app:app --reload
 The example uses `gemstone_py.aio.fastapi.session_dependency`, which opens one
 `AsyncSession` per request, commits successful handlers, aborts failed handlers,
 and logs out at the end of the request.
+
+For the same async surface outside a web framework, run:
+
+```bash
+python -m examples.async_features.session_root_and_collection
+```

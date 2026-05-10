@@ -35,6 +35,11 @@ Read Parts I, II, and III first.
 
 Read Parts I, II, and V first.
 
+### Async or typed-API user
+
+Read Parts I, II, III, and V first, then keep the User Manual open for the
+focused `AsyncSession`, `TypedOop[T]`, and managed-lifetime examples.
+
 ### Operations-focused user
 
 Read Parts II, VI, and VII first.

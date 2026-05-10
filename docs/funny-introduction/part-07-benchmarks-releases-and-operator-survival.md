@@ -146,6 +146,24 @@ The package now includes:
 This is not glamorous, but it is adult.
 
 
+## Native Wheels Are Packaging Work, Not Just Speed Work
+
+The optional `gemstone-py[fast]` install path adds a PyO3 native GCI extension.
+That sounds like a performance feature, and it is, but it also expands the
+release contract.
+
+The package now has to prove:
+
+- the pure ctypes fallback still works
+- the native backend can be selected when installed
+- Linux, macOS, and Windows wheels carry the expected tags
+- ARM and x86_64 platforms are covered
+- post-release verification installs the `fast` extra from real PyPI
+
+That is why the native wheel workflow, post-release verify workflow, and backend
+examples belong in the same operational story as benchmarks.
+
+
 ## A Runner Is Infrastructure, Not a Pet
 
 There is a dangerous tendency to treat one carefully tuned self-hosted runner as
@@ -250,6 +268,7 @@ That is a proper supply chain story, not a triumphant shell alias.
 If you maintain this package or one like it:
 
 - prefer boring workflow clarity over cleverness
+- keep async, typed, and native examples aligned with the implemented API
 - write docs for the administrator as well as the user
 - keep benchmark policy evidence-based
 - verify the thing the outside world actually installs

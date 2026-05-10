@@ -32,6 +32,9 @@ If you are already productive and only need answers:
 - installing and configuring `gemstone-py`
 - connecting to a GemStone stone from Python
 - transaction policies, session scopes, and failure behaviour
+- async sessions and FastAPI request integration
+- typed OOPs, typed `GSCollection` queries, and managed OOP lifetimes
+- optional native PyO3 backend installation and backend selection
 - the persistent data helpers:
   - `PersistentRoot`
   - `GSCollection`

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from gemstone_py import GemStoneConfig, GemStoneSession
+from gemstone_py import GemStoneConfig, GemStoneSession, gemstone_class
 from gemstone_py.gsquery import GSCollection
 
 
@@ -35,3 +35,17 @@ def recent_published_posts(
         .where(lambda post: post.timestamp >= cutoff_timestamp)
         .all()
     )
+
+
+@gemstone_class("Date")
+class GemStoneDate(Protocol):
+    @property
+    def printString(self) -> str:
+        """Return GemStone's printable date representation."""
+        ...
+
+
+def typed_today(session: GemStoneSession) -> GemStoneDate:
+    """Return today's GemStone Date through a typed OOP runtime proxy."""
+    today = session.execute_typed("Date today", GemStoneDate)  # type: ignore[type-abstract]
+    return today.proxy()

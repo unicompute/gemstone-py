@@ -6,7 +6,8 @@ If somebody corners you near a whiteboard and asks what this package is, say:
 
 > "`gemstone-py` is a Python package that talks directly to GemStone Smalltalk,
 > keeps transaction intent explicit, and provides persistence, query, logging,
-> concurrency, web, benchmark, and release tooling around that core."
+> concurrency, async, typed-access, web, benchmark, native-extension, and
+> release tooling around that core."
 
 That is the sober pitch.
 
@@ -27,6 +28,8 @@ to do it in a way that:
 - survives packaging
 - survives release automation
 - behaves correctly under web request lifecycles
+- fits async Python applications without sharing one GCI session across threads
+- gives typed and managed handles when raw OOP integers are too vague
 - handles commit conflicts like an adult
 - and still has examples clear enough for a new user
 
@@ -104,6 +107,9 @@ It can also:
 - benchmark reports
 - benchmark comparison
 - baseline management
+- async live integration coverage
+- typed OOP and managed-lifetime tests
+- optional PyO3 native wheels
 - TestPyPI
 - PyPI
 - post-release verification
@@ -124,8 +130,11 @@ At the highest level, the package gives you:
 - `GSCollection`
 - `GStore`
 - `ObjectLog`
+- `TypedOop[T]` and managed OOP handles
+- `AsyncSession` and FastAPI helpers
 - concurrency helpers
 - Flask request-session providers
+- optional native backend discovery
 - benchmarks and release utilities
 
 That list is broad, but it is not random.
