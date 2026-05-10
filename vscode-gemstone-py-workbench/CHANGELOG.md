@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.9
+
+- Updated Marketplace screenshots for the examples runner, environment/backend checks, and database explorer launcher.
+
 ## 0.1.8
 
 - Prefer `.venv/bin/python` from the configured `gemstone-py` checkout when `gemstonePy.pythonPath` is empty, so example commands use the repository virtualenv by default.
