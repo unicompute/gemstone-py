@@ -2,7 +2,7 @@
   "name": "gemstone-py-workbench",
   "displayName": "gemstone-py Workbench",
   "description": "Run gemstone-py examples, check GemStone environment state, open docs, and launch the Python GemStone database explorer.",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "publisher": "unicompute",
   "icon": "media/emerald-logo.png",
   "license": "MIT",
@@ -74,8 +74,8 @@
       "properties": {
         "gemstonePy.pythonPath": {
           "type": "string",
-          "default": "python3",
-          "description": "Python executable used to run gemstone-py examples and checks."
+          "default": "",
+          "description": "Python executable used to run gemstone-py examples and checks. Leave empty to use .venv/bin/python from the gemstone-py checkout when it exists, otherwise python3."
         },
         "gemstonePy.repoPath": {
           "type": "string",

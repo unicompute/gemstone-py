@@ -63,7 +63,7 @@ The extension contributes these settings:
 
 ```json
 {
-  "gemstonePy.pythonPath": "python3",
+  "gemstonePy.pythonPath": "",
   "gemstonePy.repoPath": "",
   "gemstonePy.explorerPath": "",
   "gemstonePy.explorerHost": "127.0.0.1",
@@ -82,7 +82,9 @@ The extension contributes these settings:
 ```
 
 Leave `gemstonePy.repoPath` empty when the current VS Code workspace is the
-`gemstone-py` checkout. Set `gemstonePy.explorerPath` to a local
+`gemstone-py` checkout. Leave `gemstonePy.pythonPath` empty to use
+`.venv/bin/python` from that checkout when it exists, otherwise `python3`.
+Set `gemstonePy.explorerPath` to a local
 `python-gemstone-database-explorer` checkout before using the database explorer
 commands.
 
@@ -108,7 +110,7 @@ python3 -m examples.fastapi.run --reload
 Install the repository example dependencies once with:
 
 ```bash
-python3 -m pip install -e ".[examples]"
+python -m pip install -e ".[examples]"
 ```
 
 ## Database Explorer

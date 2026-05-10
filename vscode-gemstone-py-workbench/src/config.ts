@@ -19,7 +19,7 @@ export function getConfig(): GemStonePyConfig {
   const repoPath = readString(configuration, "repoPath") || workspaceRoot || "";
 
   return {
-    pythonPath: readString(configuration, "pythonPath") || "python3",
+    pythonPath: readString(configuration, "pythonPath") || repoPython(repoPath),
     repoPath,
     explorerPath: readString(configuration, "explorerPath") || "",
     explorerHost: readString(configuration, "explorerHost") || "127.0.0.1",
@@ -48,22 +48,7 @@ export function explorerPython(config: GemStonePyConfig): string {
     return config.pythonPath;
   }
 
-  const executable = process.platform === "win32" ? "python.exe" : "python";
-  const localPython = path.join(config.explorerPath, ".venv", "bin", executable);
-  const windowsLocalPython = path.join(
-    config.explorerPath,
-    ".venv",
-    "Scripts",
-    executable,
-  );
-
-  if (pathExists(localPython)) {
-    return localPython;
-  }
-  if (pathExists(windowsLocalPython)) {
-    return windowsLocalPython;
-  }
-  return config.pythonPath;
+  return localVenvPython(config.explorerPath) || config.pythonPath;
 }
 
 export function pathExists(candidate: string): boolean {
@@ -123,6 +108,23 @@ function readEnv(value: unknown): EnvMap {
     .map(([key, item]) => [key, item == null ? "" : String(item)]);
 
   return Object.fromEntries(entries);
+}
+
+function repoPython(repoPath: string): string {
+  return localVenvPython(repoPath) || "python3";
+}
+
+function localVenvPython(rootPath: string): string | undefined {
+  if (!rootPath) {
+    return undefined;
+  }
+
+  const executable = process.platform === "win32" ? "python.exe" : "python";
+  const candidates = [
+    path.join(rootPath, ".venv", "bin", executable),
+    path.join(rootPath, ".venv", "Scripts", executable),
+  ];
+  return candidates.find(pathExists);
 }
 
 function dropEmptyValues(env: EnvMap): EnvMap {

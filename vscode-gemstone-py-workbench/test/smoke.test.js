@@ -228,6 +228,21 @@ test("getConfig uses workspace defaults and normalizes environment values", () =
   });
 });
 
+test("getConfig uses a workspace .venv Python when pythonPath is empty", () => {
+  const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), "gemstone-py-"));
+  const pythonPath = path.join(workspacePath, ".venv", "bin", "python");
+  fs.mkdirSync(path.dirname(pythonPath), { recursive: true });
+  fs.writeFileSync(pythonPath, "");
+  workspaceFolders = [{ uri: { fsPath: workspacePath } }];
+  configurationValues.pythonPath = "";
+  configurationValues.repoPath = "";
+
+  const resolved = config.getConfig();
+
+  assert.equal(resolved.repoPath, workspacePath);
+  assert.equal(resolved.pythonPath, pythonPath);
+});
+
 test("runRepoPythonModule builds terminal command and drops empty env values", () => {
   terminal.runRepoPythonModule("Async example", "examples.async_features.demo", [
     "has space",

@@ -87,11 +87,17 @@ def dependency_help(missing: Sequence[str]) -> str:
         [
             f"Missing optional FastAPI dependencies: {missing_list}",
             "",
-            "For an installed gemstone-py package, run:",
-            f'  {pip_command} install "gemstone-py[fastapi]"',
+            "You are running:",
+            f"  {sys.executable}",
             "",
             "For a source checkout, run:",
-            f'  {pip_command} install -e ".[examples]"',
+            "  python3 -m venv .venv",
+            "  source .venv/bin/activate",
+            '  python -m pip install -e ".[examples]"',
+            "  python -m examples.fastapi.run --reload",
+            "",
+            "For an installed gemstone-py package in an existing environment, run:",
+            f'  {pip_command} install "gemstone-py[fastapi]"',
         ]
     )
 

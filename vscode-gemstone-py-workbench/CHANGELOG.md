@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.8
+
+- Prefer `.venv/bin/python` from the configured `gemstone-py` checkout when `gemstonePy.pythonPath` is empty, so example commands use the repository virtualenv by default.
+- Updated setup docs to leave `gemstonePy.pythonPath` empty for automatic virtualenv detection.
+
 ## 0.1.7
 
 - Changed the FastAPI example command to run `python -m examples.fastapi.run --reload`, which checks for missing FastAPI/uvicorn dependencies and prints the correct install command before starting uvicorn.

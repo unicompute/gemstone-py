@@ -22,8 +22,11 @@ class FastApiExampleRunnerTests(unittest.TestCase):
         self.assertEqual(result, 2)
         output = stream.getvalue()
         self.assertIn("Missing optional FastAPI dependencies: fastapi, uvicorn", output)
+        self.assertIn(f"You are running:\n  {sys.executable}", output)
+        self.assertIn("python3 -m venv .venv", output)
+        self.assertIn("source .venv/bin/activate", output)
+        self.assertIn('python -m pip install -e ".[examples]"', output)
         self.assertIn(f'{sys.executable} -m pip install "gemstone-py[fastapi]"', output)
-        self.assertIn(f'{sys.executable} -m pip install -e ".[examples]"', output)
 
     def test_main_runs_uvicorn_with_requested_options(self):
         fake_uvicorn = types.SimpleNamespace(run=mock.Mock())
