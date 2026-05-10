@@ -3,6 +3,7 @@ __pycache__/
 *.pyo
 *.so
 .DS_Store
+.vscode/settings.json
 .pytest_cache/
 .mypy_cache/
 .coverage
