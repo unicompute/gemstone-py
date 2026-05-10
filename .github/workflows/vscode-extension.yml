@@ -15,6 +15,10 @@ on:
         description: Publish the packaged VSIX to the Visual Studio Marketplace
         required: true
         default: "false"
+      create-github-release:
+        description: Create or update a scoped GitHub release after Marketplace publish
+        required: true
+        default: "false"
 
 permissions:
   contents: read
@@ -91,3 +95,75 @@ jobs:
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: npx vsce publish --packagePath gemstone-py-workbench-*.vsix --no-dependencies
+
+  github-release:
+    needs:
+      - build-vsix
+      - publish-marketplace
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs['publish-to-marketplace'] == 'true' &&
+      github.event.inputs['create-github-release'] == 'true'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Download VSIX artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: gemstone-py-workbench-vsix
+          path: vscode-gemstone-py-workbench
+
+      - name: Resolve release metadata
+        id: release-metadata
+        shell: bash
+        run: |
+          version="$(node -p "require('./vscode-gemstone-py-workbench/package.json').version")"
+          tag="vscode-workbench-v${version}"
+          vsix="vscode-gemstone-py-workbench/gemstone-py-workbench-${version}.vsix"
+          test -f "${vsix}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          echo "vsix=${vsix}" >> "${GITHUB_OUTPUT}"
+
+      - name: Create release notes
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.release-metadata.outputs.version }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          cat > vscode-workbench-release-notes.md <<NOTES
+          VS Code workbench ${RELEASE_VERSION}.
+
+          Marketplace: https://marketplace.visualstudio.com/items?itemName=unicompute.gemstone-py-workbench
+          Workflow: ${RUN_URL}
+
+          See vscode-gemstone-py-workbench/CHANGELOG.md for release notes.
+          NOTES
+
+      - name: Create or update GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release-metadata.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.release-metadata.outputs.version }}
+          VSIX_PATH: ${{ steps.release-metadata.outputs.vsix }}
+        run: |
+          git fetch --force origin "+refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}" || true
+          if ! git rev-parse --verify --quiet "${RELEASE_TAG}" >/dev/null; then
+            git tag -a "${RELEASE_TAG}" -m "VS Code workbench ${RELEASE_VERSION}"
+            git push origin "${RELEASE_TAG}"
+          fi
+
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release edit "${RELEASE_TAG}" \
+              --title "VS Code workbench ${RELEASE_VERSION}" \
+              --notes-file vscode-workbench-release-notes.md
+            gh release upload "${RELEASE_TAG}" "${VSIX_PATH}" --clobber
+          else
+            gh release create "${RELEASE_TAG}" "${VSIX_PATH}" \
+              --title "VS Code workbench ${RELEASE_VERSION}" \
+              --notes-file vscode-workbench-release-notes.md
+          fi

@@ -144,6 +144,10 @@ To enable Marketplace publishing, set a repository secret named `VSCE_PAT` with
 a Visual Studio Marketplace personal access token for the `unicompute`
 publisher. Then run the workflow with `publish-to-marketplace=true`.
 
+Set `create-github-release=true` on the same manual workflow run when the
+Marketplace publish should also create or update the scoped GitHub release tag
+`vscode-workbench-v<version>` and attach the packaged VSIX.
+
 Before publishing a new version, the workflow runs release preflight checks for
 `package.json`, `package-lock.json`, `CHANGELOG.md`, README screenshot links,
 and the packaged VSIX metadata. Keep the Marketplace publisher owner account,
