@@ -42,7 +42,7 @@ def create_app() -> Any:
         config=GemStoneConfig.from_env(require_credentials=False)
     )
 
-    @app.get("/")
+    @app.get("/")  # type: ignore[untyped-decorator]
     async def index() -> dict[str, Any]:
         return {
             "name": "gemstone-py FastAPI example",
@@ -53,7 +53,7 @@ def create_app() -> Any:
             },
         }
 
-    @app.exception_handler(GemStoneConfigurationError)
+    @app.exception_handler(GemStoneConfigurationError)  # type: ignore[untyped-decorator]
     async def gemstone_configuration_error(
         _request: Any,
         exc: GemStoneConfigurationError,
@@ -66,7 +66,7 @@ def create_app() -> Any:
             },
         )
 
-    @app.get("/health/gemstone")
+    @app.get("/health/gemstone")  # type: ignore[untyped-decorator]
     async def gemstone_health(
         session: AsyncSession = Depends(get_gemstone_session),
     ) -> dict[str, Any]:
