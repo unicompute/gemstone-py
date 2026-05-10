@@ -626,23 +626,36 @@ python -m pip install -e ".[examples]"
 python -m examples.fastapi.run --reload
 ```
 
+When the server starts, you should see output like:
+
+```text
+INFO:     Will watch for changes in these directories: ['/path/to/gemstone-py']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [49045] using WatchFiles
+INFO:     Started server process [49048]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+```
+
 Open `http://127.0.0.1:8000/` for the example index,
 `http://127.0.0.1:8000/docs` for the interactive FastAPI docs, or
 `http://127.0.0.1:8000/health/gemstone` for the GemStone health check.
 
-Verify from a second terminal while the server is running:
+With that server running, test it from a second terminal.
+
+Basic checks:
 
 ```bash
 curl -i http://127.0.0.1:8000/
 ```
 
-Expected status:
+Expected:
 
 ```text
 HTTP/1.1 200 OK
 ```
 
-The body should include:
+Body should include:
 
 ```json
 {"name":"gemstone-py FastAPI example","endpoints":{"health":"/health/gemstone","docs":"/docs","openapi":"/openapi.json"}}
@@ -654,7 +667,7 @@ Then test the GemStone endpoint:
 curl -i http://127.0.0.1:8000/health/gemstone
 ```
 
-Expected when GemStone credentials and the stone are reachable:
+Expected if GemStone credentials/environment are set and the stone is reachable:
 
 ```json
 {"result":7}
