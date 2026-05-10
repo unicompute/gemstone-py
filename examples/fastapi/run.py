@@ -7,7 +7,11 @@ from gemstone_py.fastapi_example import main
 
 def main_entry() -> int:
     """Run ``examples.fastapi.app:app`` through the shared FastAPI runner."""
-    return main(app_path="examples.fastapi.app:app", factory=False)
+    return main(
+        app_path="examples.fastapi.app:app",
+        factory=False,
+        module_name="examples.fastapi.run",
+    )
 
 
 if __name__ == "__main__":

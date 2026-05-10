@@ -16,6 +16,8 @@ All notable changes to `gemstone-py` should be recorded here.
 - Changed the source-checkout dependency guidance to prefer a repository
   virtualenv, so Homebrew's externally managed Python does not send users down
   a failing global-install path.
+- Made the FastAPI source-checkout runner automatically hand off to the local
+  `.venv` Python when the current interpreter is missing FastAPI or uvicorn.
 - Made the FastAPI example start without GemStone credentials and report missing
   `GS_USERNAME` or `GS_PASSWORD` as a 503 response when the endpoint is called.
 - Updated the VS Code workbench FastAPI example launcher to use the dependency

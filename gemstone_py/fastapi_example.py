@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import os
 import shlex
 import sys
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any
 
 DEFAULT_APP_PATH = "gemstone_py.fastapi_example:create_app"
+DEFAULT_MODULE_NAME = "gemstone_py.fastapi_example"
 FASTAPI_DEPENDENCIES = ("fastapi", "uvicorn")
 
 
@@ -102,18 +105,44 @@ def dependency_help(missing: Sequence[str]) -> str:
     )
 
 
+def repo_venv_python(root: Path | None = None) -> Path | None:
+    """Return the repository virtualenv Python when this is a source checkout."""
+    checkout_root = root or Path(__file__).resolve().parents[1]
+    candidates = (
+        checkout_root / ".venv" / "Scripts" / "python.exe",
+        checkout_root / ".venv" / "bin" / "python",
+    )
+    return next((candidate for candidate in candidates if candidate.exists()), None)
+
+
+def reexec_with_repo_venv(argv: Sequence[str], module_name: str) -> bool:
+    """Re-run the example with the local checkout virtualenv when available."""
+    python = repo_venv_python()
+    if python is None:
+        return False
+    if python.absolute() == Path(sys.executable).absolute():
+        return False
+
+    os.execv(str(python), [str(python), "-m", module_name, *argv])
+    return True
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
     app_path: str = DEFAULT_APP_PATH,
     factory: bool = True,
+    module_name: str = DEFAULT_MODULE_NAME,
 ) -> int:
     """Run the FastAPI example through uvicorn."""
+    raw_argv = list(argv) if argv is not None else sys.argv[1:]
     parser = build_parser()
-    args = parser.parse_args(list(argv) if argv is not None else None)
+    args = parser.parse_args(raw_argv)
 
     missing = missing_dependencies()
     if missing:
+        if reexec_with_repo_venv(raw_argv, module_name):
+            return 0
         print(dependency_help(missing), file=sys.stderr)
         return 2
 
