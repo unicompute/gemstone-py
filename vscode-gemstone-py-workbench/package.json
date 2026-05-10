@@ -2,7 +2,7 @@
   "name": "gemstone-py-workbench",
   "displayName": "gemstone-py Workbench",
   "description": "Run gemstone-py examples, check GemStone environment state, open docs, and launch the Python GemStone database explorer.",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "publisher": "unicompute",
   "icon": "media/emerald-logo.png",
   "license": "MIT",
@@ -63,6 +63,7 @@
     "onCommand:gemstonePy.runBenchmarks",
     "onCommand:gemstonePy.runNativeChecks",
     "onCommand:gemstonePy.openJasper",
+    "onCommand:gemstonePy.openJasperRepository",
     "onCommand:gemstonePy.openReadme",
     "onCommand:gemstonePy.refreshViews"
   ],
@@ -235,7 +236,11 @@
       },
       {
         "command": "gemstonePy.openJasper",
-        "title": "gemstone-py: Open Jasper"
+        "title": "gemstone-py: Open Jasper IDE"
+      },
+      {
+        "command": "gemstonePy.openJasperRepository",
+        "title": "gemstone-py: Open Jasper Repository"
       }
     ],
     "viewsContainers": {

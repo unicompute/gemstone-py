@@ -19,6 +19,11 @@ import {
   runRepoScript,
 } from "./terminal";
 
+const JASPER_EXTENSION_ID = "gemtalksystems.gemstone-ide";
+const JASPER_MARKETPLACE_ID = "GemTalkSystems.gemstone-ide";
+const JASPER_REPOSITORY_URL = "https://github.com/jgfoster/Jasper";
+const JASPER_VIEW_COMMAND = "workbench.view.extension.gemstone";
+
 const execFileAsync = promisify(execFile);
 const output = vscode.window.createOutputChannel("gemstone-py Workbench");
 
@@ -124,8 +129,9 @@ export function registerCommands(
     vscode.commands.registerCommand("gemstonePy.runNativeChecks", () =>
       runRepoScript("Native checks", "./scripts/run_native_checks.sh"),
     ),
-    vscode.commands.registerCommand("gemstonePy.openJasper", () =>
-      vscode.env.openExternal(vscode.Uri.parse("https://github.com/jgfoster/Jasper")),
+    vscode.commands.registerCommand("gemstonePy.openJasper", openJasper),
+    vscode.commands.registerCommand("gemstonePy.openJasperRepository", () =>
+      vscode.env.openExternal(vscode.Uri.parse(JASPER_REPOSITORY_URL)),
     ),
   ];
 
@@ -218,6 +224,39 @@ async function openExplorer(): Promise<void> {
   const config = getConfig();
   await vscode.env.openExternal(
     vscode.Uri.parse(`http://${config.explorerHost}:${config.explorerPort}/`),
+  );
+}
+
+async function openJasper(): Promise<void> {
+  const jasper = getJasperExtension();
+  if (!jasper) {
+    await vscode.commands.executeCommand(
+      "workbench.extensions.search",
+      `@id:${JASPER_MARKETPLACE_ID}`,
+    );
+    void vscode.window.showInformationMessage(
+      `Install Jasper (${JASPER_MARKETPLACE_ID}) from the Extensions view, then open the GemStone sidebar.`,
+    );
+    return;
+  }
+
+  await jasper.activate();
+  try {
+    await vscode.commands.executeCommand(JASPER_VIEW_COMMAND);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    output.appendLine(`Could not open Jasper GemStone sidebar: ${message}`);
+    output.show(true);
+    void vscode.window.showWarningMessage(
+      "Jasper is installed, but the GemStone sidebar could not be opened. Open the GemStone activity bar item manually.",
+    );
+  }
+}
+
+function getJasperExtension(): vscode.Extension<unknown> | undefined {
+  return (
+    vscode.extensions.getExtension(JASPER_EXTENSION_ID) ??
+    vscode.extensions.getExtension(JASPER_MARKETPLACE_ID)
   );
 }
 

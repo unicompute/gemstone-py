@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6
+
+- Changed the Jasper IDE handoff to open the installed `GemTalkSystems.gemstone-ide` extension's GemStone sidebar instead of opening GitHub.
+- Open the VS Code Extensions view filtered to Jasper when Jasper is not installed.
+- Added a separate Jasper repository link and smoke coverage for the installed, missing, and repository paths.
+
 ## 0.1.5
 
 - Made the "Use Jasper for Smalltalk IDE work" IDE tree row open Jasper instead of acting as inert descriptive text.

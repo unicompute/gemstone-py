@@ -13,6 +13,9 @@ let workspaceFolders = [{ uri: { fsPath: "/workspace/gemstone-py" } }];
 let configurationValues = {};
 let terminals = [];
 let registeredCommands = new Map();
+let executedCommands = [];
+let openedExternal = [];
+let extensionsById = new Map();
 let warnings = [];
 let clipboardText = "";
 
@@ -32,6 +35,9 @@ function resetState() {
   workspaceFolders = [{ uri: { fsPath: "/workspace/gemstone-py" } }];
   terminals = [];
   registeredCommands = new Map();
+  executedCommands = [];
+  openedExternal = [];
+  extensionsById = new Map();
   warnings = [];
   clipboardText = "";
 }
@@ -93,6 +99,7 @@ const fakeVscode = {
       };
     },
     executeCommand(command, ...args) {
+      executedCommands.push({ command, args });
       return Promise.resolve({ command, args });
     },
   },
@@ -103,8 +110,14 @@ const fakeVscode = {
         return Promise.resolve();
       },
     },
-    openExternal() {
+    openExternal(uri) {
+      openedExternal.push(uri);
       return Promise.resolve(true);
+    },
+  },
+  extensions: {
+    getExtension(id) {
+      return extensionsById.get(id);
     },
   },
   window: {
@@ -286,7 +299,11 @@ test("tree providers expose expected commands and mask environment secrets", () 
   assert.ok(jasper);
   assert.deepEqual(
     jasper.children.map((item) => item.options.command),
-    ["gemstonePy.openJasper", "gemstonePy.openJasper"],
+    [
+      "gemstonePy.openJasper",
+      "gemstonePy.openJasper",
+      "gemstonePy.openJasperRepository",
+    ],
   );
   const jasperHandoff = jasper.children.find(
     (item) => item.label === "Use Jasper for Smalltalk IDE work",
@@ -311,6 +328,44 @@ test("registered commands match package contributions", () => {
   );
   assert.deepEqual(new Set(registeredCommands.keys()), contributedCommands);
   assert.equal(context.subscriptions.length, contributedCommands.size + 1);
+});
+
+test("openJasper activates installed Jasper and opens the GemStone sidebar", async () => {
+  const jasper = {
+    activated: false,
+    activate() {
+      this.activated = true;
+      return Promise.resolve({});
+    },
+  };
+  extensionsById.set("gemtalksystems.gemstone-ide", jasper);
+
+  await registeredCommand("gemstonePy.openJasper")();
+
+  assert.equal(jasper.activated, true);
+  assert.deepEqual(executedCommands, [
+    { command: "workbench.view.extension.gemstone", args: [] },
+  ]);
+  assert.deepEqual(openedExternal, []);
+});
+
+test("openJasper opens the VS Code Extensions view when Jasper is not installed", async () => {
+  await registeredCommand("gemstonePy.openJasper")();
+
+  assert.deepEqual(executedCommands, [
+    {
+      command: "workbench.extensions.search",
+      args: ["@id:GemTalkSystems.gemstone-ide"],
+    },
+  ]);
+  assert.deepEqual(openedExternal, []);
+});
+
+test("openJasperRepository opens the Jasper source repository", async () => {
+  await registeredCommand("gemstonePy.openJasperRepository")();
+
+  assert.equal(openedExternal.length, 1);
+  assert.equal(openedExternal[0].toString(), "https://github.com/jgfoster/Jasper");
 });
 
 test("copyEnvScript copies only non-empty configured variables", async () => {

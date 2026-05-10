@@ -130,7 +130,17 @@ npm run test:ui:live
 
 ## Jasper Handoff
 
-Use Jasper for full GemStone/S Smalltalk IDE work:
+Use Jasper for full GemStone/S Smalltalk IDE work. Jasper is the Marketplace
+extension `GemTalkSystems.gemstone-ide`:
+
+```bash
+code --install-extension GemTalkSystems.gemstone-ide
+```
+
+The IDE view's `Open Jasper` and `Use Jasper for Smalltalk IDE work` rows open
+Jasper's GemStone sidebar when Jasper is installed. If Jasper is not installed,
+they open the VS Code Extensions view filtered to Jasper. The separate `Open
+Jasper repository` row opens the Jasper source repository:
 
 https://github.com/jgfoster/Jasper
 

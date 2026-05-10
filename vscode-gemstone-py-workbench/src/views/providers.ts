@@ -240,13 +240,19 @@ export function createIdeProvider(): WorkbenchTreeProvider {
           commandItem(
             "Open Jasper",
             "gemstonePy.openJasper",
-            "github.com/jgfoster/Jasper",
-            "link-external",
+            "GemStone sidebar",
+            "symbol-class",
           ),
           commandItem(
             "Use Jasper for Smalltalk IDE work",
             "gemstonePy.openJasper",
             "browser, inspector, debugger, SUnit",
+            "symbol-method",
+          ),
+          commandItem(
+            "Open Jasper repository",
+            "gemstonePy.openJasperRepository",
+            "github.com/jgfoster/Jasper",
             "link-external",
           ),
         ],
