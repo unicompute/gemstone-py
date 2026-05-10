@@ -1,0 +1,295 @@
+{
+  "name": "gemstone-py-workbench",
+  "displayName": "gemstone-py Workbench",
+  "description": "Run gemstone-py examples, check GemStone environment state, open docs, and launch the Python GemStone database explorer.",
+  "version": "0.1.0",
+  "publisher": "unicompute",
+  "icon": "media/emerald-logo.png",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/unicompute/gemstone-py.git",
+    "directory": "vscode-gemstone-py-workbench"
+  },
+  "keywords": [
+    "gemstone",
+    "smalltalk",
+    "python",
+    "database",
+    "examples"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "engines": {
+    "vscode": "^1.91.0"
+  },
+  "categories": [
+    "Other",
+    "Testing",
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onView:gemstonePy.examplesView",
+    "onView:gemstonePy.environmentView",
+    "onView:gemstonePy.docsView",
+    "onView:gemstonePy.maintainerView",
+    "onView:gemstonePy.ideView",
+    "onCommand:gemstonePy.runGrandTour",
+    "onCommand:gemstonePy.runHelloGemstone",
+    "onCommand:gemstonePy.runSmalltalkDemo",
+    "onCommand:gemstonePy.runAsyncExample",
+    "onCommand:gemstonePy.runTypedExample",
+    "onCommand:gemstonePy.runLifetimeExample",
+    "onCommand:gemstonePy.checkNativeBackend",
+    "onCommand:gemstonePy.runFastApiExample",
+    "onCommand:gemstonePy.showEnvironment",
+    "onCommand:gemstonePy.copyEnvScript",
+    "onCommand:gemstonePy.checkBackend",
+    "onCommand:gemstonePy.openSetupGuide",
+    "onCommand:gemstonePy.launchDatabaseExplorer",
+    "onCommand:gemstonePy.openDatabaseExplorer",
+    "onCommand:gemstonePy.runDatabaseExplorerTests",
+    "onCommand:gemstonePy.runDatabaseExplorerUiTests",
+    "onCommand:gemstonePy.runDatabaseExplorerLiveUiTests",
+    "onCommand:gemstonePy.openDatabaseExplorerRepository",
+    "onCommand:gemstonePy.openExamplesGuide",
+    "onCommand:gemstonePy.openUserManual",
+    "onCommand:gemstonePy.openMediumArticle",
+    "onCommand:gemstonePy.openMediumArticlePdf",
+    "onCommand:gemstonePy.rebuildDocsPdf",
+    "onCommand:gemstonePy.runCiChecks",
+    "onCommand:gemstonePy.runLiveChecks",
+    "onCommand:gemstonePy.runBenchmarks",
+    "onCommand:gemstonePy.runNativeChecks",
+    "onCommand:gemstonePy.openJasper",
+    "onCommand:gemstonePy.openReadme",
+    "onCommand:gemstonePy.refreshViews"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "gemstone-py Workbench",
+      "properties": {
+        "gemstonePy.pythonPath": {
+          "type": "string",
+          "default": "python3",
+          "description": "Python executable used to run gemstone-py examples and checks."
+        },
+        "gemstonePy.repoPath": {
+          "type": "string",
+          "default": "",
+          "description": "Local gemstone-py repository path. Leave empty to use the current VS Code workspace folder."
+        },
+        "gemstonePy.explorerPath": {
+          "type": "string",
+          "default": "",
+          "description": "Local python-gemstone-database-explorer repository path. Configure this before launching the database explorer."
+        },
+        "gemstonePy.explorerHost": {
+          "type": "string",
+          "default": "127.0.0.1",
+          "description": "Host used when launching the Python GemStone database explorer."
+        },
+        "gemstonePy.explorerPort": {
+          "type": "number",
+          "default": 9292,
+          "description": "Port used when launching the Python GemStone database explorer."
+        },
+        "gemstonePy.env": {
+          "type": "object",
+          "default": {
+            "GEMSTONE": "",
+            "GS_LIB": "",
+            "GS_STONE": "gs64stone",
+            "GS_USERNAME": "DataCurator",
+            "GS_PASSWORD": "",
+            "GS_HOST": "localhost",
+            "GS_NETLDI": "netldi",
+            "DYLD_LIBRARY_PATH": ""
+          },
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Environment variables passed to gemstone-py example terminals."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "gemstonePy.refreshViews",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "gemstonePy.runGrandTour",
+        "title": "gemstone-py: Run Grand Tour Example"
+      },
+      {
+        "command": "gemstonePy.runHelloGemstone",
+        "title": "gemstone-py: Run Hello GemStone"
+      },
+      {
+        "command": "gemstonePy.runSmalltalkDemo",
+        "title": "gemstone-py: Run Smalltalk Demo"
+      },
+      {
+        "command": "gemstonePy.runAsyncExample",
+        "title": "gemstone-py: Run Async Example"
+      },
+      {
+        "command": "gemstonePy.runTypedExample",
+        "title": "gemstone-py: Run Typed OOP Example"
+      },
+      {
+        "command": "gemstonePy.runLifetimeExample",
+        "title": "gemstone-py: Run Managed Lifetime Example"
+      },
+      {
+        "command": "gemstonePy.checkNativeBackend",
+        "title": "gemstone-py: Check Native Backend Example"
+      },
+      {
+        "command": "gemstonePy.runFastApiExample",
+        "title": "gemstone-py: Run FastAPI Example"
+      },
+      {
+        "command": "gemstonePy.showEnvironment",
+        "title": "gemstone-py: Show Environment"
+      },
+      {
+        "command": "gemstonePy.copyEnvScript",
+        "title": "gemstone-py: Copy Environment Export Script"
+      },
+      {
+        "command": "gemstonePy.checkBackend",
+        "title": "gemstone-py: Check Active GCI Backend"
+      },
+      {
+        "command": "gemstonePy.openSetupGuide",
+        "title": "gemstone-py: Open Setup Guide"
+      },
+      {
+        "command": "gemstonePy.launchDatabaseExplorer",
+        "title": "gemstone-py: Launch Database Explorer"
+      },
+      {
+        "command": "gemstonePy.openDatabaseExplorer",
+        "title": "gemstone-py: Open Database Explorer"
+      },
+      {
+        "command": "gemstonePy.runDatabaseExplorerTests",
+        "title": "gemstone-py: Run Database Explorer Python Tests"
+      },
+      {
+        "command": "gemstonePy.runDatabaseExplorerUiTests",
+        "title": "gemstone-py: Run Database Explorer UI Tests"
+      },
+      {
+        "command": "gemstonePy.runDatabaseExplorerLiveUiTests",
+        "title": "gemstone-py: Run Database Explorer Live UI Tests"
+      },
+      {
+        "command": "gemstonePy.openDatabaseExplorerRepository",
+        "title": "gemstone-py: Open Database Explorer Repository"
+      },
+      {
+        "command": "gemstonePy.openExamplesGuide",
+        "title": "gemstone-py: Open Examples Guide"
+      },
+      {
+        "command": "gemstonePy.openUserManual",
+        "title": "gemstone-py: Open User Manual"
+      },
+      {
+        "command": "gemstonePy.openMediumArticle",
+        "title": "gemstone-py: Open Medium Article Markdown"
+      },
+      {
+        "command": "gemstonePy.openMediumArticlePdf",
+        "title": "gemstone-py: Open Medium Article PDF"
+      },
+      {
+        "command": "gemstonePy.rebuildDocsPdf",
+        "title": "gemstone-py: Rebuild Documentation PDFs"
+      },
+      {
+        "command": "gemstonePy.runCiChecks",
+        "title": "gemstone-py: Run CI Checks"
+      },
+      {
+        "command": "gemstonePy.runLiveChecks",
+        "title": "gemstone-py: Run Live Checks"
+      },
+      {
+        "command": "gemstonePy.runBenchmarks",
+        "title": "gemstone-py: Run Benchmarks"
+      },
+      {
+        "command": "gemstonePy.runNativeChecks",
+        "title": "gemstone-py: Run Native Checks"
+      },
+      {
+        "command": "gemstonePy.openReadme",
+        "title": "gemstone-py: Open README"
+      },
+      {
+        "command": "gemstonePy.openJasper",
+        "title": "gemstone-py: Open Jasper"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "gemstonePy",
+          "title": "GemStone Py",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "gemstonePy": [
+        {
+          "id": "gemstonePy.examplesView",
+          "name": "Examples"
+        },
+        {
+          "id": "gemstonePy.environmentView",
+          "name": "Environment"
+        },
+        {
+          "id": "gemstonePy.docsView",
+          "name": "Docs"
+        },
+        {
+          "id": "gemstonePy.maintainerView",
+          "name": "Maintainer"
+        },
+        {
+          "id": "gemstonePy.ideView",
+          "name": "IDE"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "gemstonePy.refreshViews",
+          "when": "view == gemstonePy.examplesView || view == gemstonePy.environmentView || view == gemstonePy.docsView || view == gemstonePy.maintainerView || view == gemstonePy.ideView",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "check": "tsc -p ./ --noEmit",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.19",
+    "@types/vscode": "1.91.0",
+    "@vscode/vsce": "^3.9.1",
+    "typescript": "^5.7.3"
+  }
+}

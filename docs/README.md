@@ -26,6 +26,7 @@ If you are already productive and only need answers:
 - "Which example should I run first?" → [Examples Guide](examples-guide.md)
 - "How do I do X quickly?" → [Cookbook](cookbook.md)
 - "I want the whole story, plus jokes." → [Funny Introduction](funny-introduction/README.md)
+- "Can I run these from VS Code?" → [`vscode-gemstone-py-workbench`](../vscode-gemstone-py-workbench/)
 
 ## What This Docs Set Covers
 
@@ -43,6 +44,9 @@ If you are already productive and only need answers:
   - concurrency helpers such as `RCCounter`, `RCHash`, and `RCQueue`
 - Flask request-session integration
 - benchmarks, release workflows, and the current examples directory
+- the companion VS Code workbench for running examples, opening docs, checking
+  backends, launching the Python database explorer, and handing Smalltalk IDE
+  work to Jasper
 
 ## Visuals
 

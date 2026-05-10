@@ -92,6 +92,17 @@ python -m examples.native_backend.check_backend
 uvicorn examples.fastapi.app:app --reload
 ```
 
+The repository also includes a companion VS Code extension scaffold under
+[`vscode-gemstone-py-workbench/`](vscode-gemstone-py-workbench/). It adds a
+GemStone Py sidebar for running examples, checking the active backend, opening
+docs/PDFs, launching the Python database explorer, and running maintainer checks.
+Use Jasper for full GemStone/S Smalltalk IDE work; use this workbench for the
+Python-facing `gemstone-py` workflow.
+
+The extension uses the current VS Code workspace as the default `gemstone-py`
+checkout. Configure `gemstonePy.explorerPath` if you want the workbench to
+launch a local `python-gemstone-database-explorer` checkout.
+
 Operational helper scripts:
 
 ```bash

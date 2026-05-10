@@ -60,6 +60,29 @@ For the optional native backend example:
 python -m pip install "gemstone-py[fast]"
 ```
 
+## Running Examples From VS Code
+
+The repository now includes `vscode-gemstone-py-workbench/`, a companion VS Code
+extension scaffold for the Python-facing workflow. It adds a GemStone Py sidebar
+with example runners, environment/backend checks, docs/PDF launchers,
+maintainer scripts, Jasper links, and a launcher for
+`python-gemstone-database-explorer`.
+
+During extension development:
+
+```bash
+cd vscode-gemstone-py-workbench
+npm install
+npm run compile
+```
+
+Then open the extension folder in VS Code and press `F5`. Configure the
+`gemstonePy.env` settings with the same `GS_*` values shown above before
+running live examples. Leave `gemstonePy.repoPath` empty when the current
+workspace is the `gemstone-py` checkout, and set `gemstonePy.explorerPath` to a
+local `python-gemstone-database-explorer` checkout when you want explorer
+commands.
+
 ## `examples/example.py`: The Grand Tour
 
 If you only run one example, run this one.
