@@ -19,6 +19,18 @@ The GitHub `Release` workflow now validates that the release tag matches
 ./scripts/run_ci_checks.sh
 ```
 
+For a full local release verification wrapper, including native checks, public
+PyPI/TestPyPI verification, VSIX packaging, Marketplace version verification,
+and GitHub release asset checks:
+
+```bash
+./scripts/release_all.sh
+make release
+```
+
+Use `./scripts/release_all.sh --skip-public-verify` for a local-only preflight
+before the PyPI, Marketplace, and GitHub release assets exist.
+
 3. Run the build/install artifact smoke lane:
 ```bash
 ./scripts/run_build_smoke.sh
@@ -91,7 +103,8 @@ gh workflow run vscode-extension.yml \
 
 The workflow packages the VSIX, publishes it with `VSCE_PAT`, verifies the
 Marketplace listing, and can create or update the scoped GitHub release
-`vscode-workbench-v<version>`.
+`vscode-workbench-v<version>`. The release upload includes the VSIX and a
+matching `.vsix.sha256` checksum file.
 
 15. Update external documentation surfaces:
 

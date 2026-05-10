@@ -7,6 +7,8 @@ src/**
 test/**
 tsconfig.json
 *.vsix
+*.vsix.sha256
+marketplace.json
 **/*.map
 .gitignore
 npm-debug.log

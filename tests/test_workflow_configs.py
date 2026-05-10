@@ -65,6 +65,11 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertIn("Check Marketplace version before publish", content)
         self.assertIn("steps.marketplace-precheck.outputs.visible != 'true'", content)
         self.assertIn("already (exists|published)|version.*(exists|published)", content)
+        self.assertIn("Integration-test extension in VS Code", content)
+        self.assertIn("xvfb-run -a npm run test:integration", content)
+        self.assertIn("Generate VSIX checksum", content)
+        self.assertIn("*.vsix.sha256", content)
+        self.assertIn("CHECKSUM_PATH", content)
         self.assertIn("Verify Marketplace version", content)
         self.assertIn("npx vsce show unicompute.gemstone-py-workbench --json", content)
         self.assertIn("EXPECTED_VERSION", content)
@@ -99,6 +104,9 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertIn("id-token: write", pypi_content)
         self.assertNotIn("password:", pypi_content)
         self.assertNotIn("attestations: false", pypi_content)
+        self.assertIn("Generate release checksums", pypi_content)
+        self.assertIn("checksums/SHA256SUMS", pypi_content)
+        self.assertIn("gemstone-py-release-checksums", pypi_content)
 
     def test_native_wheels_workflow_exists(self) -> None:
         content = pathlib.Path(".github/workflows/native-wheels.yml").read_text(

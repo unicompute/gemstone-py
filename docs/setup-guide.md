@@ -21,6 +21,15 @@ For the full local development experience, you will also want:
 
 ## Install the Package
 
+### Which Install Path Should I Use?
+
+| Use case | Command |
+| --- | --- |
+| Normal users | `python3 -m pip install gemstone-py` |
+| Native acceleration | `python3 -m pip install "gemstone-py[fast]"` |
+| Source checkout examples/development | `python3 -m pip install -e ".[examples,dev]"` |
+| VS Code users | `code --install-extension unicompute.gemstone-py-workbench` |
+
 ### Installed Package
 
 From PyPI:
@@ -94,6 +103,7 @@ Quick reference:
 | --- | --- | --- | --- |
 | `GS_LIB` | Yes | `/opt/gemstone/product/lib` | GemStone `lib/` directory for library discovery |
 | `GS_STONE` | Yes | `gs64stone` | Stone name |
+| `GS_STONE_NAME` | No | `gs64stone` | Stone-name alias used by some tools; used when `GS_STONE` is absent |
 | `GS_USERNAME` | Yes | `DataCurator` | GemStone login username |
 | `GS_PASSWORD` | Yes | `swordfish` | GemStone login password |
 | `GS_LIB_PATH` | No | `/full/path/libgcirpc.dylib` | Pin to a specific `libgcirpc` file |

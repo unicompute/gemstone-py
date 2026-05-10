@@ -35,6 +35,35 @@ class GemStoneConfigTests(unittest.TestCase):
         self.assertEqual(config.gem_service, "gemnetcustom")
         self.assertEqual(config.lib_path, "/tmp/libgcirpc.dylib")
 
+    def test_from_env_accepts_stone_name_alias(self):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "GS_STONE_NAME": "aliasStone",
+                "GS_USERNAME": "alice",
+                "GS_PASSWORD": "secret",
+            },
+            clear=True,
+        ):
+            config = gemstone.GemStoneConfig.from_env()
+
+        self.assertEqual(config.stone, "aliasStone")
+
+    def test_from_env_prefers_gs_stone_over_alias(self):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "GS_STONE": "primaryStone",
+                "GS_STONE_NAME": "aliasStone",
+                "GS_USERNAME": "alice",
+                "GS_PASSWORD": "secret",
+            },
+            clear=True,
+        ):
+            config = gemstone.GemStoneConfig.from_env()
+
+        self.assertEqual(config.stone, "primaryStone")
+
     def test_from_env_requires_credentials(self):
         with mock.patch.dict(os.environ, {}, clear=True):
             with self.assertRaises(gemstone.GemStoneConfigurationError):

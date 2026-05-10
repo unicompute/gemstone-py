@@ -41,6 +41,7 @@ From this directory:
 npm install
 npm run compile
 npm run test:smoke
+npm run test:integration
 ```
 
 Open this folder in VS Code and press `F5` to start an extension development
@@ -72,6 +73,7 @@ The extension contributes these settings:
     "GEMSTONE": "",
     "GS_LIB": "",
     "GS_STONE": "gs64stone",
+    "GS_STONE_NAME": "gs64stone",
     "GS_USERNAME": "DataCurator",
     "GS_PASSWORD": "",
     "GS_HOST": "localhost",
@@ -87,6 +89,13 @@ Leave `gemstonePy.repoPath` empty when the current VS Code workspace is the
 Set `gemstonePy.explorerPath` to a local
 `python-gemstone-database-explorer` checkout before using the database explorer
 commands.
+
+Run `gemstone-py: Configure Workbench` from the Command Palette for a first-run
+setup wizard. It prompts for the Python executable, `gemstone-py` checkout,
+database explorer checkout, `GS_USERNAME`, `GS_PASSWORD`, and `GS_STONE_NAME`,
+then writes workspace settings and refreshes the sidebar views. It writes both
+`GS_STONE_NAME` and `GS_STONE` so newer and older tooling read the same stone
+name.
 
 Set `GS_PASSWORD` locally in your VS Code user settings or workspace settings
 before running live examples. The environment view masks password, token,
@@ -178,8 +187,10 @@ Marketplace publish should also create or update the scoped GitHub release tag
 
 Before publishing a new version, the workflow runs release preflight checks for
 `package.json`, `package-lock.json`, `CHANGELOG.md`, README screenshot links,
-and the packaged VSIX metadata. After publishing, it verifies that the public
-Marketplace listing is reachable and still renders `gemstone-py Workbench`.
+the packaged VSIX metadata, and VS Code extension-host integration smoke tests.
+After publishing, it verifies that the public Marketplace listing is reachable
+and still renders `gemstone-py Workbench`. GitHub releases include the packaged
+VSIX and a matching `.vsix.sha256` checksum asset.
 Keep the Marketplace publisher owner account, `VSCE_PAT` owner account, and
 `unicompute.com` domain verification documented in the publisher admin notes so
 future releases do not depend on a single browser session or a stale personal

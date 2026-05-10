@@ -29,6 +29,15 @@ from gemstone_py.session_facade import GemStoneSessionFacade
 
 ## Install
 
+### Which Install Path Should I Use?
+
+| Use case | Command |
+| --- | --- |
+| Normal users | `python3 -m pip install gemstone-py` |
+| Native acceleration | `python3 -m pip install "gemstone-py[fast]"` |
+| Source checkout examples/development | `python3 -m pip install -e ".[examples,dev]"` |
+| VS Code users | `code --install-extension unicompute.gemstone-py-workbench` |
+
 For a normal installed package:
 
 ```bash
@@ -132,7 +141,9 @@ https://marketplace.visualstudio.com/items?itemName=unicompute.gemstone-py-workb
 
 The extension uses the current VS Code workspace as the default `gemstone-py`
 checkout. Configure `gemstonePy.explorerPath` if you want the workbench to
-launch a local `python-gemstone-database-explorer` checkout.
+launch a local `python-gemstone-database-explorer` checkout, or run
+`gemstone-py: Configure Workbench` from the Command Palette for a guided
+first-run setup.
 
 Operational helper scripts:
 

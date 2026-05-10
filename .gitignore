@@ -18,3 +18,5 @@ venv/
 env/
 ENV/
 examples/django/myapp/db.sqlite3
+package-release.json
+vscode-release.json

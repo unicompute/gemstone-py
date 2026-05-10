@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.11
+
+- Added `gemstone-py: Configure Workbench`, a first-run setup command for
+  Python, checkout, database explorer, and GemStone connection settings.
+- Added VS Code extension-host integration smoke tests with
+  `@vscode/test-electron`.
+- Added VSIX checksum generation for GitHub release assets.
+
 ## 0.1.10
 
 - Added a pre-launch settings check for the database explorer so missing

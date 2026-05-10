@@ -71,6 +71,21 @@ jobs:
       - name: Build release artifacts
         run: python -m build --sdist --wheel
 
+      - name: Generate release checksums
+        run: |
+          mkdir -p checksums
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+
+          lines = []
+          for artifact in sorted(Path("dist").iterdir()):
+              if artifact.is_file():
+                  digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+                  lines.append(f"{digest}  {artifact.name}")
+          Path("checksums/SHA256SUMS").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+
       - name: Upload release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -78,11 +93,20 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
+      - name: Upload release checksums
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: gemstone-py-release-checksums
+          path: checksums/SHA256SUMS
+          if-no-files-found: error
+
       - name: Create GitHub release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3
         with:
-          files: dist/*
+          files: |
+            dist/*
+            checksums/SHA256SUMS
           generate_release_notes: true
 
   publish-pypi:

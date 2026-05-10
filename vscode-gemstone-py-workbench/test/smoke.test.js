@@ -18,6 +18,10 @@ let openedExternal = [];
 let extensionsById = new Map();
 let warnings = [];
 let clipboardText = "";
+let inputBoxValues = [];
+let informationMessages = [];
+let configUpdates = [];
+let refreshedProviders = 0;
 
 function resetState() {
   configurationValues = {
@@ -28,6 +32,7 @@ function resetState() {
     explorerPort: 9292,
     env: {
       GS_STONE: "gs64stone",
+      GS_STONE_NAME: "gs64stone",
       GS_USERNAME: "DataCurator",
       GS_PASSWORD: "secret",
       GEMSTONE_PY_SMOKE_EMPTY: "",
@@ -41,6 +46,10 @@ function resetState() {
   extensionsById = new Map();
   warnings = [];
   clipboardText = "";
+  inputBoxValues = [];
+  informationMessages = [];
+  configUpdates = [];
+  refreshedProviders = 0;
 }
 
 class EventEmitter {
@@ -81,6 +90,10 @@ const fakeVscode = {
     None: 0,
     Collapsed: 1,
     Expanded: 2,
+  },
+  ConfigurationTarget: {
+    Global: 1,
+    Workspace: 2,
   },
   Uri: {
     file(fsPath) {
@@ -149,7 +162,12 @@ const fakeVscode = {
       return { viewId, provider, dispose() {} };
     },
     showInformationMessage() {
+      informationMessages.push([...arguments].join(" "));
       return Promise.resolve();
+    },
+    showInputBox(options) {
+      const value = inputBoxValues.shift();
+      return Promise.resolve(value === undefined ? undefined : value);
     },
     showWarningMessage(message) {
       warnings.push(message);
@@ -165,6 +183,11 @@ const fakeVscode = {
       return {
         get(key) {
           return configurationValues[key];
+        },
+        update(key, value, target) {
+          configurationValues[key] = value;
+          configUpdates.push({ key, value, target });
+          return Promise.resolve();
         },
       };
     },
@@ -197,10 +220,11 @@ test("configuration helpers quote shell values and mask secrets", () => {
   assert.equal(
     config.envExportScript({
       GS_STONE: "stone one",
+      GS_STONE_NAME: "stone one",
       GS_PASSWORD: "p'a",
       GEMSTONE_PY_SMOKE_EMPTY: "",
     }),
-    "export GS_STONE='stone one'\nexport GS_PASSWORD='p'\\''a'",
+    "export GS_STONE='stone one'\nexport GS_STONE_NAME='stone one'\nexport GS_PASSWORD='p'\\''a'",
   );
 });
 
@@ -302,6 +326,9 @@ test("tree providers expose expected commands and mask environment secrets", () 
   );
 
   const environment = providers.createEnvironmentProvider().getChildren();
+  assert.ok(
+    environment.find((item) => item.options.command === "gemstonePy.configureWorkbench"),
+  );
   const envGroup = environment.find((item) => item.label === "Configured environment");
   assert.ok(envGroup);
   const password = envGroup.children.find((item) => item.label === "GS_PASSWORD");
@@ -367,9 +394,10 @@ test("openJasper activates installed Jasper and opens the GemStone sidebar", asy
   };
   extensionsById.set("gemtalksystems.gemstone-ide", jasper);
 
-  await registeredCommand("gemstonePy.openJasper")();
+  const result = await registeredCommand("gemstonePy.openJasper")();
 
   assert.equal(jasper.activated, true);
+  assert.equal(result, "jasper-sidebar");
   assert.deepEqual(executedCommands, [
     { command: "workbench.view.extension.gemstone", args: [] },
   ]);
@@ -377,8 +405,9 @@ test("openJasper activates installed Jasper and opens the GemStone sidebar", asy
 });
 
 test("openJasper opens the VS Code Extensions view when Jasper is not installed", async () => {
-  await registeredCommand("gemstonePy.openJasper")();
+  const result = await registeredCommand("gemstonePy.openJasper")();
 
+  assert.equal(result, "extensions-search");
   assert.deepEqual(executedCommands, [
     {
       command: "workbench.extensions.search",
@@ -400,14 +429,15 @@ test("copyEnvScript copies only non-empty configured variables", async () => {
 
   assert.equal(
     clipboardText,
-    "export GS_STONE=gs64stone\nexport GS_USERNAME=DataCurator\nexport GS_PASSWORD=secret",
+    "export GS_STONE=gs64stone\nexport GS_STONE_NAME=gs64stone\nexport GS_USERNAME=DataCurator\nexport GS_PASSWORD=secret",
   );
 });
 
 test("launchDatabaseExplorer warns when explorerPath is not configured", () => {
   configurationValues.explorerPath = "";
-  registeredCommand("gemstonePy.launchDatabaseExplorer")();
+  const result = registeredCommand("gemstonePy.launchDatabaseExplorer")();
 
+  assert.equal(result, false);
   assert.equal(terminals.length, 0);
   assert.deepEqual(warnings, [
     "Set gemstonePy.explorerPath before launching the database explorer.",
@@ -419,8 +449,9 @@ test("launchDatabaseExplorer warns when GemStone credentials are not configured"
   configurationValues.explorerPath = explorerPath;
   configurationValues.env.GS_PASSWORD = "";
 
-  registeredCommand("gemstonePy.launchDatabaseExplorer")();
+  const result = registeredCommand("gemstonePy.launchDatabaseExplorer")();
 
+  assert.equal(result, false);
   assert.equal(terminals.length, 0);
   assert.deepEqual(warnings, [
     "Set gemstonePy.env.GS_PASSWORD before launching the database explorer.",
@@ -434,8 +465,9 @@ test("launchDatabaseExplorer starts Python directly without shell sendText", () 
   fs.writeFileSync(pythonPath, "");
 
   configurationValues.explorerPath = explorerPath;
-  registeredCommand("gemstonePy.launchDatabaseExplorer")();
+  const result = registeredCommand("gemstonePy.launchDatabaseExplorer")();
 
+  assert.equal(result, true);
   assert.equal(terminals.length, 1);
   assert.equal(terminals[0].options.name, "GemStone: Database explorer");
   assert.equal(terminals[0].options.cwd, explorerPath);
@@ -453,9 +485,54 @@ test("launchDatabaseExplorer starts Python directly without shell sendText", () 
   assert.equal(terminals[0].shown, true);
 });
 
+test("configureWorkbench writes workspace settings and refreshes views", async () => {
+  inputBoxValues = [
+    "/workspace/gemstone-py/.venv/bin/python",
+    "/workspace/gemstone-py",
+    "/workspace/python-gemstone-database-explorer",
+    "SystemUser",
+    "configured password",
+    "seaside",
+  ];
+
+  const result = await registeredCommand("gemstonePy.configureWorkbench")();
+
+  assert.equal(result, "configured");
+  assert.deepEqual(
+    configUpdates.map((update) => [update.key, update.target]),
+    [
+      ["pythonPath", fakeVscode.ConfigurationTarget.Workspace],
+      ["repoPath", fakeVscode.ConfigurationTarget.Workspace],
+      ["explorerPath", fakeVscode.ConfigurationTarget.Workspace],
+      ["env", fakeVscode.ConfigurationTarget.Workspace],
+    ],
+  );
+  assert.equal(configurationValues.pythonPath, "/workspace/gemstone-py/.venv/bin/python");
+  assert.equal(configurationValues.repoPath, "/workspace/gemstone-py");
+  assert.equal(
+    configurationValues.explorerPath,
+    "/workspace/python-gemstone-database-explorer",
+  );
+  assert.equal(configurationValues.env.GS_USERNAME, "SystemUser");
+  assert.equal(configurationValues.env.GS_PASSWORD, "configured password");
+  assert.equal(configurationValues.env.GS_STONE_NAME, "seaside");
+  assert.equal(configurationValues.env.GS_STONE, "seaside");
+  assert.equal(refreshedProviders, 1);
+  assert.deepEqual(informationMessages, ["gemstone-py Workbench settings updated."]);
+});
+
+test("configureWorkbench cancels without writing settings", async () => {
+  inputBoxValues = [undefined];
+
+  const result = await registeredCommand("gemstonePy.configureWorkbench")();
+
+  assert.equal(result, "cancelled");
+  assert.deepEqual(configUpdates, []);
+});
+
 function registeredCommand(command) {
   const context = { subscriptions: [] };
-  actions.registerCommands(context, [{ refresh() {} }]);
+  actions.registerCommands(context, [{ refresh() { refreshedProviders += 1; } }]);
   const callback = registeredCommands.get(command);
   assert.ok(callback, `expected ${command} to be registered`);
   return callback;

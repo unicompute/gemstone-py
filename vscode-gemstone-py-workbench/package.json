@@ -2,7 +2,7 @@
   "name": "gemstone-py-workbench",
   "displayName": "gemstone-py Workbench",
   "description": "Run gemstone-py examples, check GemStone environment state, open docs, and launch the Python GemStone database explorer.",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "publisher": "unicompute",
   "icon": "media/emerald-logo.png",
   "license": "MIT",
@@ -44,6 +44,7 @@
     "onCommand:gemstonePy.checkNativeBackend",
     "onCommand:gemstonePy.runFastApiExample",
     "onCommand:gemstonePy.showEnvironment",
+    "onCommand:gemstonePy.configureWorkbench",
     "onCommand:gemstonePy.copyEnvScript",
     "onCommand:gemstonePy.checkBackend",
     "onCommand:gemstonePy.openSetupGuide",
@@ -103,6 +104,7 @@
             "GEMSTONE": "",
             "GS_LIB": "",
             "GS_STONE": "gs64stone",
+            "GS_STONE_NAME": "gs64stone",
             "GS_USERNAME": "DataCurator",
             "GS_PASSWORD": "",
             "GS_HOST": "localhost",
@@ -157,6 +159,10 @@
       {
         "command": "gemstonePy.showEnvironment",
         "title": "gemstone-py: Show Environment"
+      },
+      {
+        "command": "gemstonePy.configureWorkbench",
+        "title": "gemstone-py: Configure Workbench"
       },
       {
         "command": "gemstonePy.copyEnvScript",
@@ -289,6 +295,7 @@
   "scripts": {
     "compile": "tsc -p ./",
     "check": "tsc -p ./ --noEmit",
+    "test:integration": "node test/integration/run.js",
     "test:smoke": "npm run compile && node --test test/*.test.js",
     "release:preflight": "node scripts/check-release.js",
     "release:verify-vsix": "node scripts/check-release.js --vsix",
@@ -297,6 +304,7 @@
   "devDependencies": {
     "@types/node": "^20.17.19",
     "@types/vscode": "1.91.0",
+    "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.9.1",
     "typescript": "^5.7.3"
   }

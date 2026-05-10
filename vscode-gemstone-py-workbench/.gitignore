@@ -1,5 +1,6 @@
 node_modules/
 out/
 *.vsix
+*.vsix.sha256
+marketplace.json
 .vscode-test/
-

@@ -69,6 +69,9 @@ export function registerCommands(
     ),
     vscode.commands.registerCommand("gemstonePy.runFastApiExample", runFastApiExample),
     vscode.commands.registerCommand("gemstonePy.showEnvironment", showEnvironment),
+    vscode.commands.registerCommand("gemstonePy.configureWorkbench", () =>
+      configureWorkbench(providers),
+    ),
     vscode.commands.registerCommand("gemstonePy.copyEnvScript", copyEnvScript),
     vscode.commands.registerCommand("gemstonePy.checkBackend", checkBackend),
     vscode.commands.registerCommand("gemstonePy.openReadme", () => openRepoFile("README.md")),
@@ -142,6 +145,107 @@ function runFastApiExample(): void {
   runRepoPythonModule("FastAPI example", "examples.fastapi.run", ["--reload"]);
 }
 
+async function configureWorkbench(
+  providers: WorkbenchTreeProvider[],
+): Promise<"configured" | "cancelled"> {
+  const config = getConfig();
+  const target = vscode.workspace.workspaceFolders?.length
+    ? vscode.ConfigurationTarget.Workspace
+    : vscode.ConfigurationTarget.Global;
+
+  const pythonPath = await promptForSetting({
+    title: "Configure gemstone-py Workbench",
+    prompt: "Python executable for examples and checks.",
+    value: config.pythonPath,
+  });
+  if (pythonPath === undefined) {
+    return "cancelled";
+  }
+
+  const repoPath = await promptForSetting({
+    title: "Configure gemstone-py Workbench",
+    prompt: "Local gemstone-py checkout path.",
+    value: config.repoPath,
+  });
+  if (repoPath === undefined) {
+    return "cancelled";
+  }
+
+  const explorerPath = await promptForSetting({
+    title: "Configure gemstone-py Workbench",
+    prompt: "Local python-gemstone-database-explorer checkout path.",
+    value: config.explorerPath,
+  });
+  if (explorerPath === undefined) {
+    return "cancelled";
+  }
+
+  const username = await promptForSetting({
+    title: "Configure gemstone-py Workbench",
+    prompt: "GemStone username.",
+    value: config.env.GS_USERNAME ?? "DataCurator",
+  });
+  if (username === undefined) {
+    return "cancelled";
+  }
+
+  const password = await promptForSetting({
+    title: "Configure gemstone-py Workbench",
+    prompt: "GemStone password.",
+    value: config.env.GS_PASSWORD ?? "",
+    password: true,
+    trim: false,
+  });
+  if (password === undefined) {
+    return "cancelled";
+  }
+
+  const stoneName = await promptForSetting({
+    title: "Configure gemstone-py Workbench",
+    prompt: "GemStone stone name.",
+    value: config.env.GS_STONE_NAME ?? config.env.GS_STONE ?? "gs64stone",
+  });
+  if (stoneName === undefined) {
+    return "cancelled";
+  }
+
+  const nextEnv = {
+    ...config.env,
+    GS_USERNAME: username,
+    GS_PASSWORD: password,
+    GS_STONE_NAME: stoneName,
+    GS_STONE: stoneName,
+  };
+  const configuration = vscode.workspace.getConfiguration("gemstonePy");
+  await configuration.update("pythonPath", pythonPath, target);
+  await configuration.update("repoPath", repoPath, target);
+  await configuration.update("explorerPath", explorerPath, target);
+  await configuration.update("env", nextEnv, target);
+  providers.forEach((provider) => provider.refresh());
+  void vscode.window.showInformationMessage("gemstone-py Workbench settings updated.");
+  return "configured";
+}
+
+async function promptForSetting(options: {
+  title: string;
+  prompt: string;
+  value: string;
+  password?: boolean;
+  trim?: boolean;
+}): Promise<string | undefined> {
+  const value = await vscode.window.showInputBox({
+    title: options.title,
+    prompt: options.prompt,
+    value: options.value,
+    password: options.password,
+    ignoreFocusOut: true,
+  });
+  if (value === undefined) {
+    return undefined;
+  }
+  return options.trim === false ? value : value.trim();
+}
+
 async function showEnvironment(): Promise<void> {
   const config = getConfig();
   output.clear();
@@ -197,13 +301,13 @@ async function openRepoFile(relativePath: string): Promise<void> {
   await vscode.commands.executeCommand("vscode.open", vscode.Uri.file(filePath));
 }
 
-function launchExplorer(): void {
+function launchExplorer(): boolean {
   const config = getConfig();
   if (!ensureExplorerPath(config.explorerPath)) {
-    return;
+    return false;
   }
   if (!ensureExplorerCredentials(config.env)) {
-    return;
+    return false;
   }
 
   const python = explorerPython(config);
@@ -216,6 +320,7 @@ function launchExplorer(): void {
     String(config.explorerPort),
   ];
   runProcessInTerminal("Database explorer", python, args, config.explorerPath);
+  return true;
 }
 
 async function openExplorer(): Promise<void> {
@@ -225,7 +330,7 @@ async function openExplorer(): Promise<void> {
   );
 }
 
-async function openJasper(): Promise<void> {
+async function openJasper(): Promise<"jasper-sidebar" | "extensions-search"> {
   const jasper = getJasperExtension();
   if (!jasper) {
     await vscode.commands.executeCommand(
@@ -235,12 +340,13 @@ async function openJasper(): Promise<void> {
     void vscode.window.showInformationMessage(
       `Install Jasper (${JASPER_MARKETPLACE_ID}) from the Extensions view, then open the GemStone sidebar.`,
     );
-    return;
+    return "extensions-search";
   }
 
   await jasper.activate();
   try {
     await vscode.commands.executeCommand(JASPER_VIEW_COMMAND);
+    return "jasper-sidebar";
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     output.appendLine(`Could not open Jasper GemStone sidebar: ${message}`);
@@ -248,6 +354,7 @@ async function openJasper(): Promise<void> {
     void vscode.window.showWarningMessage(
       "Jasper is installed, but the GemStone sidebar could not be opened. Open the GemStone activity bar item manually.",
     );
+    return "jasper-sidebar";
   }
 }
 

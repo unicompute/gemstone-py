@@ -111,7 +111,7 @@ class GemStoneConfig:
     @classmethod
     def from_env(cls, *, require_credentials: bool = True) -> "GemStoneConfig":
         config = cls(
-            stone=os.environ.get("GS_STONE", "gs64stone"),
+            stone=os.environ.get("GS_STONE") or os.environ.get("GS_STONE_NAME", "gs64stone"),
             netldi=os.environ.get("GS_NETLDI", "netldi"),
             host=os.environ.get("GS_HOST", "localhost"),
             username=os.environ.get("GS_USERNAME"),

@@ -50,6 +50,9 @@ jobs:
       - name: Smoke-test extension helpers
         run: npm run test:smoke
 
+      - name: Integration-test extension in VS Code
+        run: xvfb-run -a npm run test:integration
+
       - name: Release preflight
         run: npm run release:preflight
 
@@ -59,11 +62,19 @@ jobs:
       - name: Verify packaged VSIX
         run: npm run release:verify-vsix
 
+      - name: Generate VSIX checksum
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          sha256sum "gemstone-py-workbench-${version}.vsix" > "gemstone-py-workbench-${version}.vsix.sha256"
+
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: gemstone-py-workbench-vsix
-          path: vscode-gemstone-py-workbench/*.vsix
+          path: |
+            vscode-gemstone-py-workbench/*.vsix
+            vscode-gemstone-py-workbench/*.vsix.sha256
           if-no-files-found: error
 
   publish-marketplace:
@@ -196,10 +207,13 @@ jobs:
           version="$(node -p "require('./vscode-gemstone-py-workbench/package.json').version")"
           tag="vscode-workbench-v${version}"
           vsix="vscode-gemstone-py-workbench/gemstone-py-workbench-${version}.vsix"
+          checksum="vscode-gemstone-py-workbench/gemstone-py-workbench-${version}.vsix.sha256"
           test -f "${vsix}"
+          test -f "${checksum}"
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
           echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
           echo "vsix=${vsix}" >> "${GITHUB_OUTPUT}"
+          echo "checksum=${checksum}" >> "${GITHUB_OUTPUT}"
 
       - name: Create release notes
         shell: bash
@@ -236,6 +250,7 @@ jobs:
           RELEASE_TAG: ${{ steps.release-metadata.outputs.tag }}
           RELEASE_VERSION: ${{ steps.release-metadata.outputs.version }}
           VSIX_PATH: ${{ steps.release-metadata.outputs.vsix }}
+          CHECKSUM_PATH: ${{ steps.release-metadata.outputs.checksum }}
         run: |
           git fetch --force origin "+refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}" || true
           if ! git rev-parse --verify --quiet "${RELEASE_TAG}" >/dev/null; then
@@ -249,9 +264,9 @@ jobs:
             gh release edit "${RELEASE_TAG}" \
               --title "VS Code workbench ${RELEASE_VERSION}" \
               --notes-file vscode-workbench-release-notes.md
-            gh release upload "${RELEASE_TAG}" "${VSIX_PATH}" --clobber
+            gh release upload "${RELEASE_TAG}" "${VSIX_PATH}" "${CHECKSUM_PATH}" --clobber
           else
-            gh release create "${RELEASE_TAG}" "${VSIX_PATH}" \
+            gh release create "${RELEASE_TAG}" "${VSIX_PATH}" "${CHECKSUM_PATH}" \
               --title "VS Code workbench ${RELEASE_VERSION}" \
               --notes-file vscode-workbench-release-notes.md
           fi
