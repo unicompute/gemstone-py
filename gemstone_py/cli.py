@@ -8,6 +8,8 @@ import sys
 from collections.abc import Sequence
 
 from gemstone_py.example_support import MANUAL_POLICY, example_session
+from gemstone_py.fastapi_example import add_runner_arguments
+from gemstone_py.fastapi_example import main as run_fastapi_example
 from gemstone_py.session_facade import GemStoneSessionFacade
 from gemstone_py.smalltalk_bridge import SmalltalkBridge
 
@@ -69,6 +71,11 @@ def build_parser() -> argparse.ArgumentParser:
         "smalltalk-demo",
         help="Run the Smalltalk bridge demo against GemStone.",
     )
+    fastapi_parser = subparsers.add_parser(
+        "fastapi",
+        help="Run the packaged FastAPI example.",
+    )
+    add_runner_arguments(fastapi_parser)
     return parser
 
 
@@ -83,6 +90,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "smalltalk-demo":
         run_smalltalk_demo()
         return 0
+    if args.command == "fastapi":
+        fastapi_args = ["--host", args.host, "--port", str(args.port)]
+        if args.reload:
+            fastapi_args.append("--reload")
+        return run_fastapi_example(fastapi_args)
     raise AssertionError(f"Unhandled command: {args.command}")
 
 

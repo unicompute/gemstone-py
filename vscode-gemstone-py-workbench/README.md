@@ -102,7 +102,13 @@ python3 -m examples.async_features.session_root_and_collection
 python3 -m examples.typed_access.typed_oops_and_queries
 python3 -m examples.lifetime.managed_oop_handles
 python3 -m examples.native_backend.check_backend
-python3 -m uvicorn examples.fastapi.app:app --reload
+python3 -m examples.fastapi.run --reload
+```
+
+Install the repository example dependencies once with:
+
+```bash
+python3 -m pip install -e ".[examples]"
 ```
 
 ## Database Explorer

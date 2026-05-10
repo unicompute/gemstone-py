@@ -1,10 +1,18 @@
 # FastAPI Example
 
-Install FastAPI separately, configure GemStone with the usual `GS_*`
-environment variables, then run:
+Install the repository example dependencies, configure GemStone with the usual
+`GS_*` environment variables, then run:
 
 ```bash
-uvicorn examples.fastapi.app:app --reload
+python -m pip install -e ".[examples]"
+python -m examples.fastapi.run --reload
+```
+
+For an installed package rather than a repository checkout:
+
+```bash
+python -m pip install "gemstone-py[fastapi]"
+gemstone-fastapi-example --reload
 ```
 
 The example uses `gemstone_py.aio.fastapi.session_dependency`, which opens one

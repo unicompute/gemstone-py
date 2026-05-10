@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.7
+
+- Changed the FastAPI example command to run `python -m examples.fastapi.run --reload`, which checks for missing FastAPI/uvicorn dependencies and prints the correct install command before starting uvicorn.
+
 ## 0.1.6
 
 - Changed the Jasper IDE handoff to open the installed `GemTalkSystems.gemstone-ide` extension's GemStone sidebar instead of opening GitHub.

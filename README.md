@@ -68,7 +68,13 @@ For development from source:
 ```bash
 git clone https://github.com/unicompute/gemstone-py.git
 cd gemstone-py
-python3 -m pip install -e .[dev]
+python3 -m pip install -e ".[dev]"
+```
+
+For the web examples without the full development toolchain:
+
+```bash
+python3 -m pip install -e ".[examples]"
 ```
 
 Installed demo commands:
@@ -80,6 +86,8 @@ gemstone-hello
 gemstone-smalltalk-demo
 gemstone-examples hello
 gemstone-examples smalltalk-demo
+gemstone-examples fastapi --reload
+gemstone-fastapi-example --reload
 ```
 
 Feature examples from the repository checkout:
@@ -89,7 +97,7 @@ python -m examples.async_features.session_root_and_collection
 python -m examples.typed_access.typed_oops_and_queries
 python -m examples.lifetime.managed_oop_handles
 python -m examples.native_backend.check_backend
-uvicorn examples.fastapi.app:app --reload
+python -m examples.fastapi.run --reload
 ```
 
 The repository also includes a companion VS Code extension scaffold under
@@ -191,6 +199,11 @@ async with AsyncSession.connect(config=config) as session:
 ```
 
 For FastAPI:
+
+```bash
+python -m pip install "gemstone-py[fastapi]"
+gemstone-fastapi-example --reload
+```
 
 ```python
 from fastapi import Depends, FastAPI

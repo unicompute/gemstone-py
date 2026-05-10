@@ -139,12 +139,7 @@ export function registerCommands(
 }
 
 function runFastApiExample(): void {
-  const config = getConfig();
-  runInTerminal(
-    "FastAPI example",
-    `${shellQuote(config.pythonPath)} -m uvicorn examples.fastapi.app:app --reload`,
-    config.repoPath,
-  );
+  runRepoPythonModule("FastAPI example", "examples.fastapi.run", ["--reload"]);
 }
 
 async function showEnvironment(): Promise<void> {

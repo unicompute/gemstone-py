@@ -258,6 +258,17 @@ test("runRepoScript includes explicit extra environment values", () => {
   assert.deepEqual(terminals[0].sentText, ["./scripts/run_ci_checks.sh"]);
 });
 
+test("runFastApiExample uses the dependency-checking repository runner", () => {
+  registeredCommand("gemstonePy.runFastApiExample")();
+
+  assert.equal(terminals.length, 1);
+  assert.equal(terminals[0].options.name, "GemStone: FastAPI example");
+  assert.equal(terminals[0].options.cwd, "/workspace/gemstone-py");
+  assert.deepEqual(terminals[0].sentText, [
+    "python3 -m examples.fastapi.run --reload",
+  ]);
+});
+
 test("tree providers expose expected commands and mask environment secrets", () => {
   const examples = providers.createExamplesProvider().getChildren();
   assert.deepEqual(

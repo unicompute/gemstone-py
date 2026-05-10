@@ -218,8 +218,8 @@ a managed OOP alive, and exercises `AsyncGSCollection`.
 For FastAPI:
 
 ```bash
-python -m pip install fastapi uvicorn
-uvicorn examples.fastapi.app:app --reload
+python -m pip install -e ".[examples]"
+python -m examples.fastapi.run --reload
 ```
 
 Visit `http://127.0.0.1:8000/health/gemstone`.

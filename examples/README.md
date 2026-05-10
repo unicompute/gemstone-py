@@ -112,7 +112,8 @@ GEMSTONE_PY_GCI_BACKEND=native python -m examples.native_backend.check_backend
 Minimal FastAPI app using `gemstone_py.aio.fastapi.session_dependency`.
 
 ```
-uvicorn examples.fastapi.app:app --reload
+python -m pip install -e ".[examples]"
+python -m examples.fastapi.run --reload
 ```
 
 ---

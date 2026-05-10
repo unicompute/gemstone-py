@@ -104,7 +104,7 @@ export function createExamplesProvider(): WorkbenchTreeProvider {
     commandItem(
       "FastAPI example",
       "gemstonePy.runFastApiExample",
-      "examples.fastapi.app:app",
+      "examples.fastapi.run --reload",
       "server-process",
     ),
   ]);

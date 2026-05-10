@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gemstone-py"
-version = "0.2.9"
+version = "0.2.10"
 description = "Direct Python-to-GemStone GCI bridge and translated persistence helpers."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -25,6 +25,7 @@ gemstone-benchmark-baseline-register = "gemstone_py.benchmark_baseline_register:
 gemstone-benchmark-compare = "gemstone_py.benchmark_compare:main_entry"
 gemstone-benchmarks = "gemstone_py.benchmarks:main_entry"
 gemstone-examples = "gemstone_py.cli:main_entry"
+gemstone-fastapi-example = "gemstone_py.fastapi_example:main_entry"
 gemstone-hello = "gemstone_py.cli:hello_entry"
 gemstone-smalltalk-demo = "gemstone_py.cli:smalltalk_demo_entry"
 
@@ -32,12 +33,23 @@ gemstone-smalltalk-demo = "gemstone_py.cli:smalltalk_demo_entry"
 dev = [
   "build>=1.0",
   "Flask>=2.3",
+  "fastapi>=0.115",
   "mypy>=1.10",
   "pytest-asyncio>=0.23",
   "ruff>=0.6",
+  "uvicorn[standard]>=0.30",
+]
+examples = [
+  "Flask>=2.3",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
 ]
 fast = [
   "gemstone-py-native>=0.1.2",
+]
+fastapi = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
 ]
 
 [tool.setuptools]
@@ -84,6 +96,7 @@ files = [
   "gemstone_py/benchmarks.py",
   "gemstone_py/session_facade.py",
   "gemstone_py/example_support.py",
+  "gemstone_py/fastapi_example.py",
   "gemstone_py/cli.py",
   "gemstone_py/client.py",
   "gemstone_py/native.py",
@@ -112,6 +125,7 @@ module = [
   "gemstone_py.benchmarks",
   "gemstone_py.session_facade",
   "gemstone_py.example_support",
+  "gemstone_py.fastapi_example",
   "gemstone_py.cli",
   "gemstone_py.objectlog",
 ]

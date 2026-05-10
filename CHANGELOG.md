@@ -4,6 +4,16 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+## 0.2.10 - 2026-05-10
+
+- Added `fastapi` and `examples` extras so new installs can opt into FastAPI
+  and uvicorn dependencies explicitly.
+- Added `gemstone-fastapi-example`, `gemstone-examples fastapi`, and
+  `python -m examples.fastapi.run` runners that check optional dependencies
+  before starting uvicorn.
+- Updated the VS Code workbench FastAPI example launcher to use the dependency
+  checking repository runner instead of calling `python -m uvicorn` directly.
+
 ## 0.2.9 - 2026-05-10
 
 - Added runnable examples for async sessions/FastAPI support, typed OOPs and
