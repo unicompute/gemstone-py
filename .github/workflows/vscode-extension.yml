@@ -104,22 +104,36 @@ jobs:
             --pat "${VSCE_PAT}" \
             --no-dependencies
 
-      - name: Verify Marketplace listing
+      - name: Verify Marketplace version
         shell: bash
-        env:
-          MARKETPLACE_URL: https://marketplace.visualstudio.com/items?itemName=unicompute.gemstone-py-workbench
         run: |
+          expected_version="$(node -p "require('./package.json').version")"
           for attempt in 1 2 3 4 5 6; do
-            if curl -fsSL "${MARKETPLACE_URL}" -o marketplace.html; then
-              if grep -q "gemstone-py Workbench" marketplace.html; then
-                echo "Marketplace listing is visible: ${MARKETPLACE_URL}"
+            if npx vsce show unicompute.gemstone-py-workbench --json > marketplace.json; then
+              if EXPECTED_VERSION="${expected_version}" node -e '
+              const fs = require("fs");
+              const expected = process.env.EXPECTED_VERSION;
+              const payload = JSON.parse(fs.readFileSync("marketplace.json", "utf8"));
+              const versions = (payload.versions || []).map((entry) => entry.version);
+              if (payload.displayName !== "gemstone-py Workbench") {
+                throw new Error(`Unexpected Marketplace display name: ${payload.displayName}`);
+              }
+              if (!versions.includes(expected)) {
+                throw new Error(`Marketplace versions ${versions.join(", ")} do not include ${expected}`);
+              }
+              if (versions[0] !== expected) {
+                throw new Error(`Marketplace latest version is ${versions[0]}, expected ${expected}`);
+              }
+              '
+              then
+                echo "Marketplace version ${expected_version} is visible."
                 exit 0
               fi
             fi
-            echo "Marketplace listing not visible yet; retrying (${attempt}/6)..."
+            echo "Marketplace version ${expected_version} not visible yet; retrying (${attempt}/6)..."
             sleep 30
           done
-          echo "Marketplace listing did not become visible: ${MARKETPLACE_URL}"
+          echo "Marketplace version ${expected_version} did not become visible."
           exit 1
 
   github-release:
@@ -160,14 +174,27 @@ jobs:
           RELEASE_VERSION: ${{ steps.release-metadata.outputs.version }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          cat > vscode-workbench-release-notes.md <<NOTES
-          VS Code workbench ${RELEASE_VERSION}.
-
-          Marketplace: https://marketplace.visualstudio.com/items?itemName=unicompute.gemstone-py-workbench
-          Workflow: ${RUN_URL}
-
-          See vscode-gemstone-py-workbench/CHANGELOG.md for release notes.
-          NOTES
+          changelog_notes="$(
+            awk -v version="${RELEASE_VERSION}" '
+              $0 == "## " version { capture=1; next }
+              /^## / && capture { exit }
+              capture { print }
+            ' vscode-gemstone-py-workbench/CHANGELOG.md
+          )"
+          {
+            echo "VS Code workbench ${RELEASE_VERSION}."
+            echo
+            echo "Marketplace: https://marketplace.visualstudio.com/items?itemName=unicompute.gemstone-py-workbench"
+            echo "Workflow: ${RUN_URL}"
+            echo
+            echo "## Changelog"
+            echo
+            if test -n "${changelog_notes}"; then
+              printf '%s\n' "${changelog_notes}"
+            else
+              echo "See vscode-gemstone-py-workbench/CHANGELOG.md for release notes."
+            fi
+          } > vscode-workbench-release-notes.md
 
       - name: Create or update GitHub release
         shell: bash
