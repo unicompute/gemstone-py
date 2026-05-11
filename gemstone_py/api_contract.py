@@ -102,6 +102,7 @@ MODULE_EXPORTS: dict[str, str] = {
     "benchmark_compare": "gemstone_py.benchmark_compare",
     "bootstrap": "gemstone_py.bootstrap",
     "codegen": "gemstone_py.codegen",
+    "frameworks": "gemstone_py.frameworks",
     "inspection": "gemstone_py.inspection",
     "native": "gemstone_py.native",
     "observability": "gemstone_py.observability",

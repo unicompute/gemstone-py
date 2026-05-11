@@ -144,7 +144,8 @@ with session_scope(config=config) as session:
 
 ```python
 from flask import Flask
-from gemstone_py import GemStoneConfig, install_flask_request_session
+from gemstone_py import GemStoneConfig
+from gemstone_py.frameworks.flask import install_flask_request_session
 
 app = Flask(__name__)
 
@@ -243,6 +244,15 @@ get_gemstone = session_dependency(config=GemStoneConfig.from_env())
 @app.get("/health/gemstone")
 async def gemstone_health(session: AsyncSession = Depends(get_gemstone)):
     return {"result": await session.eval("3 + 4")}
+```
+
+For Litestar, use the sibling async adapter:
+
+```python
+from gemstone_py import GemStoneConfig
+from gemstone_py.aio.litestar import session_dependency
+
+get_gemstone = session_dependency(config=GemStoneConfig.from_env())
 ```
 
 ## Recipe 18: Query With a Typed Protocol

@@ -91,6 +91,12 @@ python -m pip install "gemstone-py[fastapi]"
 gemstone-fastapi-example --reload
 ```
 
+For Litestar applications:
+
+```bash
+python -m pip install "gemstone-py[litestar]"
+```
+
 For FastAPI examples from a source checkout:
 
 ```bash

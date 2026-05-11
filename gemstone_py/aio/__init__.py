@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor
+from importlib import import_module
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
@@ -413,6 +414,10 @@ def __getattr__(name: str) -> object:
         from gemstone_py.aio.pool import AsyncSessionPoolLease
 
         return AsyncSessionPoolLease
+    if name == "litestar":
+        module = import_module("gemstone_py.aio.litestar")
+        globals()[name] = module
+        return module
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -424,4 +429,5 @@ __all__ = [
     "AsyncSession",
     "AsyncSessionPool",
     "AsyncSessionPoolLease",
+    "litestar",
 ]

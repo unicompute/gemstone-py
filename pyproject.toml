@@ -56,6 +56,9 @@ fastapi = [
   "fastapi>=0.115",
   "uvicorn[standard]>=0.30",
 ]
+litestar = [
+  "litestar>=2.0",
+]
 observability = [
   "opentelemetry-api>=1.25",
   "prometheus-client>=0.20",
@@ -95,6 +98,7 @@ files = [
   "gemstone_py/aio/__init__.py",
   "gemstone_py/aio/fastapi.py",
   "gemstone_py/aio/gsquery.py",
+  "gemstone_py/aio/litestar.py",
   "gemstone_py/aio/persistent_root.py",
   "gemstone_py/aio/pool.py",
   "gemstone_py/api_contract.py",
@@ -111,12 +115,15 @@ files = [
   "gemstone_py/fastapi_example.py",
   "gemstone_py/cli.py",
   "gemstone_py/client.py",
+  "gemstone_py/frameworks/__init__.py",
+  "gemstone_py/frameworks/flask.py",
   "gemstone_py/inspection.py",
   "gemstone_py/migrations.py",
   "gemstone_py/native.py",
   "gemstone_py/observability.py",
   "gemstone_py/oop.py",
   "gemstone_py/web.py",
+  "gemstone_py/web_core.py",
   "gemstone_py/persistent_root.py",
   "gemstone_py/gsquery.py",
   "gemstone_py/gstore.py",
@@ -164,11 +171,20 @@ module = [
   "gemstone_py.aio",
   "gemstone_py.aio.fastapi",
   "gemstone_py.aio.gsquery",
+  "gemstone_py.aio.litestar",
   "gemstone_py.aio.persistent_root",
   "gemstone_py.aio.pool",
   "gemstone_py.gsquery",
   "gemstone_py.gstore",
   "gemstone_py.native",
+]
+strict = true
+
+[[tool.mypy.overrides]]
+module = [
+  "gemstone_py.frameworks",
+  "gemstone_py.frameworks.flask",
+  "gemstone_py.web_core",
 ]
 strict = true
 

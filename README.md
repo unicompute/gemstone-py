@@ -15,10 +15,10 @@ New code should treat `gemstone_py.*` as the supported public API:
 
 ```python
 from gemstone_py import GemStoneConfig, GemStoneSession, TransactionPolicy
+from gemstone_py.frameworks.flask import install_flask_request_session
 from gemstone_py.web import (
     GemStoneSessionPool,
     GemStoneThreadLocalSessionProvider,
-    install_flask_request_session,
     session_scope,
 )
 from gemstone_py.persistent_root import PersistentRoot
@@ -35,6 +35,7 @@ from gemstone_py.session_facade import GemStoneSessionFacade
 | --- | --- |
 | Normal users | `python3 -m pip install gemstone-py` |
 | Native acceleration | `python3 -m pip install "gemstone-py[fast]"` |
+| Litestar web apps | `python3 -m pip install "gemstone-py[litestar]"` |
 | Source checkout examples/development | `python3 -m pip install -e ".[examples,dev]"` |
 | VS Code users | `code --install-extension unicompute.gemstone-py-workbench` |
 
@@ -367,6 +368,18 @@ sessions, async persistent-root access, async `GSCollection`, and managed async
 OOP handles in one runnable script. See `examples/fastapi/app.py` for the
 minimal FastAPI dependency-injection shape.
 
+Litestar apps can use the same lifecycle through `gemstone_py.aio.litestar`:
+
+```python
+from gemstone_py import GemStoneConfig
+from gemstone_py.aio.litestar import session_dependency
+
+get_gemstone = session_dependency(config=GemStoneConfig.from_env())
+```
+
+For pooled Litestar handlers, use
+`gemstone_py.aio.litestar.pool_session_dependency(pool)`.
+
 ## Typed OOPs and Handles
 
 The untyped API remains available. New code can add phantom types for static
@@ -498,7 +511,8 @@ still using a bounded pool of logged-in sessions:
 
 ```python
 from flask import Flask
-from gemstone_py import GemStoneConfig, install_flask_request_session
+from gemstone_py import GemStoneConfig
+from gemstone_py.frameworks.flask import install_flask_request_session
 
 app = Flask(__name__)
 install_flask_request_session(
@@ -521,6 +535,9 @@ install_flask_request_session(
 without a pool. `GemStoneSessionPool` is the production-safe option when you
 want concurrent request handling without sharing a single logged-in GCI
 session across threads.
+The historical `from gemstone_py import install_flask_request_session` import
+still works; `gemstone_py.frameworks.flask` is the framework-specific path for
+new code.
 
 For operations dashboards, call `pool.stats()` to get stable counters for
 current capacity, idle/in-use sessions, total created sessions, evictions,
@@ -532,7 +549,8 @@ For worker models that prefer one session per thread instead of a shared pool:
 
 ```python
 from flask import Flask
-from gemstone_py import GemStoneConfig, install_flask_request_session
+from gemstone_py import GemStoneConfig
+from gemstone_py.frameworks.flask import install_flask_request_session
 
 app = Flask(__name__)
 install_flask_request_session(

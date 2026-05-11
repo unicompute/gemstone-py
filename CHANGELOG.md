@@ -15,6 +15,9 @@ All notable changes to `gemstone-py` should be recorded here.
 - Added `gemstone_py.web_core` with framework-neutral sync/async request
   scopes, transaction finalizers, and provider protocols, and moved Flask and
   FastAPI request cleanup through the shared lifecycle core.
+- Added `gemstone_py.frameworks.flask` as the Flask-specific adapter import
+  path and `gemstone_py.aio.litestar` for Litestar dependency and ASGI
+  middleware integration.
 - Added chunked `GSCollection.iter(...)`, `search_iter(...)`, typed
   `Query.iter(...)`, and async iterator equivalents for large result sets.
 - Made `GSCollection.search()`, `GSCollection.all()`, and typed `Query.all()`

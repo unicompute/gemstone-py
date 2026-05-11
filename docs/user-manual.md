@@ -568,6 +568,7 @@ The main pieces are:
 - `GemStoneSessionPool`
 - `GemStoneThreadLocalSessionProvider`
 - `session_scope(...)`
+- `gemstone_py.frameworks.flask`
 - `gemstone_py.web_core.RequestScope`
 - `gemstone_py.web_core.AsyncRequestScope`
 
@@ -653,6 +654,26 @@ Use this when your web stack is async-first. Use the Flask integration when your
 application is Flask-first.
 
 The runnable repository example is `examples/fastapi/app.py`.
+
+### Litestar
+
+Litestar integration lives in `gemstone_py.aio.litestar`. The module does not
+import Litestar directly; it provides async dependency callables and ASGI
+middleware that application code can wire into Litestar.
+
+```python
+from gemstone_py import GemStoneConfig
+from gemstone_py.aio.litestar import pool_session_dependency, session_dependency
+
+get_gemstone = session_dependency(config=GemStoneConfig.from_env())
+get_pooled_gemstone = pool_session_dependency(pool)
+```
+
+Install the optional framework dependency with:
+
+```bash
+python -m pip install "gemstone-py[litestar]"
+```
 
 ### Adapter Core
 
