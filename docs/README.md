@@ -13,9 +13,10 @@ If you are new to the project, use this order:
 2. [User Manual](user-manual.md)
 3. [Examples Guide](examples-guide.md)
 4. [Cookbook](cookbook.md)
-5. [Observability](observability.md)
-6. [Performance](performance.md)
-7. [Funny Introduction](funny-introduction/README.md)
+5. [Type-Safe Smalltalk Codegen](codegen.md)
+6. [Observability](observability.md)
+7. [Performance](performance.md)
+8. [Funny Introduction](funny-introduction/README.md)
 
 If you want a narrative overview before diving in:
 
@@ -27,6 +28,7 @@ If you are already productive and only need answers:
 - "Which transaction policy should I use?" → [User Manual](user-manual.md)
 - "Which example should I run first?" → [Examples Guide](examples-guide.md)
 - "How do I do X quickly?" → [Cookbook](cookbook.md)
+- "How do I generate typed wrappers from Protocols?" → [Type-Safe Smalltalk Codegen](codegen.md)
 - "How do I trace or measure GemStone calls?" → [Observability](observability.md)
 - "How do I inspect an OOP or class?" → [User Manual](user-manual.md)
 - "What are the current benchmark numbers?" → [Performance](performance.md)
@@ -41,6 +43,7 @@ If you are already productive and only need answers:
 - transaction policies, session scopes, and failure behaviour
 - async sessions and FastAPI request integration
 - typed OOPs, typed `GSCollection` queries, and managed OOP lifetimes
+- Protocol-to-Smalltalk code generation with checked-in typed wrappers
 - OOP/class inspection and recursive debug dumps
 - optional native PyO3 backend installation and backend selection
 - the persistent data helpers:

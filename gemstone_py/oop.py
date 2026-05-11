@@ -242,11 +242,12 @@ _REGISTRY: dict[str, type[Any]] = {}
 _CLASS_NAMES: weakref.WeakKeyDictionary[type[Any], str] = weakref.WeakKeyDictionary()
 
 
-def gemstone_class(name: str) -> Callable[[type[T]], type[T]]:
+def gemstone_class(name: str, *, async_: bool = False) -> Callable[[type[T]], type[T]]:
     """Register a Python class or protocol as describing a GemStone class."""
 
     def decorator(cls: type[T]) -> type[T]:
         setattr(cls, "__gemstone_class_name__", name)
+        setattr(cls, "__gemstone_codegen_async__", async_)
         _REGISTRY[name] = cls
         _CLASS_NAMES[cls] = name
         return cls

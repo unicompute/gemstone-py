@@ -316,14 +316,20 @@ Use it when you want to understand:
 - `typed_oop(...)`
 - typed `GSCollection.query(Protocol)` predicates
 - chunked `Query.iter(...)` result handling
+- `gemstone-codegen` generated wrappers for method-shaped Smalltalk access
 
 `simple_blog_queries.py` contains importable helper functions for the blog data
 shape. `typed_oops_and_queries.py` is the runnable live example.
+`codegen_demo/` shows the Protocol-to-generated-wrapper workflow.
 
 Usage:
 
 ```bash
 python -m examples.typed_access.typed_oops_and_queries
+gemstone-codegen \
+  --module examples.typed_access.codegen_demo.models \
+  --output examples/typed_access/codegen_demo/generated \
+  --check
 ```
 
 Typed OOPs:
@@ -367,6 +373,31 @@ for post in published:
 ```
 
 The lambda records a GemStone ivar path. It is not a Python-side row filter.
+
+Generated wrappers:
+
+```python
+from typing import Protocol
+from gemstone_py import GemStoneConfig, GemStoneSession, gemstone_class, gemstone_selector
+
+@gemstone_class("OkzBooking")
+class OkzBookingProto(Protocol):
+    status: str
+
+    @classmethod
+    @gemstone_selector("findById:")
+    def find_by_id(cls, booking_id: str) -> "OkzBookingProto":
+        ...
+
+from examples.typed_access.codegen_demo.generated import OkzBooking
+
+with GemStoneSession(config=GemStoneConfig.from_env()) as session:
+    booking = OkzBooking.find_by_id(session, "B-1001")
+    print(booking.status)
+```
+
+Use `@gemstone_selector(...)` for selectors that do not map cleanly from Python
+snake_case to Smalltalk camelCase keywords.
 
 ## `examples/lifetime/`
 

@@ -240,7 +240,44 @@ for post in posts.where(lambda row: row.status == "published").all():
 The lambda records an indexed GemStone path. It is not called for every row in
 Python.
 
-## Recipe 18: Keep an OOP Alive Explicitly
+## Recipe 18: Generate a Typed Smalltalk Wrapper
+
+```python
+from typing import Protocol
+from gemstone_py import gemstone_class, gemstone_selector
+
+@gemstone_class("OkzBooking", async_=True)
+class OkzBookingProto(Protocol):
+    status: str
+
+    @classmethod
+    @gemstone_selector("findById:")
+    def find_by_id(cls, booking_id: str) -> "OkzBookingProto":
+        ...
+
+    def mark_paid(self, at_posix_seconds: int) -> None:
+        ...
+```
+
+Generate and check in the wrapper:
+
+```bash
+gemstone-codegen \
+  --module examples.typed_access.codegen_demo.models \
+  --output examples/typed_access/codegen_demo/generated
+```
+
+Use it without hand-writing the class-side Smalltalk string:
+
+```python
+from examples.typed_access.codegen_demo.generated import OkzBooking
+
+booking = OkzBooking.find_by_id(session, "B-1001")
+print(booking.status)
+booking.mark_paid(1_779_912_000)
+```
+
+## Recipe 19: Keep an OOP Alive Explicitly
 
 ```python
 with GemStoneSession(config=config) as session:
@@ -257,7 +294,7 @@ with session.handle(raw_oop) as handle:
     print(handle.send("printString"))
 ```
 
-## Recipe 19: Check the Native Backend
+## Recipe 20: Check the Native Backend
 
 ```bash
 python -m pip install "gemstone-py[fast]"
@@ -271,7 +308,7 @@ GEMSTONE_PY_GCI_BACKEND=ctypes python -m examples.native_backend.check_backend
 GEMSTONE_PY_GCI_BACKEND=native python -m examples.native_backend.check_backend
 ```
 
-## Recipe 20: Run the Maintained Benchmarks
+## Recipe 21: Run the Maintained Benchmarks
 
 ```bash
 gemstone-benchmarks --entries 500 --search-runs 20
@@ -283,7 +320,7 @@ Or emit JSON:
 gemstone-benchmarks --json --output benchmark-report.json
 ```
 
-## Recipe 21: Compare Benchmark Reports
+## Recipe 22: Compare Benchmark Reports
 
 ```bash
 gemstone-benchmark-compare old.json new.json --json --output compare.json
@@ -291,7 +328,7 @@ gemstone-benchmark-compare old.json new.json --json --output compare.json
 
 That turns performance arguments into evidence, which is disappointingly healthy.
 
-## Recipe 22: Register a New Accepted Benchmark Baseline
+## Recipe 23: Register a New Accepted Benchmark Baseline
 
 ```bash
 gemstone-benchmark-baseline-register \
@@ -299,7 +336,7 @@ gemstone-benchmark-baseline-register \
   --manifest .github/benchmarks/index.json
 ```
 
-## Recipe 23: Verify the Installed Artifact
+## Recipe 24: Verify the Installed Artifact
 
 ```bash
 python -m gemstone_py.api_contract --json
@@ -317,7 +354,7 @@ gemstone-publish-verify --gemstone-version 0.2.10 --native-version 0.1.2
 That command checks project JSON, version-specific JSON, the simple index, and
 temporary-virtualenv installs for both the pure package and native package.
 
-## Recipe 24: Run the Live Test Lane
+## Recipe 25: Run the Live Test Lane
 
 ```bash
 GS_RUN_LIVE=1 ./scripts/run_live_checks.sh
@@ -329,7 +366,7 @@ Longer soak run:
 GS_RUN_LIVE=1 GS_RUN_LIVE_SOAK=1 ./scripts/run_live_checks.sh
 ```
 
-## Recipe 25: Handle Commit Conflicts Without Pretending They Are Rare
+## Recipe 26: Handle Commit Conflicts Without Pretending They Are Rare
 
 When multiple sessions modify overlapping state, conflicts are normal. The right
 pattern:
@@ -362,13 +399,13 @@ Rules:
 - bound the retry count — do not loop forever
 - log conflicts — frequent conflicts signal a design smell, not bad luck
 
-## Recipe 26: Learn a Queue With a Hat
+## Recipe 27: Learn a Queue With a Hat
 
 The hat trick example is memorable because it teaches a real primitive through a
 slightly ridiculous scenario. You should keep more examples like that in your
 own codebase than you probably do.
 
-## Recipe 27: Explain `gemstone-py` to a New Teammate
+## Recipe 28: Explain `gemstone-py` to a New Teammate
 
 Use this sentence:
 

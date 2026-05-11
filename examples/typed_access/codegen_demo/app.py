@@ -1,0 +1,29 @@
+"""FastAPI-style usage of generated GemStone wrappers.
+
+Run code generation first:
+
+    gemstone-codegen --module examples.typed_access.codegen_demo.models \
+        --output examples/typed_access/codegen_demo/generated
+"""
+
+from __future__ import annotations
+
+from fastapi import Depends, FastAPI
+
+from gemstone_py import GemStoneConfig
+from gemstone_py.aio import AsyncSession
+from gemstone_py.aio.fastapi import session_dependency
+
+from .generated import AsyncOkzBooking
+
+app = FastAPI(title="gemstone-py codegen demo")
+get_gemstone = session_dependency(config=GemStoneConfig.from_env(require_credentials=False))
+
+
+@app.get("/bookings/{booking_id}")
+async def booking_status(
+    booking_id: str,
+    session: AsyncSession = Depends(get_gemstone),
+) -> dict[str, str]:
+    booking = await AsyncOkzBooking.find_by_id(session, booking_id)
+    return {"booking_id": booking_id, "status": str(await booking.status())}

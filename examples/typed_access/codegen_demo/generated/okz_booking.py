@@ -1,0 +1,120 @@
+"""Generated GemStone wrappers.
+
+Source Protocol: examples.typed_access.codegen_demo.models.OkzBookingProto
+Regenerate with `gemstone-codegen`; do not edit by hand.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from gemstone_py import TypedOop
+
+
+def _smalltalk_literal(value: Any) -> str:
+    if value is None:
+        return "nil"
+    if value is True:
+        return "true"
+    if value is False:
+        return "false"
+    if isinstance(value, str):
+        return "'" + value.replace("'", "''") + "'"
+    if isinstance(value, int | float):
+        return repr(value)
+    custom = getattr(value, "__smalltalk_source__", None)
+    if callable(custom):
+        return str(custom())
+    raise TypeError(f"cannot convert {type(value).__name__} to a Smalltalk literal")
+
+
+def _argument_to_oop(value: Any) -> int:
+    if hasattr(value, "oop"):
+        return int(getattr(value, "oop"))
+    return int(value)
+
+
+def _build_smalltalk_source(receiver: str, selector: str, args: tuple[Any, ...]) -> str:
+    keywords = tuple(part for part in selector.split(":")[:-1] if part)
+    if not keywords:
+        if args:
+            raise TypeError(f"selector {selector!r} does not accept arguments")
+        return f"{receiver} {selector}"
+    if len(keywords) != len(args):
+        raise TypeError(f"selector {selector!r} expects {len(keywords)} argument(s)")
+    pieces = [receiver]
+    for keyword, arg in zip(keywords, args):
+        pieces.append(f"{keyword}:")
+        pieces.append(_smalltalk_literal(arg))
+    return " ".join(pieces)
+
+
+class OkzBooking(TypedOop[Any]):
+    __gemstone_class_name__ = 'OkzBooking'
+
+    @property
+    def status(self) -> Any:
+        return self.send('status')
+
+    @classmethod
+    def find_by_id(cls, session: Any, booking_id: Any) -> 'OkzBooking':
+        source = _build_smalltalk_source(
+            cls.__gemstone_class_name__,
+            'findById:',
+            (booking_id,),
+        )
+        oop = session.execute_oop(source)
+        return cls(
+            oop,
+            session=session,
+            wrapper_type=cls,
+            gemstone_class_name=cls.__gemstone_class_name__,
+        )
+
+    def mark_paid(self, at_posix_seconds: Any) -> Any:
+        return self.send('markPaid:', at_posix_seconds)
+
+    def transfer(self, user_id: Any, by_user_id: Any) -> Any:
+        return self.send('transferTo:byUserId:', user_id, by_user_id)
+
+
+class AsyncOkzBooking(TypedOop[Any]):
+    __gemstone_class_name__ = 'OkzBooking'
+
+    async def status(self) -> Any:
+        session = self.session
+        if session is None:
+            raise RuntimeError("TypedOop has no associated GemStoneSession")
+        return await session.perform_value(int(self), 'status')
+
+    @classmethod
+    async def find_by_id(cls, session: Any, booking_id: Any) -> 'AsyncOkzBooking':
+        source = _build_smalltalk_source(
+            cls.__gemstone_class_name__,
+            'findById:',
+            (booking_id,),
+        )
+        oop = await session.execute_oop(source)
+        return cls(
+            oop,
+            session=session,
+            wrapper_type=cls,
+            gemstone_class_name=cls.__gemstone_class_name__,
+        )
+
+    async def mark_paid(self, at_posix_seconds: Any) -> Any:
+        session = self.session
+        if session is None:
+            raise RuntimeError("TypedOop has no associated GemStoneSession")
+        raw_args = (_argument_to_oop(at_posix_seconds),)
+        return await session.perform_value(int(self), 'markPaid:', *raw_args)
+
+    async def transfer(self, user_id: Any, by_user_id: Any) -> Any:
+        session = self.session
+        if session is None:
+            raise RuntimeError("TypedOop has no associated GemStoneSession")
+        raw_args = (_argument_to_oop(user_id), _argument_to_oop(by_user_id))
+        return await session.perform_value(int(self), 'transferTo:byUserId:', *raw_args)
+
+
+__all__ = ['OkzBooking', 'AsyncOkzBooking']

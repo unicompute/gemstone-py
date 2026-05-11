@@ -131,6 +131,7 @@ gemstone-benchmark-baseline-register
 gemstone-benchmarks
 gemstone-bootstrap --status
 gemstone-bootstrap
+gemstone-codegen --help
 gemstone-hello
 gemstone-smalltalk-demo
 gemstone-examples hello
@@ -147,6 +148,7 @@ Feature examples from the repository checkout:
 python -m examples.quickstart
 python -m examples.async_features.session_root_and_collection
 python -m examples.typed_access.typed_oops_and_queries
+gemstone-codegen --module examples.typed_access.codegen_demo.models --output examples/typed_access/codegen_demo/generated --check
 python -m examples.lifetime.managed_oop_handles
 python -m examples.native_backend.check_backend
 python -m examples.fastapi.run --reload
@@ -382,6 +384,47 @@ with GemStoneSession(config=config) as session:
     booking = session.execute_typed("OkzBooking findById: 'x'", OkzBooking)
     status = booking.proxy().status
 ```
+
+For method-shaped object access, generate concrete wrappers from registered
+Protocols so application code does not repeat Smalltalk strings:
+
+```python
+from typing import Protocol
+from gemstone_py import gemstone_class, gemstone_selector
+
+@gemstone_class("OkzBooking", async_=True)
+class OkzBookingProto(Protocol):
+    status: str
+
+    @classmethod
+    @gemstone_selector("findById:")
+    def find_by_id(cls, booking_id: str) -> "OkzBookingProto": ...
+
+    def mark_paid(self, at_posix_seconds: int) -> None: ...
+```
+
+Generate wrappers and commit the output:
+
+```bash
+gemstone-codegen \
+  --module examples.typed_access.codegen_demo.models \
+  --output examples/typed_access/codegen_demo/generated
+```
+
+Then use the generated sync or async wrapper:
+
+```python
+from examples.typed_access.codegen_demo.generated import OkzBooking
+
+with GemStoneSession(config=config) as session:
+    booking = OkzBooking.find_by_id(session, "B-1001")
+    print(booking.status)
+    booking.mark_paid(1_779_912_000)
+```
+
+See [docs/codegen.md](docs/codegen.md) and
+[`examples/typed_access/codegen_demo/`](examples/typed_access/codegen_demo/)
+for the full selector-mapping rules and FastAPI usage.
 
 Typed `GSCollection` queries keep the existing string form and also accept a
 field-recording lambda. The lambda is executed against a query builder, not a

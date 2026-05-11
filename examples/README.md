@@ -34,7 +34,7 @@ The command creates missing `GStoreRoot` and `GSQueryRoot` entries under
 | Grand tour | `examples/example.py` | You want one script that touches most persistence helpers. |
 | Realistic reference app | `examples/webstack/` | You want a web app with users, follows, and persisted posts. |
 | Async/FastAPI cookbook | `examples/async_features/`, `examples/fastapi/` | You need async sessions or request dependencies. |
-| Typed-access cookbook | `examples/typed_access/` | You want `TypedOop`, protocols, and typed queries. |
+| Typed-access cookbook | `examples/typed_access/` | You want `TypedOop`, protocols, typed queries, or generated wrappers. |
 | Lifetime cookbook | `examples/lifetime/` | You need managed OOP/export-set lifetime examples. |
 | Native backend cookbook | `examples/native_backend/` | You need to verify `ctypes` versus native backend selection. |
 | Persistence cookbook | `examples/persistence/` | You want indexing, migrations, key/value, and collection recipes. |
@@ -47,7 +47,7 @@ The command creates missing `GStoreRoot` and `GSQueryRoot` entries under
 |------------------------|------------------------|
 | Session-bound persistence | `PersistentRoot(session)` or `GemStoneSessionFacade(session).persistent_root` |
 | Async sessions and request-friendly access | `examples/async_features/` and `examples/fastapi/` |
-| Typed OOPs and typed collection queries | `examples/typed_access/` |
+| Typed OOPs, typed collection queries, and Smalltalk codegen | `examples/typed_access/` |
 | Export-set lifetime handles | `examples/lifetime/` |
 | Optional native backend discovery | `examples/native_backend/` |
 | Model-style helpers | `gemstone_model.py` |
@@ -128,13 +128,19 @@ Shows both static typing surfaces:
 
 - `TypedOop[T]` with `@gemstone_class(...)`
 - typed `GSCollection.query(Protocol)` predicates
+- generated wrappers from `gemstone-codegen`
 
 ```
 python -m examples.typed_access.typed_oops_and_queries
+gemstone-codegen \
+  --module examples.typed_access.codegen_demo.models \
+  --output examples/typed_access/codegen_demo/generated \
+  --check
 ```
 
 `simple_blog_queries.py` also contains importable helper functions for the
-existing simple-blog data shape.
+existing simple-blog data shape. `codegen_demo/` contains a Protocol module,
+checked-in generated wrappers, and a small FastAPI-style usage example.
 
 ---
 

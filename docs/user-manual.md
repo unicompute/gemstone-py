@@ -288,6 +288,51 @@ with GemStoneSession(config=config) as session:
     print(today.proxy().printString)
 ```
 
+### Generated Typed Wrappers
+
+When a Protocol describes method-shaped GemStone access, use
+`gemstone-codegen` to generate a concrete wrapper instead of repeating
+Smalltalk strings throughout the application.
+
+```python
+from typing import Protocol
+from gemstone_py import gemstone_class, gemstone_selector
+
+@gemstone_class("OkzBooking", async_=True)
+class OkzBookingProto(Protocol):
+    status: str
+
+    @classmethod
+    @gemstone_selector("findById:")
+    def find_by_id(cls, booking_id: str) -> "OkzBookingProto":
+        ...
+
+    def mark_paid(self, at_posix_seconds: int) -> None:
+        ...
+```
+
+Generate and check in the wrapper package:
+
+```bash
+gemstone-codegen \
+  --module examples.typed_access.codegen_demo.models \
+  --output examples/typed_access/codegen_demo/generated
+```
+
+Application code can then use regular Python methods:
+
+```python
+from examples.typed_access.codegen_demo.generated import OkzBooking
+
+with GemStoneSession(config=config) as session:
+    booking = OkzBooking.find_by_id(session, "B-1001")
+    print(booking.status)
+    booking.mark_paid(1_779_912_000)
+```
+
+See `docs/codegen.md` for selector rules, async wrappers, and CI `--check`
+usage.
+
 For object lifetime, use `execute_managed(...)` when a raw OOP should stay in
 GemStone's export set while Python holds a handle:
 

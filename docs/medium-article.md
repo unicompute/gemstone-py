@@ -260,6 +260,43 @@ today = session.execute_typed("Date today", GemStoneDate)
 print(today.proxy().printString)
 ```
 
+For object methods you call repeatedly, `gemstone-codegen` can generate concrete
+wrappers from registered Protocols:
+
+```python
+from typing import Protocol
+from gemstone_py import gemstone_class, gemstone_selector
+
+@gemstone_class("OkzBooking", async_=True)
+class OkzBookingProto(Protocol):
+    status: str
+
+    @classmethod
+    @gemstone_selector("findById:")
+    def find_by_id(cls, booking_id: str) -> "OkzBookingProto": ...
+
+    def mark_paid(self, at_posix_seconds: int) -> None: ...
+```
+
+Generate and check in the wrapper package:
+
+```bash
+gemstone-codegen \
+  --module examples.typed_access.codegen_demo.models \
+  --output examples/typed_access/codegen_demo/generated
+```
+
+Then application code uses normal Python methods while the generated wrapper
+builds `OkzBooking findById: 'B-1001'` and `markPaid:` under the hood:
+
+```python
+from examples.typed_access.codegen_demo.generated import OkzBooking
+
+booking = OkzBooking.find_by_id(session, "B-1001")
+print(booking.status)
+booking.mark_paid(1_779_912_000)
+```
+
 ---
 
 ## Persistent Storage with PersistentRoot
@@ -686,6 +723,7 @@ gemstone-py
 ├── TransactionPolicy        MANUAL | COMMIT_ON_SUCCESS | ABORT_ON_EXIT
 ├── OopRef                   wraps a GemStone OOP; .send(), .print_string()
 ├── TypedOop / ManagedOop    typed OOPs and export-set lifetime handles
+├── codegen                  Protocol-to-TypedOop wrapper generation
 ├── aio                      AsyncSession, AsyncPersistentRoot, AsyncGSCollection
 ├── native                   optional PyO3 backend discovery
 │

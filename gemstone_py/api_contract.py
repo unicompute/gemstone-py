@@ -28,6 +28,7 @@ CORE_EXPORTS: dict[str, tuple[str, str]] = {
     "GemStoneObjectProxy": ("gemstone_py.oop", "GemStoneObjectProxy"),
     "gemstone_class": ("gemstone_py.oop", "gemstone_class"),
     "gemstone_class_name": ("gemstone_py.oop", "gemstone_class_name"),
+    "gemstone_selector": ("gemstone_py.codegen", "gemstone_selector"),
     "registered_gemstone_classes": ("gemstone_py.oop", "registered_gemstone_classes"),
     "typed_oop": ("gemstone_py.oop", "typed_oop"),
     "ClassDescription": ("gemstone_py.inspection", "ClassDescription"),
@@ -89,6 +90,7 @@ MODULE_EXPORTS: dict[str, str] = {
     "benchmark_baselines": "gemstone_py.benchmark_baselines",
     "benchmark_compare": "gemstone_py.benchmark_compare",
     "bootstrap": "gemstone_py.bootstrap",
+    "codegen": "gemstone_py.codegen",
     "inspection": "gemstone_py.inspection",
     "native": "gemstone_py.native",
     "observability": "gemstone_py.observability",
@@ -135,6 +137,7 @@ def validate_public_api_behaviors() -> list[str]:
 
     gemstone_py = import_module("gemstone_py")
     client = import_module("gemstone_py.client")
+    codegen = import_module("gemstone_py.codegen")
     benchmark_compare = import_module("gemstone_py.benchmark_compare")
     benchmark_baselines = import_module("gemstone_py.benchmark_baselines")
     release_metadata = import_module("gemstone_py.release_metadata")
@@ -197,6 +200,27 @@ def validate_public_api_behaviors() -> list[str]:
     if gemstone_py.registered_gemstone_classes()["ApiContractThing"] is not _ApiContractThing:
         raise AssertionError("gemstone_class did not register the wrapper")
     validated.append("typed_oop_registry")
+
+    from gemstone_py.codegen import gemstone_selector as local_gemstone_selector
+
+    @gemstone_py.gemstone_class("ApiContractCodegen")
+    class _ApiContractCodegen:
+        value: int
+
+        @classmethod
+        @local_gemstone_selector("findById:")
+        def find_by_id(cls, code: str) -> "_ApiContractCodegen":
+            del cls, code
+            raise NotImplementedError
+
+    if codegen.selector_for_method("find_by_id", ("code",)) != "findById:":
+        raise AssertionError("codegen selector inference changed unexpectedly")
+    generated_source = codegen.generate_wrapper(_ApiContractCodegen)
+    if "class _ApiContractCodegen(TypedOop[Any]):" not in generated_source:
+        raise AssertionError("codegen did not produce a TypedOop wrapper")
+    if "'findById:'" not in generated_source:
+        raise AssertionError("codegen did not preserve an explicit selector")
+    validated.append("codegen_wrapper_generation")
 
     with TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)

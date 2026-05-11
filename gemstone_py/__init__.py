@@ -78,6 +78,8 @@ _LAZY_EXPORTS = {
     "benchmark_baselines": "gemstone_py.benchmark_baselines",
     "benchmark_compare": "gemstone_py.benchmark_compare",
     "bootstrap": "gemstone_py.bootstrap",
+    "codegen": "gemstone_py.codegen",
+    "gemstone_selector": "gemstone_py.codegen",
     "inspection": "gemstone_py.inspection",
     "GemStoneSessionFacade": "gemstone_py.session_facade",
     "PersistentRoot": "gemstone_py.persistent_root",
@@ -101,7 +103,7 @@ def __getattr__(name: str) -> object:
     if target is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     module = import_module(target)
-    if name in {"GemStoneSessionFacade", "PersistentRoot"}:
+    if name in {"GemStoneSessionFacade", "PersistentRoot", "gemstone_selector"}:
         value = getattr(module, name)
     else:
         value = module
@@ -161,6 +163,7 @@ __all__ = [
     "benchmark_compare",
     "bootstrap",
     "close_flask_request_session_provider",
+    "codegen",
     "connect",
     "current_flask_request_session",
     "flask_request_session_provider",
@@ -169,6 +172,7 @@ __all__ = [
     "finalize_flask_request_session",
     "gemstone_class",
     "gemstone_class_name",
+    "gemstone_selector",
     "inspection",
     "install_flask_request_session",
     "native",

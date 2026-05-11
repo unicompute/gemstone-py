@@ -25,6 +25,7 @@ gemstone-benchmark-baseline-register = "gemstone_py.benchmark_baseline_register:
 gemstone-benchmark-compare = "gemstone_py.benchmark_compare:main_entry"
 gemstone-benchmarks = "gemstone_py.benchmarks:main_entry"
 gemstone-bootstrap = "gemstone_py.bootstrap:main_entry"
+gemstone-codegen = "gemstone_py.codegen:main_entry"
 gemstone-examples = "gemstone_py.cli:main_entry"
 gemstone-fastapi-example = "gemstone_py.fastapi_example:main_entry"
 gemstone-hello = "gemstone_py.cli:hello_entry"
@@ -100,6 +101,7 @@ files = [
   "gemstone_py/benchmark_baselines.py",
   "gemstone_py/benchmark_compare.py",
   "gemstone_py/bootstrap.py",
+  "gemstone_py/codegen.py",
   "gemstone_py/release_metadata.py",
   "gemstone_py/_smalltalk_batch.py",
   "gemstone_py/benchmarks.py",
@@ -133,6 +135,7 @@ module = [
   "gemstone_py.benchmark_baselines",
   "gemstone_py.benchmark_compare",
   "gemstone_py.bootstrap",
+  "gemstone_py.codegen",
   "gemstone_py.release_metadata",
   "gemstone_py._smalltalk_batch",
   "gemstone_py.benchmarks",
