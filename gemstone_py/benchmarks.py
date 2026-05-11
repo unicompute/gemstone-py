@@ -7,6 +7,7 @@ import json
 import platform
 import sys
 import time
+import tracemalloc
 import uuid
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
@@ -117,6 +118,46 @@ def _measure(
         ),
         value,
     )
+
+
+def _measure_with_peak_memory(
+    suite: str,
+    operation: str,
+    count: int,
+    fn: Callable[[], T],
+) -> tuple[BenchmarkResult, T]:
+    if tracemalloc.is_tracing():
+        result, value = _measure(suite, operation, count, fn)
+        return result.with_note("peak_bytes=unavailable"), value
+
+    tracemalloc.start()
+    tracemalloc.reset_peak()
+    started_at = time.perf_counter()
+    try:
+        value = fn()
+        _current, peak_bytes = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    elapsed = max(time.perf_counter() - started_at, 1e-12)
+    ops_per_second = float(count) / elapsed if count > 0 else 0.0
+    return (
+        BenchmarkResult(
+            suite=suite,
+            operation=operation,
+            count=count,
+            elapsed_seconds=elapsed,
+            ops_per_second=ops_per_second,
+            note=f"peak_bytes={peak_bytes}",
+        ),
+        value,
+    )
+
+
+def _append_note(result: BenchmarkResult, note: str) -> BenchmarkResult:
+    if result.note:
+        return result.with_note(f"{result.note}; {note}")
+    return result.with_note(note)
 
 
 def _payloads(entries: int) -> dict[str, dict[str, Any]]:
@@ -233,6 +274,41 @@ def benchmark_gscollection(
                 lambda: _gscollection_search(session, collection, search_thresholds),
             )
             results.append(result.with_note(f"matched={matched}"))
+
+            session.abort()
+            result, matched = _measure(
+                "gscollection",
+                "indexed_search_iter",
+                search_runs,
+                lambda: _gscollection_search_iter(session, collection, search_thresholds),
+            )
+            results.append(result.with_note(f"matched={matched}"))
+
+            session.abort()
+            result, rows = _measure_with_peak_memory(
+                "gscollection",
+                "all_materialize",
+                entries,
+                lambda: collection.all(session=session),
+            )
+            if len(rows) != entries:
+                raise RuntimeError(
+                    f"GSCollection all() benchmark fetched {len(rows)} rows, expected {entries}"
+                )
+            results.append(_append_note(result, f"rows={len(rows)}"))
+
+            session.abort()
+            result, streamed = _measure_with_peak_memory(
+                "gscollection",
+                "iter_stream_count",
+                entries,
+                lambda: _gscollection_iter_count(session, collection),
+            )
+            if streamed != entries:
+                raise RuntimeError(
+                    f"GSCollection iter() benchmark streamed {streamed} rows, expected {entries}"
+                )
+            results.append(_append_note(result, f"rows={streamed}"))
         finally:
             session.abort()
             GSCollection.drop(collection_name, session=session)
@@ -261,6 +337,26 @@ def _gscollection_search(
     for threshold in thresholds:
         total += len(collection.search("@age", "lt", threshold, session=session))
     return total
+
+
+def _gscollection_search_iter(
+    session: GemStoneSession,
+    collection: GSCollection,
+    thresholds: list[int],
+) -> int:
+    total = 0
+    for threshold in thresholds:
+        with collection.search_iter("@age", "lt", threshold, session=session) as records:
+            total += sum(1 for _record in records)
+    return total
+
+
+def _gscollection_iter_count(
+    session: GemStoneSession,
+    collection: GSCollection,
+) -> int:
+    with collection.iter(session=session) as records:
+        return sum(1 for _record in records)
 
 
 def benchmark_gstore(

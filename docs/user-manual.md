@@ -252,7 +252,8 @@ for post in published:
 ```
 
 For large result sets, use `iter(chunk_size=...)` to fetch records in bounded
-batches:
+batches. `all()` keeps the familiar list return value, but it materializes that
+list by consuming the same chunked iterator path:
 
 ```python
 for post in posts.where(lambda post: post.status == "published").iter(chunk_size=500):

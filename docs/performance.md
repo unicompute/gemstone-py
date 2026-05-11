@@ -50,6 +50,19 @@ Capture a JSON artifact:
 ./scripts/run_benchmarks.sh --json --output benchmark-report.json
 ```
 
+The `gscollection` suite records both the legacy materialized path and the
+streaming path:
+
+- `indexed_search` and `indexed_search_iter` compare list-returning indexed
+  search with chunked indexed iteration.
+- `all_materialize` records `collection.all()` latency and peak Python
+  allocation.
+- `iter_stream_count` records the same full-collection pass while streaming
+  through `collection.iter()`.
+
+Use a larger entry count, such as `--entries 50000`, when you want to compare
+large-result memory behavior rather than smoke-test latency.
+
 Compare two saved reports:
 
 ```bash

@@ -110,14 +110,14 @@ class GSCollectionQueryTests(unittest.TestCase):
 
         with mock.patch.object(
             col,
-            'search',
-            return_value=[{'@status': 'booked'}],
-        ) as search:
+            'search_iter',
+            return_value=iter([{'@status': 'booked'}]),
+        ) as search_iter:
             result = query.all()
 
         self.assertEqual(result[0].status, 'booked')
         self.assertEqual(result[0]['@status'], 'booked')
-        search.assert_called_once_with('@status', 'eql', 'booked', session=None)
+        search_iter.assert_called_once_with('@status', 'eql', 'booked', chunk_size=256, session=None)
 
     def test_typed_query_materializes_nested_attribute_records(self):
         col = GSCollection('Bookings')
@@ -126,8 +126,8 @@ class GSCollectionQueryTests(unittest.TestCase):
 
         with mock.patch.object(
             col,
-            'all',
-            return_value=[{'@status': 'booked', '@address': {'@zip': '90210'}}],
+            'iter',
+            return_value=iter([{'@status': 'booked', '@address': {'@zip': '90210'}}]),
         ):
             result = query.all()
 
@@ -144,21 +144,21 @@ class GSCollectionQueryTests(unittest.TestCase):
 
         with mock.patch.object(
             col,
-            'search',
-            side_effect=[
-                [{'@address': {'@zip': '90210'}, '@age': 30}],
-                [{'@address': {'@zip': '90210'}, '@age': 30}],
-            ],
-        ) as search:
+            'search_iter',
+            return_value=iter([
+                {'@address': {'@zip': '90210'}, '@age': 20},
+                {'@address': {'@zip': '90210'}, '@age': 30},
+            ]),
+        ) as search_iter:
             result = query.all()
 
         self.assertEqual(result, [{'@address': {'@zip': '90210'}, '@age': 30}])
-        self.assertEqual(
-            search.call_args_list,
-            [
-                mock.call('@address.@zip', 'eql', '90210', session=None),
-                mock.call('@age', 'gte', 21, session=None),
-            ],
+        search_iter.assert_called_once_with(
+            '@address.@zip',
+            'eql',
+            '90210',
+            chunk_size=256,
+            session=None,
         )
 
     def test_query_where_rejects_non_comparison_lambdas(self):
@@ -244,6 +244,8 @@ class GSCollectionQueryTests(unittest.TestCase):
     def test_search_materializes_records_from_result_collection(self):
         col = GSCollection('People')
         session = mock.Mock()
+        session.perform_oop.return_value = 222
+        session.perform_value.return_value = 1
 
         with mock.patch(
             'gemstone_py.gsquery._session',
@@ -257,7 +259,7 @@ class GSCollectionQueryTests(unittest.TestCase):
             ) as search_result:
                 with mock.patch.object(
                     GSCollection,
-                    '_records_from_collection_oop',
+                    '_records_from_array_range_oop',
                     autospec=True,
                     return_value=[{'@name': 'Bob', '@age': 24}],
                 ) as records:
@@ -265,7 +267,9 @@ class GSCollectionQueryTests(unittest.TestCase):
 
         self.assertEqual(result, [{'@name': 'Bob', '@age': 24}])
         search_result.assert_called_once_with(col, session, '@age', 'lt', 25)
-        records.assert_called_once_with(session, 777)
+        session.perform_oop.assert_called_once_with(777, 'asArray')
+        session.perform_value.assert_called_once_with(222, 'size')
+        records.assert_called_once_with(session, 222, 1, 1)
 
     def test_iter_reads_records_in_chunks(self):
         col = GSCollection('People')
@@ -301,6 +305,65 @@ class GSCollectionQueryTests(unittest.TestCase):
                 mock.call(session, 222, 3, 3),
             ],
         )
+
+    def test_iter_rejects_invalid_chunk_size(self):
+        col = GSCollection('People')
+
+        with self.assertRaisesRegex(ValueError, "chunk_size"):
+            col.iter(chunk_size=0, session=mock.Mock())
+
+    def test_search_iter_empty_result_does_not_fetch_array(self):
+        col = GSCollection('People')
+        session = mock.Mock()
+
+        with mock.patch.object(
+            GSCollection,
+            '_search_result_oop',
+            autospec=True,
+            return_value=gemstone.OOP_NIL,
+        ):
+            result = list(col.search_iter('@age', 'lt', 25, session=session))
+
+        self.assertEqual(result, [])
+        session.perform_oop.assert_not_called()
+        session.perform_value.assert_not_called()
+
+    def test_iterator_context_closes_owned_session_on_early_exit(self):
+        col = GSCollection('People')
+        session = mock.Mock()
+        session.perform_oop.return_value = 222
+        session.perform_value.return_value = 2
+        events = []
+
+        class SessionContext:
+            def __enter__(self):
+                events.append("enter")
+                return session
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                del exc_type, exc_val, exc_tb
+                events.append("exit")
+
+        with mock.patch(
+            'gemstone_py.gsquery._session',
+            return_value=SessionContext(),
+        ):
+            with mock.patch.object(
+                GSCollection,
+                '_set_oop',
+                autospec=True,
+                return_value=111,
+            ):
+                with mock.patch.object(
+                    GSCollection,
+                    '_records_from_array_range_oop',
+                    autospec=True,
+                    return_value=[{'@name': 'Alice'}],
+                ):
+                    with col.iter(chunk_size=1) as iterator:
+                        self.assertEqual(next(iterator), {'@name': 'Alice'})
+
+        self.assertEqual(events, ["enter", "exit"])
 
     def test_search_iter_streams_from_search_result_oop(self):
         col = GSCollection('People')
@@ -351,6 +414,34 @@ class GSCollectionQueryTests(unittest.TestCase):
             chunk_size=32,
             session=None,
         )
+
+    def test_query_iter_closes_underlying_iterator_when_generator_closes(self):
+        col = GSCollection('Bookings')
+        closed = False
+
+        class ClosingIterator:
+            def __init__(self):
+                self._items = iter([
+                    {'@status': 'booked', '@age': 30},
+                    {'@status': 'booked', '@age': 31},
+                ])
+
+            def __iter__(self):
+                return self
+
+            def __next__(self):
+                return next(self._items)
+
+            def close(self):
+                nonlocal closed
+                closed = True
+
+        with mock.patch.object(col, 'iter', return_value=ClosingIterator()):
+            iterator = col.query(BookingRecord).iter()
+            self.assertEqual(next(iterator).age, 30)
+            iterator.close()
+
+        self.assertTrue(closed)
 
     def test_list_reads_root_keys_without_pipe_serialization(self):
         session = mock.Mock()

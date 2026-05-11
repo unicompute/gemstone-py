@@ -275,6 +275,12 @@ def _smalltalk_value(v: Any) -> str:
     raise ValueError(f"Cannot convert {v!r} to a Smalltalk literal for indexed search")
 
 
+def _close_iterator(iterator: object) -> None:
+    close = getattr(iterator, "close", None)
+    if callable(close):
+        close()
+
+
 class GSCollection:
     """
     A named, persistent IdentitySet in GemStone UserGlobals.
@@ -760,11 +766,8 @@ class GSCollection:
         list[dict]
             Matching elements as Python dicts (same structure as insert()).
         """
-        with _session(session, self._config) as s:
-            result_oop = self._search_result_oop(s, ivar_path, op, value)
-            if result_oop == gemstone.OOP_NIL:
-                return []
-            return self._records_from_collection_oop(s, result_oop)
+        with self.search_iter(ivar_path, op, value, session=session) as iterator:
+            return list(iterator)
 
     def search_iter(
         self,
@@ -791,8 +794,8 @@ class GSCollection:
 
     def all(self, session: gemstone.GemStoneSession | None = None) -> List[Record]:
         """Return every element in the collection."""
-        with _session(session, self._config) as s:
-            return self._all_records(s)
+        with self.iter(session=session) as iterator:
+            return list(iterator)
 
     def iter(
         self,
@@ -1049,9 +1052,12 @@ class GSCollectionIterator(Iterator[Record]):
             self._session_cm = _session(None, self._collection._config)
             session = self._session_cm.__enter__()
         collection_oop = self._collection_oop_factory(session)
+        self._session = session
+        if collection_oop == gemstone.OOP_NIL:
+            self._size = 0
+            return
         self._array_oop = session.perform_oop(collection_oop, 'asArray')
         self._size = cast(int, session.perform_value(self._array_oop, 'size'))
-        self._session = session
 
     def _fill_buffer(self) -> None:
         self._open()
@@ -1137,20 +1143,8 @@ class Query(Generic[RecordT]):
         )
 
     def all(self) -> list[RecordT]:
-        """Materialize all records matching this query."""
-        if not self._filters:
-            return self._coerce_records(self._collection.all(session=self._session))
-
-        result: list[Record] | None = None
-        for predicate in self._filters:
-            current = self._collection.search(
-                predicate.ivar_path,
-                predicate.op,
-                predicate.value,
-                session=self._session,
-            )
-            result = current if result is None else self._collection.intersect(result, current)
-        return self._coerce_records(result or [])
+        """Materialize all records matching this query by exhausting ``iter()``."""
+        return list(self.iter())
 
     def iter(self, *, chunk_size: int = 256) -> Iterator[RecordT]:
         """
@@ -1160,6 +1154,7 @@ class Query(Generic[RecordT]):
         ``chunk_size`` batches. Additional predicates are applied Python-side to
         the streamed first-predicate result to avoid materialising every match.
         """
+        remaining: list[QueryPredicate] = []
         if not self._filters:
             records: Iterator[Record] = self._collection.iter(
                 chunk_size=chunk_size,
@@ -1174,19 +1169,23 @@ class Query(Generic[RecordT]):
                 chunk_size=chunk_size,
                 session=self._session,
             )
-            if remaining:
-                records = (
-                    record
-                    for record in records
-                    if all(_record_matches_predicate(record, predicate) for predicate in remaining)
-                )
-        for record in records:
-            yield self._coerce_record(record)
+        try:
+            for record in records:
+                if remaining and not all(
+                    _record_matches_predicate(record, predicate) for predicate in remaining
+                ):
+                    continue
+                yield self._coerce_record(record)
+        finally:
+            _close_iterator(records)
 
     def first(self, default: RecordT | None = None) -> RecordT | None:
         """Return the first matching record, or ``default`` when empty."""
-        records = self.all()
-        return records[0] if records else default
+        iterator = self.iter(chunk_size=1)
+        try:
+            return next(iterator, default)
+        finally:
+            _close_iterator(iterator)
 
     def _coerce_records(self, records: list[Record]) -> list[RecordT]:
         return [self._coerce_record(record) for record in records]

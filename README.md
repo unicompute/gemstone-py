@@ -405,7 +405,9 @@ recent = posts.where(lambda post: post.status == "published").where(
 ```
 
 For large `GSCollection` result sets, iterate in chunks instead of materializing
-the full list:
+the full list. `search()` and `all()` now use the same chunked path internally
+before returning a list, so existing callers keep their return type while new
+code can stream with bounded memory:
 
 ```python
 people = GSCollection("People", config=config)
@@ -566,6 +568,11 @@ gemstone-benchmarks --entries 500 --search-runs 20
 
 See [`docs/performance.md`](docs/performance.md) for the current committed
 benchmark baseline, methodology, and regression policy.
+
+The `gscollection` suite includes `indexed_search_iter`,
+`all_materialize`, and `iter_stream_count` so benchmark artifacts show the
+latency and peak Python allocation difference between list materialization and
+chunked streaming.
 
 To compare the low-level ctypes and PyO3 helper-call overhead without a live
 stone:

@@ -14,6 +14,9 @@ All notable changes to `gemstone-py` should be recorded here.
   pool-backed async request handling.
 - Added chunked `GSCollection.iter(...)`, `search_iter(...)`, typed
   `Query.iter(...)`, and async iterator equivalents for large result sets.
+- Made `GSCollection.search()`, `GSCollection.all()`, and typed `Query.all()`
+  materialize through the chunked iterator path, with benchmark coverage for
+  `all()` versus streaming `iter()` memory use.
 - Added `gemstone-publish-verify`, an end-to-end PyPI/TestPyPI verifier for
   project JSON, version-specific JSON, simple index pages, and temporary
   virtualenv install smoke checks.

@@ -30,6 +30,18 @@ class BenchmarkFormattingTests(unittest.TestCase):
         self.assertIn("mapping_keys", output)
         self.assertIn("400.0", output)
 
+    def test_measure_with_peak_memory_records_peak_bytes(self):
+        result, value = benchmarks._measure_with_peak_memory(
+            "gscollection",
+            "iter_stream_count",
+            3,
+            lambda: [index for index in range(3)],
+        )
+
+        self.assertEqual(value, [0, 1, 2])
+        self.assertEqual(result.count, 3)
+        self.assertIn("peak_bytes=", result.note or "")
+
 
 class BenchmarkCliTests(unittest.TestCase):
     def test_main_emits_json(self):
