@@ -432,6 +432,9 @@ install_flask_request_session(
     app,
     config=GemStoneConfig.from_env(),
     pool_size=4,
+    idle_timeout_seconds=900,
+    validation_query="1 + 1",
+    validation_interval_seconds=60,
     max_session_age=1800,
     max_session_uses=500,
     warmup_sessions=2,
@@ -443,6 +446,10 @@ install_flask_request_session(
 without a pool. `GemStoneSessionPool` is the production-safe option when you
 want concurrent request handling without sharing a single logged-in GCI
 session across threads.
+
+For operations dashboards, call `pool.stats()` to get stable counters for
+current capacity, idle/in-use sessions, total created sessions, evictions,
+validation failures, and acquire wait time.
 
 For worker models that prefer one session per thread instead of a shared pool:
 

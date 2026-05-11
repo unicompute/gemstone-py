@@ -6,6 +6,8 @@ All notable changes to `gemstone-py` should be recorded here.
 
 - Added `gemstone-bootstrap`, an idempotent GemStone-side bootstrap/audit
   command for the `GStoreRoot`, `GSQueryRoot`, and bootstrap marker roots.
+- Added `GemStoneSessionPool.stats()`, validation-query intervals, and
+  idle-timeout eviction on checkout for pooled GemStone sessions.
 - Added `gemstone-publish-verify`, an end-to-end PyPI/TestPyPI verifier for
   project JSON, version-specific JSON, simple index pages, and temporary
   virtualenv install smoke checks.

@@ -71,6 +71,16 @@ class _PoolSession:
         self.logout_calls += 1
 
 
+class _ValidationSession(_PoolSession):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.eval_calls = []
+
+    def eval(self, source):
+        self.eval_calls.append(source)
+        return 2
+
+
 class GemStoneRequestSessionTests(unittest.TestCase):
     def test_session_scope_reuses_request_scoped_session(self):
         marker = object()
@@ -409,9 +419,82 @@ class GemStoneSessionPoolTests(unittest.TestCase):
         self.assertEqual(during.maxsize, 1)
         self.assertEqual(during.in_use, 1)
         self.assertEqual(after_release.available, 1)
+        self.assertEqual(after_release.created_total, 1)
         self.assertEqual(after_release.acquire_calls, 1)
         self.assertEqual(after_release.release_calls, 1)
         self.assertTrue(after_close.closed)
+
+    def test_pool_stats_exposes_capacity_contract(self):
+        pool = gemstone.GemStoneSessionPool(
+            maxsize=1,
+            session_factory=_PoolSession,
+            stone="demo",
+            username="alice",
+            password="secret",
+        )
+
+        session = pool.acquire()
+        pool.release(session, clean=True)
+        stats = pool.stats()
+        pool.close()
+
+        self.assertIsInstance(stats, gemstone.GemStoneSessionPoolStats)
+        self.assertEqual(stats.in_use, 0)
+        self.assertEqual(stats.idle, 1)
+        self.assertEqual(stats.current_capacity, 1)
+        self.assertEqual(stats.created_total, 1)
+        self.assertEqual(stats.evicted_total, 0)
+        self.assertEqual(stats.validation_failures, 0)
+        self.assertEqual(stats.acquire_waits_total, 1)
+
+    def test_pool_validation_query_runs_after_interval(self):
+        pool = gemstone.GemStoneSessionPool(
+            maxsize=1,
+            session_factory=_ValidationSession,
+            validation_query="1 + 1",
+            validation_interval_seconds=999,
+            stone="demo",
+            username="alice",
+            password="secret",
+        )
+
+        first = pool.acquire()
+        pool.release(first, clean=True)
+        setattr(first, "_gemstone_provider_validated_at", 0.0)
+        second = pool.acquire()
+        pool.release(second, discard=True)
+        pool.close()
+
+        self.assertIs(first, second)
+        self.assertEqual(first.eval_calls, ["1 + 1", "1 + 1"])
+
+    def test_pool_discards_idle_sessions_on_checkout(self):
+        created = []
+
+        def factory(**kwargs):
+            session = _PoolSession(**kwargs)
+            created.append(session)
+            return session
+
+        pool = gemstone.GemStoneSessionPool(
+            maxsize=1,
+            session_factory=factory,
+            idle_timeout_seconds=999,
+            stone="demo",
+            username="alice",
+            password="secret",
+        )
+
+        first = pool.acquire()
+        pool.release(first, clean=True)
+        setattr(first, "_gemstone_provider_last_used_at", 0.0)
+        second = pool.acquire()
+        pool.release(second, discard=True)
+        pool.close()
+
+        self.assertIsNot(first, second)
+        self.assertEqual(created, [first, second])
+        self.assertEqual(pool.snapshot().idle_timeout_discards, 1)
 
     def test_pool_timeout_raises_timeout_error(self):
         pool = gemstone.GemStoneSessionPool(

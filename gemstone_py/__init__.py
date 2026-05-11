@@ -36,6 +36,7 @@ from .oop import (
 )
 from .web import (
     GemStoneSessionPool,
+    GemStoneSessionPoolStats,
     GemStoneSessionProvider,
     GemStoneSessionProviderEvent,
     GemStoneSessionProviderSnapshot,
@@ -98,6 +99,7 @@ __all__ = [
     "GemStoneSessionProviderEvent",
     "GemStoneSessionProvider",
     "GemStoneSessionProviderSnapshot",
+    "GemStoneSessionPoolStats",
     "GemStoneThreadLocalSessionProvider",
     "GemStoneClassWrapper",
     "GemStoneObjectProxy",

@@ -15,6 +15,7 @@ from .client import GemStoneSession, TransactionPolicy
 __all__ = [
     "GemStoneSessionProviderEvent",
     "GemStoneSessionProviderSnapshot",
+    "GemStoneSessionPoolStats",
     "GemStoneSessionProvider",
     "GemStoneSessionPool",
     "GemStoneThreadLocalSessionProvider",
@@ -47,6 +48,7 @@ class GemStoneSessionProviderSnapshot:
     max_session_age: Optional[float]
     max_session_uses: Optional[int]
     created: int
+    created_total: int
     available: int
     in_use: int
     acquire_calls: int
@@ -58,6 +60,7 @@ class GemStoneSessionProviderSnapshot:
     create_failures: int
     recycle_age_discards: int
     recycle_use_discards: int
+    idle_timeout_discards: int
     warmup_calls: int
     warmed_sessions: int
     acquire_wait_seconds: float
@@ -67,6 +70,25 @@ class GemStoneSessionProviderSnapshot:
     def metrics(self) -> dict[str, Any]:
         """Return a JSON-/metrics-friendly dict view of the snapshot."""
         return asdict(self)
+
+
+@dataclass(frozen=True)
+class GemStoneSessionPoolStats:
+    """
+    Stable pool statistics for capacity planning and metrics export.
+
+    `created_total` and `evicted_total` are monotonic counters. `current_capacity`
+    is the current number of live sessions owned by the pool.
+    """
+
+    in_use: int
+    idle: int
+    created_total: int
+    evicted_total: int
+    validation_failures: int
+    acquire_waits_total: int
+    acquire_wait_seconds_total: float
+    current_capacity: int
 
 
 @dataclass(frozen=True)
@@ -122,6 +144,9 @@ class GemStoneSessionProvider:
         acquire_timeout: Optional[float] = None,
         max_session_age: Optional[float] = None,
         max_session_uses: Optional[int] = None,
+        idle_timeout_seconds: Optional[float] = None,
+        validation_query: Optional[str] = None,
+        validation_interval_seconds: Optional[float] = None,
         metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
         event_listener: Optional[Callable[[GemStoneSessionProviderEvent], None]] = None,
         logger: Any = None,
@@ -131,6 +156,10 @@ class GemStoneSessionProvider:
             raise ValueError("GemStone session max_session_age must be > 0.")
         if max_session_uses is not None and max_session_uses < 1:
             raise ValueError("GemStone session max_session_uses must be >= 1.")
+        if idle_timeout_seconds is not None and idle_timeout_seconds <= 0:
+            raise ValueError("GemStone session idle_timeout_seconds must be > 0.")
+        if validation_interval_seconds is not None and validation_interval_seconds <= 0:
+            raise ValueError("GemStone validation_interval_seconds must be > 0.")
         self._name = name or type(self).__name__
         self._session_factory: Callable[..., GemStoneSession] = session_factory
         self._session_kwargs = dict(session_kwargs)
@@ -138,10 +167,18 @@ class GemStoneSessionProvider:
         self._acquire_timeout = acquire_timeout
         self._max_session_age = max_session_age
         self._max_session_uses = max_session_uses
+        self._idle_timeout_seconds = idle_timeout_seconds
+        self._validation_query = (
+            validation_query
+            if validation_query is not None
+            else ("1 + 1" if validation_interval_seconds is not None else None)
+        )
+        self._validation_interval_seconds = validation_interval_seconds
         self._metrics_exporter = metrics_exporter
         self._event_listener = event_listener
         self._logger = logger
         self._stats_lock = threading.Lock()
+        self._created_total = 0
         self._acquire_calls = 0
         self._release_calls = 0
         self._discard_calls = 0
@@ -151,6 +188,7 @@ class GemStoneSessionProvider:
         self._create_failures = 0
         self._recycle_age_discards = 0
         self._recycle_use_discards = 0
+        self._idle_timeout_discards = 0
         self._warmup_calls = 0
         self._warmed_sessions = 0
         self._acquire_wait_seconds = 0.0
@@ -176,11 +214,18 @@ class GemStoneSessionProvider:
         return int(getattr(session, "_gemstone_provider_use_count", 0))
 
     def _mark_session_created(self, session: GemStoneSession) -> None:
-        setattr(session, "_gemstone_provider_created_at", time.monotonic())
+        now = time.monotonic()
+        setattr(session, "_gemstone_provider_created_at", now)
         setattr(session, "_gemstone_provider_use_count", 0)
+        setattr(session, "_gemstone_provider_last_used_at", now)
+        setattr(session, "_gemstone_provider_validated_at", 0.0)
 
     def _mark_session_checked_out(self, session: GemStoneSession) -> None:
         setattr(session, "_gemstone_provider_use_count", self._session_use_count(session) + 1)
+
+    @staticmethod
+    def _mark_session_released(session: GemStoneSession) -> None:
+        setattr(session, "_gemstone_provider_last_used_at", time.monotonic())
 
     def _session_recycle_reason(self, session: GemStoneSession) -> Optional[str]:
         if self._max_session_age is not None:
@@ -189,6 +234,22 @@ class GemStoneSessionProvider:
         if self._max_session_uses is not None:
             if self._session_use_count(session) >= self._max_session_uses:
                 return "max_uses"
+        return None
+
+    def _session_idle_timeout_reason(self, session: GemStoneSession) -> Optional[str]:
+        if self._idle_timeout_seconds is None:
+            return None
+        last_used_at = float(
+            getattr(
+                session,
+                "_gemstone_provider_last_used_at",
+                self._session_created_at(session),
+            )
+        )
+        if last_used_at <= 0:
+            return "idle_timeout"
+        if time.monotonic() - last_used_at >= self._idle_timeout_seconds:
+            return "idle_timeout"
         return None
 
     def _emit_observation(
@@ -242,6 +303,7 @@ class GemStoneSessionProvider:
             session = self._session_factory(**options)
             session.login()
             self._mark_session_created(session)
+            self._record_stat("_created_total")
             return session
         except Exception:
             self._record_stat("_create_failures")
@@ -256,24 +318,50 @@ class GemStoneSessionProvider:
             self._record_stat("_healthcheck_failures")
             return False
 
+    def _session_needs_validation(self, session: GemStoneSession) -> bool:
+        if self._session_healthcheck is None and self._validation_query is None:
+            return False
+        interval = self._validation_interval_seconds
+        if interval is None:
+            return True
+        validated_at = float(getattr(session, "_gemstone_provider_validated_at", 0.0))
+        if validated_at <= 0:
+            return True
+        return time.monotonic() - validated_at >= interval
+
+    def _run_validation_query(self, session: GemStoneSession) -> bool:
+        query = self._validation_query
+        if query is None:
+            return True
+        session.eval(query)
+        return True
+
     def _session_is_healthy(self, session: GemStoneSession) -> bool:
         if getattr(session, "_logged_in", True) is False:
             self._record_stat("_healthcheck_failures")
             return False
-        if self._session_healthcheck is None:
+        if not self._session_needs_validation(session):
             return True
         try:
-            healthy = bool(self._session_healthcheck(session))
+            if self._session_healthcheck is not None:
+                healthy = bool(self._session_healthcheck(session))
+            else:
+                healthy = self._run_validation_query(session)
         except Exception:
             healthy = False
         if not healthy:
             self._record_stat("_healthcheck_failures")
+        else:
+            setattr(session, "_gemstone_provider_validated_at", time.monotonic())
         return healthy
 
     def _prepare_session_for_checkout(
         self,
         session: GemStoneSession,
     ) -> tuple[bool, Optional[str]]:
+        idle_timeout_reason = self._session_idle_timeout_reason(session)
+        if idle_timeout_reason is not None:
+            return False, idle_timeout_reason
         if not self._session_is_healthy(session):
             return False, "unhealthy"
         recycle_reason = self._session_recycle_reason(session)
@@ -298,6 +386,7 @@ class GemStoneSessionProvider:
                 max_session_age=self._max_session_age,
                 max_session_uses=self._max_session_uses,
                 created=created,
+                created_total=self._created_total,
                 available=available,
                 in_use=max(created - available, 0),
                 acquire_calls=self._acquire_calls,
@@ -309,6 +398,7 @@ class GemStoneSessionProvider:
                 create_failures=self._create_failures,
                 recycle_age_discards=self._recycle_age_discards,
                 recycle_use_discards=self._recycle_use_discards,
+                idle_timeout_discards=self._idle_timeout_discards,
                 warmup_calls=self._warmup_calls,
                 warmed_sessions=self._warmed_sessions,
                 acquire_wait_seconds=self._acquire_wait_seconds,
@@ -335,6 +425,9 @@ class GemStoneSessionPool(GemStoneSessionProvider):
         acquire_timeout: Optional[float] = None,
         max_session_age: Optional[float] = None,
         max_session_uses: Optional[int] = None,
+        idle_timeout_seconds: Optional[float] = None,
+        validation_query: Optional[str] = None,
+        validation_interval_seconds: Optional[float] = None,
         metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
         event_listener: Optional[Callable[[GemStoneSessionProviderEvent], None]] = None,
         logger: Any = None,
@@ -351,6 +444,9 @@ class GemStoneSessionPool(GemStoneSessionProvider):
             acquire_timeout=acquire_timeout,
             max_session_age=max_session_age,
             max_session_uses=max_session_uses,
+            idle_timeout_seconds=idle_timeout_seconds,
+            validation_query=validation_query,
+            validation_interval_seconds=validation_interval_seconds,
             metrics_exporter=metrics_exporter,
             event_listener=event_listener,
             logger=logger,
@@ -470,6 +566,7 @@ class GemStoneSessionPool(GemStoneSessionProvider):
             self._discard_session(session, reason=recycle_reason)
             return
         try:
+            self._mark_session_released(session)
             self._available.put_nowait(session)
             self._emit_observation("session_released", session=session)
         except queue.Full:
@@ -545,6 +642,8 @@ class GemStoneSessionPool(GemStoneSessionProvider):
             self._record_stat("_recycle_age_discards")
         elif reason == "max_uses":
             self._record_stat("_recycle_use_discards")
+        elif reason == "idle_timeout":
+            self._record_stat("_idle_timeout_discards")
         try:
             session.logout()
         except Exception:
@@ -564,6 +663,20 @@ class GemStoneSessionPool(GemStoneSessionProvider):
             created=created,
             available=self._available.qsize(),
             closed=closed,
+        )
+
+    def stats(self) -> GemStoneSessionPoolStats:
+        """Return the stable production pool statistics contract."""
+        snapshot = self.snapshot()
+        return GemStoneSessionPoolStats(
+            in_use=snapshot.in_use,
+            idle=snapshot.available,
+            created_total=snapshot.created_total,
+            evicted_total=snapshot.discard_calls,
+            validation_failures=snapshot.healthcheck_failures,
+            acquire_waits_total=snapshot.acquire_calls,
+            acquire_wait_seconds_total=snapshot.acquire_wait_seconds,
+            current_capacity=snapshot.created,
         )
 
 
@@ -814,6 +927,9 @@ def _resolve_session_provider(
     session_healthcheck: Optional[Callable[[GemStoneSession], bool]] = None,
     max_session_age: Optional[float] = None,
     max_session_uses: Optional[int] = None,
+    idle_timeout_seconds: Optional[float] = None,
+    validation_query: Optional[str] = None,
+    validation_interval_seconds: Optional[float] = None,
     metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
     event_listener: Optional[Callable[[GemStoneSessionProviderEvent], None]] = None,
     logger: Any = None,
@@ -838,6 +954,9 @@ def _resolve_session_provider(
             session_healthcheck=session_healthcheck,
             max_session_age=max_session_age,
             max_session_uses=max_session_uses,
+            idle_timeout_seconds=idle_timeout_seconds,
+            validation_query=validation_query,
+            validation_interval_seconds=validation_interval_seconds,
             metrics_exporter=metrics_exporter,
             event_listener=event_listener,
             logger=logger,
@@ -948,6 +1067,9 @@ def install_flask_request_session(
     session_healthcheck: Optional[Callable[[GemStoneSession], bool]] = None,
     max_session_age: Optional[float] = None,
     max_session_uses: Optional[int] = None,
+    idle_timeout_seconds: Optional[float] = None,
+    validation_query: Optional[str] = None,
+    validation_interval_seconds: Optional[float] = None,
     metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
     event_listener: Optional[Callable[[GemStoneSessionProviderEvent], None]] = None,
     logger: Any = None,
@@ -973,6 +1095,9 @@ def install_flask_request_session(
         session_healthcheck=session_healthcheck,
         max_session_age=max_session_age,
         max_session_uses=max_session_uses,
+        idle_timeout_seconds=idle_timeout_seconds,
+        validation_query=validation_query,
+        validation_interval_seconds=validation_interval_seconds,
         metrics_exporter=metrics_exporter,
         event_listener=event_listener,
         logger=logger,

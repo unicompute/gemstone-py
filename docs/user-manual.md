@@ -422,6 +422,21 @@ Use `GemStoneSessionPool` when:
 - you have multiple request workers
 - you want bounded reuse
 - you want production-friendly pooling semantics
+- stale sessions should be checked with a cheap validation query before reuse
+- idle sessions should be evicted instead of sitting in the pool indefinitely
+
+```python
+provider = GemStoneSessionPool(
+    maxsize=4,
+    config=GemStoneConfig.from_env(),
+    idle_timeout_seconds=900,
+    validation_query="1 + 1",
+    validation_interval_seconds=60,
+)
+
+stats = provider.stats()
+print(stats.in_use, stats.idle, stats.created_total, stats.evicted_total)
+```
 
 Use `GemStoneThreadLocalSessionProvider` when:
 

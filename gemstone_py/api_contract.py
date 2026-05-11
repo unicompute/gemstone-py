@@ -37,6 +37,7 @@ CORE_EXPORTS: dict[str, tuple[str, str]] = {
         "gemstone_py.web",
         "GemStoneSessionProviderSnapshot",
     ),
+    "GemStoneSessionPoolStats": ("gemstone_py.web", "GemStoneSessionPoolStats"),
     "GemStoneThreadLocalSessionProvider": (
         "gemstone_py.web",
         "GemStoneThreadLocalSessionProvider",
