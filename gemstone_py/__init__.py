@@ -25,6 +25,12 @@ from .client import (
     TypedOop,
     connect,
 )
+from .inspection import (
+    ClassDescription,
+    InspectedReference,
+    InspectedSlot,
+    InspectionResult,
+)
 from .observability import (
     NULL_METRICS,
     NULL_SPAN,
@@ -72,6 +78,7 @@ _LAZY_EXPORTS = {
     "benchmark_baselines": "gemstone_py.benchmark_baselines",
     "benchmark_compare": "gemstone_py.benchmark_compare",
     "bootstrap": "gemstone_py.bootstrap",
+    "inspection": "gemstone_py.inspection",
     "GemStoneSessionFacade": "gemstone_py.session_facade",
     "PersistentRoot": "gemstone_py.persistent_root",
     "concurrency": "gemstone_py.concurrency",
@@ -116,8 +123,12 @@ __all__ = [
     "GemStoneSessionProviderSnapshot",
     "GemStoneSessionPoolStats",
     "GemStoneThreadLocalSessionProvider",
+    "ClassDescription",
     "GemStoneClassWrapper",
     "GemStoneObjectProxy",
+    "InspectedReference",
+    "InspectedSlot",
+    "InspectionResult",
     "MetricsCollector",
     "ManagedOop",
     "NULL_METRICS",
@@ -158,6 +169,7 @@ __all__ = [
     "finalize_flask_request_session",
     "gemstone_class",
     "gemstone_class_name",
+    "inspection",
     "install_flask_request_session",
     "native",
     "observability",

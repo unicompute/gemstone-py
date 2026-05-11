@@ -28,6 +28,7 @@ If you are already productive and only need answers:
 - "Which example should I run first?" → [Examples Guide](examples-guide.md)
 - "How do I do X quickly?" → [Cookbook](cookbook.md)
 - "How do I trace or measure GemStone calls?" → [Observability](observability.md)
+- "How do I inspect an OOP or class?" → [User Manual](user-manual.md)
 - "What are the current benchmark numbers?" → [Performance](performance.md)
 - "I want the whole story, plus jokes." → [Funny Introduction](funny-introduction/README.md)
 - "Can I run these from VS Code?" → [`vscode-gemstone-py-workbench`](../vscode-gemstone-py-workbench/)
@@ -40,6 +41,7 @@ If you are already productive and only need answers:
 - transaction policies, session scopes, and failure behaviour
 - async sessions and FastAPI request integration
 - typed OOPs, typed `GSCollection` queries, and managed OOP lifetimes
+- OOP/class inspection and recursive debug dumps
 - optional native PyO3 backend installation and backend selection
 - the persistent data helpers:
   - `PersistentRoot`

@@ -19,6 +19,8 @@ All notable changes to `gemstone-py` should be recorded here.
   `all()` versus streaming `iter()` memory use.
 - Added `gemstone_py.observability` with no-op defaults, OpenTelemetry and
   Prometheus adapters, session operation metrics, and slow-operation logging.
+- Added `GemStoneSession.inspect(...)`, `dump(...)`, `describe_class(...)`, and
+  the `gemstone-inspect` CLI for inspecting live GemStone objects and classes.
 - Added `gemstone-publish-verify`, an end-to-end PyPI/TestPyPI verifier for
   project JSON, version-specific JSON, simple index pages, and temporary
   virtualenv install smoke checks.

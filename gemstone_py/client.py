@@ -721,6 +721,24 @@ class GemStoneSession:
             lib = self._require_login()
             return int(lib.GciFetchClass(ctypes.c_uint64(oop)))
 
+    def inspect(self, oop: int) -> Any:
+        """Return a one-level inspection result for a GemStone OOP."""
+        from gemstone_py.inspection import inspect_oop
+
+        return inspect_oop(self, oop)
+
+    def dump(self, oop: int, *, depth: int = 2) -> dict[str, Any]:
+        """Return a recursive JSON-serialisable structure dump for a GemStone OOP."""
+        from gemstone_py.inspection import dump_oop
+
+        return dump_oop(self, oop, depth=depth)
+
+    def describe_class(self, name: str) -> Any:
+        """Return superclass and instance-variable details for a GemStone class."""
+        from gemstone_py.inspection import describe_class
+
+        return describe_class(self, name)
+
     def _require_login(self) -> ctypes.CDLL:
         if not self._logged_in:
             raise GemStoneError("Not logged in. Call login() first.")

@@ -551,6 +551,27 @@ with GemStoneSession(
 
 See [`docs/observability.md`](docs/observability.md) for the full setup.
 
+## Inspect And Debug
+
+When an operation returns a raw OOP and you need to understand what it points
+to, use the built-in inspection helpers:
+
+```python
+with GemStoneSession(config=GemStoneConfig.from_env()) as session:
+    ref = session.execute("OkzBooking findById: 'B-1001'")
+    print(session.inspect(ref))
+    print(session.dump(ref, depth=2))
+    print(session.describe_class("OkzBooking"))
+```
+
+The same functionality is available from the command line:
+
+```bash
+gemstone-inspect --oop 123456789
+gemstone-inspect --oop 123456789 --dump --depth 2
+gemstone-inspect --class OkzBooking --json
+```
+
 ## Production Flask Guidance
 
 For production Flask usage:

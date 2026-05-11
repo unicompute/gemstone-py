@@ -383,6 +383,37 @@ The package also includes:
 - conflict detection helpers
 - instance listing utilities
 
+## Inspect And Debug
+
+Use inspection helpers when you have a raw OOP or class name and need to see
+what GemStone is actually holding:
+
+```python
+with GemStoneSession(config=config) as session:
+    booking = session.execute("OkzBooking findById: 'B-1001'")
+
+    inspected = session.inspect(booking)
+    print(inspected.class_name, inspected.summary)
+
+    dump = session.dump(booking, depth=2)
+    print(dump["slots"])
+
+    description = session.describe_class("OkzBooking")
+    print(description.instvars)
+```
+
+The command-line form uses the same implementation:
+
+```bash
+gemstone-inspect --oop 123456789
+gemstone-inspect --oop 123456789 --dump --depth 2
+gemstone-inspect --class OkzBooking --json
+```
+
+`inspect()` returns a one-level `InspectionResult`; slot values are
+`InspectedReference` objects with OOP, class name, and summary. `dump()` follows
+those references recursively and marks cycles.
+
 ### Commit Conflicts
 
 When two sessions modify the same object and both try to commit, GemStone raises
