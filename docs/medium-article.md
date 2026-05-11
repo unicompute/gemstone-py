@@ -757,6 +757,44 @@ gemstone-py
 └── benchmarks               benchmark CLIs + GitHub workflow tooling
 ```
 
+## What Changed in the Latest gemstone-py Work
+
+The latest work was not one feature. It was a full pass across the project so a
+new user can start quickly, a production user can see the operational shape, and
+a power user can work with GemStone objects through typed Python code.
+
+The most important piece is **Codegen**. `gemstone-codegen` turns registered
+Protocol classes into concrete Python wrappers, including async wrappers and
+`.pyi` stubs. Instead of repeating raw Smalltalk strings throughout an
+application, a project can define the GemStone-side protocol once, generate
+wrappers, and get Python methods, type-checker support, and IDE autocomplete.
+That is the path from "Python can talk to GemStone" to "GemStone feels like a
+typed object database from Python."
+
+The broader plan landed around that center:
+
+| Area | What changed | Where to look |
+| --- | --- | --- |
+| Pool + health | Sync and async pool surfaces expose validation, idle cleanup, and stable stats. | `gemstone_py.session_providers`, `gemstone_py.aio.pool` |
+| Streaming results | Collection and query iteration can stream results instead of forcing every caller through list materialization. | `GSCollection.search_iter(...)`, `Query.iter(...)`, `AsyncGSCollection.search_iter(...)` |
+| Codegen | Protocol-to-wrapper generation now supports typed methods, async wrappers, stubs, cleanup, and drift checks. | `gemstone_py.codegen`, `examples/typed_access/codegen_demo/`, `docs/codegen.md` |
+| Observability | Sessions and providers can emit metrics and tracing data without hard dependencies. | `gemstone_py.observability`, `docs/observability.md` |
+| Migrations | The migration CLI now has planning, dry runs, recorded dry runs, locking, status, rollback, and class-diff helpers. | `gemstone_py.migrations`, `gemstone-migrations` |
+| Inspect/debug | Python exposes object/class inspection helpers that are useful outside VS Code. | `GemStoneSession.inspect(...)`, `dump(...)`, `describe_class(...)` |
+| Web adapters | Request lifecycle logic is shared through `web_core`, with Flask, Django, FastAPI, and Litestar adapters on top. | `docs/framework-adapters.md`, `examples/fastapi/`, `examples/litestar/` |
+| Examples | The quickstart, realistic app, cookbook index, and CLI map make it clear where to begin. | `examples/quickstart.py`, `examples/webstack/`, `examples/cookbook/`, `gemstone-examples list` |
+| Performance | Benchmark tooling is surfaced through a public performance page and release workflow. | `docs/performance.md`, `gemstone-benchmarks` |
+| Native wheels | The native backend has a broader wheel matrix and release verification flow. | `gemstone-py-native/`, `gemstone-py[fast]` |
+| Bootstrap | GemStone-side helper roots can be audited and initialized from Python. | `gemstone-bootstrap`, `docs/setup-guide.md` |
+
+For a compact maintainer map, run:
+
+```bash
+gemstone-examples plan3-map
+```
+
+or read `docs/plan3-feature-map.md`.
+
 ---
 
 ## Links
