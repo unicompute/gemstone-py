@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.0
+
+- Added `gemstone-py: Open Database Explorer in VS Code`, which embeds the
+  configured database explorer URL in a VS Code webview while keeping the
+  external browser command available.
+- Added action buttons to `gemstone-py: Verify Workbench Setup` for opening
+  settings, copying the report, and copying the environment export script.
+- Added Jasper handoff status to the setup verification report.
+- Added live extension-host CI coverage that can assert the setup verifier
+  reaches a real GemStone stone and returns `7`.
+- Added full release verification automation and Marketplace publisher-domain
+  checks.
+- Added a Marketplace/GitHub workflow screenshot for configure, verify, and
+  embedded explorer usage.
+
 ## 0.1.11
 
 - Added `gemstone-py: Configure Workbench`, a first-run setup command for

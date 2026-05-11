@@ -41,6 +41,13 @@ class AggregateCliTests(unittest.TestCase):
         self.assertEqual(result, 0)
         run_demo.assert_called_once_with()
 
+    def test_main_dispatches_quickstart(self):
+        with mock.patch("gemstone_py.cli.run_quickstart") as run_demo:
+            result = cli.main(["quickstart"])
+
+        self.assertEqual(result, 0)
+        run_demo.assert_called_once_with()
+
     def test_main_dispatches_fastapi_example(self):
         with mock.patch("gemstone_py.cli.run_fastapi_example", return_value=0) as run_demo:
             result = cli.main(["fastapi", "--host", "0.0.0.0", "--port", "9001", "--reload"])

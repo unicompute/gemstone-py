@@ -15,6 +15,8 @@ class ReleaseAllScriptTests(unittest.TestCase):
         self.assertIn("npm run test:integration", content)
         self.assertIn("npx vsce package --no-dependencies", content)
         self.assertIn("npx vsce show unicompute.gemstone-py-workbench --json", content)
+        self.assertIn("REQUIRE_VSCODE_DOMAIN_VERIFIED", content)
+        self.assertIn("publisher.isDomainVerified", content)
         self.assertIn("gh release view \"v${gemstone_version}\"", content)
         self.assertIn("gh release view \"vscode-workbench-v${vscode_version}\"", content)
         self.assertIn("SHA256SUMS", content)

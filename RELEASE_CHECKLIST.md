@@ -121,21 +121,47 @@ Marketplace listing, and can create or update the scoped GitHub release
 `vscode-workbench-v<version>`. The release upload includes the VSIX and a
 matching `.vsix.sha256` checksum file.
 
-16. Update external documentation surfaces:
+16. Verify the Marketplace publisher domain.
+
+The VS Code workflow checks that the publisher domain is
+`https://unicompute.com`. After the Microsoft Marketplace portal reports the
+domain as verified, run the workflow with `require-domain-verified=true`, or
+check from a shell:
+
+```bash
+npx vsce show unicompute.gemstone-py-workbench --json
+```
+
+If `isDomainVerified` is still `false`, open the `unicompute` publisher in the
+Marketplace management portal, start domain verification, publish the DNS record
+Microsoft provides, and rerun the check.
+
+17. Run the scheduled/manual `Full Release Verify` workflow after production
+publishes. It runs `scripts/release_all.sh` without skips, including package
+tests, native checks, PyPI/TestPyPI verification, VSIX packaging, Marketplace
+version and domain checks, and GitHub release asset checks.
+
+18. Run the manual `VS Code Workbench Live` workflow on the GemStone host when
+you want the extension-host test to execute `gemstone-py: Verify Workbench
+Setup` against the real stone and assert that `3 + 4` returns `7`.
+
+19. Update external documentation surfaces:
 
 - GitHub release notes for the package tag
 - Visual Studio Marketplace release notes/screenshots when the VSIX changed
 - Medium article Markdown/PDF when docs changed
 
-17. Tag and publish only after the checks above are green.
+20. Tag and publish only after the checks above are green.
 
 For GitHub automation:
 
 - use the manual `Release Dry Run` workflow to validate metadata, run CI, and upload build artifacts without publishing
 - use the manual `Release TestPyPI` workflow for a trusted-publishing rehearsal against TestPyPI
 - use the manual `Post Release Verify` workflow after production publish
+- use the scheduled/manual `Full Release Verify` workflow after production publish to run the complete local/public wrapper without skips
 - use `gemstone-publish-verify` after TestPyPI/PyPI publishes to check both indexes directly
 - use the manual `VS Code Extension` workflow to publish the VSIX after updating screenshots, docs, or extension behavior
+- use the manual `VS Code Workbench Live` workflow to test the extension setup verifier against the real GemStone host
 - push a tag like `v0.1.1` to trigger the `Release` workflow and create a GitHub release
 - configure PyPI trusted publishing for the repository's `pypi` GitHub environment
 - configure TestPyPI trusted publishing for the repository's `testpypi` GitHub environment
@@ -150,6 +176,7 @@ Trusted publisher values for this repository:
 - TestPyPI workflow: `.github/workflows/release-testpypi.yml`
 - TestPyPI environment: `testpypi`
 - VSIX workflow: `.github/workflows/vscode-extension.yml`
+- VSIX live workflow: `.github/workflows/vscode-workbench-live.yml`
 - VSIX secret: `VSCE_PAT`
 - VSIX Marketplace item: `unicompute.gemstone-py-workbench`
 

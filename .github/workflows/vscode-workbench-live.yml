@@ -1,0 +1,77 @@
+name: VS Code Workbench Live
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner-labels:
+        description: JSON array of runner labels for the GemStone host
+        required: true
+        default: '["self-hosted","macOS","ARM64","gemstone-py-local"]'
+
+permissions:
+  contents: read
+
+jobs:
+  live-verify-workbench-setup:
+    runs-on: ${{ fromJson(inputs.runner-labels) }}
+    env:
+      RUNNER_TOOL_CACHE: /Users/tariq/src/actions-runner-gemstone-py/hostedtoolcache
+      AGENT_TOOLSDIRECTORY: /Users/tariq/src/actions-runner-gemstone-py/hostedtoolcache
+      GEMSTONE: ${{ secrets.GEMSTONE }}
+      GS_LIB: ${{ secrets.GS_LIB != '' && secrets.GS_LIB || '/Users/tariq/GemStone64Bit3.7.5-arm64.Darwin/lib' }}
+      GS_LIB_PATH: ${{ secrets.GS_LIB_PATH != '' && secrets.GS_LIB_PATH || '/Users/tariq/GemStone64Bit3.7.5-arm64.Darwin/lib/libgcirpc-3.7.5-64.dylib' }}
+      GS_STONE: ${{ secrets.GS_STONE != '' && secrets.GS_STONE || 'gs64stone' }}
+      GS_STONE_NAME: ${{ secrets.GS_STONE_NAME != '' && secrets.GS_STONE_NAME || secrets.GS_STONE != '' && secrets.GS_STONE || 'gs64stone' }}
+      GS_HOST: ${{ secrets.GS_HOST != '' && secrets.GS_HOST || 'localhost' }}
+      GS_NETLDI: ${{ secrets.GS_NETLDI != '' && secrets.GS_NETLDI || 'netldi' }}
+      GS_GEM_SERVICE: ${{ secrets.GS_GEM_SERVICE != '' && secrets.GS_GEM_SERVICE || 'gemnetobject' }}
+      GS_USERNAME: ${{ secrets.GS_USERNAME }}
+      GS_PASSWORD: ${{ secrets.GS_PASSWORD }}
+      GS_HOST_USERNAME: ${{ secrets.GS_HOST_USERNAME }}
+      GS_HOST_PASSWORD: ${{ secrets.GS_HOST_PASSWORD }}
+      DYLD_LIBRARY_PATH: ${{ secrets.DYLD_LIBRARY_PATH }}
+      GEMSTONE_PY_LIVE_SETUP_VERIFY: "1"
+      GEMSTONE_PY_LIVE_REPO: ${{ github.workspace }}
+      GEMSTONE_PY_LIVE_PYTHON: ${{ github.workspace }}/.venv/bin/python
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: vscode-gemstone-py-workbench/package-lock.json
+
+      - name: Cache VS Code test host
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: vscode-gemstone-py-workbench/.vscode-test
+          key: vscode-test-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('vscode-gemstone-py-workbench/package-lock.json') }}
+          restore-keys: |
+            vscode-test-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Validate live workbench configuration
+        shell: bash
+        run: |
+          python3 --version
+          test -n "${GS_USERNAME}" || { echo "Missing GS_USERNAME secret"; exit 1; }
+          test -n "${GS_PASSWORD}" || { echo "Missing GS_PASSWORD secret"; exit 1; }
+          test -n "${GS_STONE}" || { echo "Missing GS_STONE secret"; exit 1; }
+          test -n "${GS_LIB}" || { echo "Missing GS_LIB"; exit 1; }
+
+      - name: Install package and extension dependencies
+        shell: bash
+        run: |
+          python3 -m venv .venv
+          . .venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install -e .[dev]
+          npm ci --prefix vscode-gemstone-py-workbench
+
+      - name: Compile extension
+        working-directory: vscode-gemstone-py-workbench
+        run: npm run compile
+
+      - name: Live Verify Workbench Setup
+        working-directory: vscode-gemstone-py-workbench
+        run: npm run test:integration:live

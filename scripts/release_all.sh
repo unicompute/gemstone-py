@@ -154,8 +154,19 @@ if [[ "${run_public_verify}" == "1" ]]; then
     const expected = process.env.EXPECTED_VERSION;
     const payload = JSON.parse(fs.readFileSync("marketplace.json", "utf8"));
     const versions = (payload.versions || []).map((entry) => entry.version);
+    const publisher = payload.publisher || {};
     if (payload.displayName !== "gemstone-py Workbench") {
       throw new Error(`Unexpected Marketplace display name: ${payload.displayName}`);
+    }
+    if (publisher.domain !== "https://unicompute.com") {
+      throw new Error(`Unexpected Marketplace publisher domain: ${publisher.domain}`);
+    }
+    if (publisher.isDomainVerified !== true) {
+      const message = "Marketplace publisher domain is not verified for unicompute.com";
+      if (process.env.REQUIRE_VSCODE_DOMAIN_VERIFIED === "1") {
+        throw new Error(message);
+      }
+      console.warn(`WARNING: ${message}`);
     }
     if (versions[0] !== expected) {
       throw new Error(`Marketplace latest version is ${versions[0]}, expected ${expected}`);

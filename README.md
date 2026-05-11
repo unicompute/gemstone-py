@@ -99,6 +99,31 @@ For the web examples without the full development toolchain:
 python3 -m pip install -e ".[examples]"
 ```
 
+## Quickstart
+
+For the smallest live example from a source checkout:
+
+```bash
+export GS_LIB=/opt/gemstone/product/lib
+export GS_STONE=gs64stone
+export GS_STONE_NAME=gs64stone
+export GS_USERNAME=DataCurator
+export GS_PASSWORD=swordfish
+python -m examples.quickstart
+```
+
+The same flow in application code:
+
+```python
+from gemstone_py import GemStoneConfig, GemStoneSession, TransactionPolicy
+from gemstone_py.persistent_root import PersistentRoot
+
+config = GemStoneConfig.from_env()
+with GemStoneSession(config=config, transaction_policy=TransactionPolicy.COMMIT_ON_SUCCESS) as session:
+    print(session.eval("3 + 4"))
+    PersistentRoot(session)["GemstonePyQuickstart"] = {"message": "Hello from Python"}
+```
+
 Installed demo commands:
 
 ```bash
@@ -107,6 +132,7 @@ gemstone-benchmarks
 gemstone-hello
 gemstone-smalltalk-demo
 gemstone-examples hello
+gemstone-examples quickstart
 gemstone-examples smalltalk-demo
 gemstone-examples fastapi --reload
 gemstone-fastapi-example --reload
@@ -116,6 +142,7 @@ gemstone-publish-verify --gemstone-version 0.2.10 --native-version 0.1.2 --skip-
 Feature examples from the repository checkout:
 
 ```bash
+python -m examples.quickstart
 python -m examples.async_features.session_root_and_collection
 python -m examples.typed_access.typed_oops_and_queries
 python -m examples.lifetime.managed_oop_handles
@@ -126,7 +153,8 @@ python -m examples.fastapi.run --reload
 The repository also includes a companion VS Code extension scaffold under
 [`vscode-gemstone-py-workbench/`](vscode-gemstone-py-workbench/). It adds a
 GemStone Py sidebar for running examples, checking the active backend, opening
-docs/PDFs, launching the Python database explorer, and running maintainer checks.
+docs/PDFs, launching or embedding the Python database explorer, and running
+maintainer checks.
 Use Jasper for full GemStone/S Smalltalk IDE work; use this workbench for the
 Python-facing `gemstone-py` workflow.
 
@@ -146,6 +174,7 @@ launch a local `python-gemstone-database-explorer` checkout, or run
 first-run setup. After configuration, run `gemstone-py: Verify Workbench Setup`
 to check Python paths, `GS_STONE`/`GS_STONE_NAME`, credentials, native backend
 state, and live GemStone connectivity from one output report.
+The report can open settings, copy itself, or copy an environment export script.
 
 Operational helper scripts:
 
@@ -483,6 +512,9 @@ Run the maintained benchmark lane against a configured stone:
 gemstone-benchmarks --entries 500 --search-runs 20
 ```
 
+See [`docs/performance.md`](docs/performance.md) for the current committed
+benchmark baseline, methodology, and regression policy.
+
 To compare the low-level ctypes and PyO3 helper-call overhead without a live
 stone:
 
@@ -712,6 +744,7 @@ For repository operations:
 - use `Native Wheels` with `publish-to-testpypi=true` before publishing the optional native package
 - use `./scripts/run_native_checks.sh` before starting the native wheel publish workflow
 - use `Post Release Verify` after a real PyPI publish to validate the public artifact and metadata
+- use `Full Release Verify` after publishing to run `scripts/release_all.sh` without skips against PyPI, TestPyPI, Marketplace, GitHub release assets, and VSIX packaging
 - use `gemstone-publish-verify --gemstone-version <version> --native-version <native-version>` to check PyPI and TestPyPI from your shell
 - use `Native Wheels` with `publish-to-pypi=true` and a matching native `release-tag` only after the native wheel matrix passes on all target platforms
 - use the real `Release` workflow only after `CHANGELOG.md`, `pyproject.toml`, live checks, and benchmarks all match the intended version

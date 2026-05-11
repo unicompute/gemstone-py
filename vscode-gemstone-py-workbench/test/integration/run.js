@@ -11,12 +11,24 @@ async function main() {
   const workspacePath = fs.mkdtempSync(
     path.join(os.tmpdir(), "gemstone-py-workbench-"),
   );
+  const userDataPath = fs.mkdtempSync(
+    path.join(os.tmpdir(), "gemstone-py-workbench-user-data-"),
+  );
+  const extensionsPath = fs.mkdtempSync(
+    path.join(os.tmpdir(), "gemstone-py-workbench-extensions-"),
+  );
 
   await runTests({
     extensionDevelopmentPath,
     extensionTestsPath,
-    launchArgs: [workspacePath, "--disable-workspace-trust"],
+    launchArgs: [
+      workspacePath,
+      "--disable-workspace-trust",
+      `--user-data-dir=${userDataPath}`,
+      `--extensions-dir=${extensionsPath}`,
+    ],
     extensionTestsEnv: {
+      ...process.env,
       GEMSTONE_PY_INTEGRATION_WORKSPACE: workspacePath,
     },
   });

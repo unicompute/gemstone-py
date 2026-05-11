@@ -307,17 +307,19 @@ def main() -> int:
         BuildTarget("user-manual", "gemstone-py User Manual", "Core APIs, transaction model, persistence helpers, and web integration", (DOCS_DIR / "user-manual.md",)),
         BuildTarget("examples-guide", "gemstone-py Examples Guide", "A tour of the examples tree with diagrams and screenshots", (DOCS_DIR / "examples-guide.md",)),
         BuildTarget("cookbook", "gemstone-py Cookbook", "Task-focused recipes for daily use", (DOCS_DIR / "cookbook.md",)),
+        BuildTarget("performance", "gemstone-py Performance", "Benchmark methodology, current baseline numbers, and regression policy", (DOCS_DIR / "performance.md",)),
         BuildTarget("medium-article", "Talking to GemStone/S from Python", "A complete article-style guide to gemstone-py", (DOCS_DIR / "medium-article.md",)),
         BuildTarget(
             "core-guides-companion",
             "gemstone-py Companion Manual",
-            "Setup guide, user manual, examples guide, and cookbook in one volume",
+            "Setup guide, user manual, examples guide, cookbook, and performance notes in one volume",
             (
                 DOCS_DIR / "README.md",
                 DOCS_DIR / "setup-guide.md",
                 DOCS_DIR / "user-manual.md",
                 DOCS_DIR / "examples-guide.md",
                 DOCS_DIR / "cookbook.md",
+                DOCS_DIR / "performance.md",
             ),
         ),
         BuildTarget(

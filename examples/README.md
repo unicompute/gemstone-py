@@ -2,6 +2,34 @@
 
 Runnable examples for `gemstone-py`.
 
+## Start Here
+
+Run the quickstart first. It is intentionally small: connect, evaluate
+Smalltalk, write a value under `UserGlobals`, and read it back.
+
+```bash
+python -m examples.quickstart
+```
+
+Then use the broader examples as a cookbook. The import paths are stable and
+are referenced by tests and docs, so the examples stay in their current
+directories rather than being moved under a physical `cookbook/` package.
+
+## Example Map
+
+| Role | Path | Use it when |
+| --- | --- | --- |
+| Quickstart | `examples/quickstart.py` | You want the smallest live connection example. |
+| Grand tour | `examples/example.py` | You want one script that touches most persistence helpers. |
+| Realistic reference app | `examples/webstack/` | You want a web app with users, follows, and persisted posts. |
+| Async/FastAPI cookbook | `examples/async_features/`, `examples/fastapi/` | You need async sessions or request dependencies. |
+| Typed-access cookbook | `examples/typed_access/` | You want `TypedOop`, protocols, and typed queries. |
+| Lifetime cookbook | `examples/lifetime/` | You need managed OOP/export-set lifetime examples. |
+| Native backend cookbook | `examples/native_backend/` | You need to verify `ctypes` versus native backend selection. |
+| Persistence cookbook | `examples/persistence/` | You want indexing, migrations, key/value, and collection recipes. |
+| Flask cookbook | `examples/flask/` | You need request sessions, Flask sessions, or small web ports. |
+| Django comparison | `examples/django/myapp/` | You want a familiar Django CRUD comparison app. |
+
 ## Feature Mapping
 
 | GemStone / app concept | Python example surface |
@@ -13,7 +41,7 @@ Runnable examples for `gemstone-py`.
 | Optional native backend discovery | `examples/native_backend/` |
 | Model-style helpers | `gemstone_model.py` |
 | Request transaction wrapper | Flask `SessionInterface` / `before_request` |
-| Web application examples | Flask / Django |
+| Web application examples | Flask / Django / `examples/webstack/` |
 
 ## Prerequisites
 
@@ -57,6 +85,18 @@ gemstone-smalltalk-demo
 For Flask examples that install request-session handling, use
 `flask_request_session_provider_snapshot(app)` to inspect pool/provider state
 and `close_flask_request_session_provider(app)` during explicit shutdown.
+
+---
+
+## quickstart.py
+
+The canonical first live example. It verifies the connection with `3 + 4`,
+stores a small Python dictionary under `UserGlobals`, and reads it back.
+
+```
+python -m examples.quickstart
+gemstone-examples quickstart
+```
 
 ---
 

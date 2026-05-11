@@ -19,6 +19,10 @@ on:
         description: Create or update a scoped GitHub release after Marketplace publish
         required: true
         default: "false"
+      require-domain-verified:
+        description: Fail unless the Marketplace publisher domain is verified
+        required: true
+        default: "false"
 
 permissions:
   contents: read
@@ -158,6 +162,8 @@ jobs:
 
       - name: Verify Marketplace version
         shell: bash
+        env:
+          REQUIRE_DOMAIN_VERIFIED: ${{ github.event.inputs['require-domain-verified'] }}
         run: |
           expected_version="$(node -p "require('./package.json').version")"
           for attempt in $(seq 1 20); do
@@ -165,10 +171,22 @@ jobs:
               if EXPECTED_VERSION="${expected_version}" node -e '
               const fs = require("fs");
               const expected = process.env.EXPECTED_VERSION;
+              const requireDomainVerified = process.env.REQUIRE_DOMAIN_VERIFIED === "true";
               const payload = JSON.parse(fs.readFileSync("marketplace.json", "utf8"));
               const versions = (payload.versions || []).map((entry) => entry.version);
+              const publisher = payload.publisher || {};
               if (payload.displayName !== "gemstone-py Workbench") {
                 throw new Error(`Unexpected Marketplace display name: ${payload.displayName}`);
+              }
+              if (publisher.domain !== "https://unicompute.com") {
+                throw new Error(`Unexpected Marketplace publisher domain: ${publisher.domain}`);
+              }
+              if (publisher.isDomainVerified !== true) {
+                const message = "Marketplace publisher domain is not verified for unicompute.com";
+                if (requireDomainVerified) {
+                  throw new Error(message);
+                }
+                console.warn(`WARNING: ${message}`);
               }
               if (!versions.includes(expected)) {
                 throw new Error(`Marketplace versions ${versions.join(", ")} do not include ${expected}`);

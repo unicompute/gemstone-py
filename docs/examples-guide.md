@@ -23,11 +23,11 @@ This guide is organized around what you are trying to learn:
 
 If you want the shortest path:
 
-1. run `examples/example.py`
-2. run `examples/misc/smalltalk_demo.py`
-3. run one feature example from `async_features/`, `typed_access/`, or `lifetime/`
-4. inspect one persistence example
-5. inspect one Flask or FastAPI example
+1. run `examples/quickstart.py`
+2. run `examples/example.py`
+3. run `examples/misc/smalltalk_demo.py`
+4. run one feature example from `async_features/`, `typed_access/`, or `lifetime/`
+5. inspect one persistence example or web example
 
 ## Common Setup
 
@@ -49,6 +49,7 @@ Run examples as modules from the repository root so imports resolve exactly as
 they do in CI:
 
 ```bash
+python -m examples.quickstart
 python -m examples.misc.smalltalk_demo
 python -m examples.async_features.session_root_and_collection
 ```
@@ -90,8 +91,8 @@ python -m examples.fastapi.run --reload
 The repository now includes `vscode-gemstone-py-workbench/`, a companion VS Code
 extension scaffold for the Python-facing workflow. It adds a GemStone Py sidebar
 with example runners, environment/backend checks, docs/PDF launchers,
-maintainer scripts, Jasper links, and a launcher for
-`python-gemstone-database-explorer`.
+maintainer scripts, Jasper links, setup verification actions, and launcher plus
+webview commands for `python-gemstone-database-explorer`.
 
 Install it from the Visual Studio Marketplace:
 
@@ -117,9 +118,28 @@ workspace is the `gemstone-py` checkout, and set `gemstonePy.explorerPath` to a
 local `python-gemstone-database-explorer` checkout when you want explorer
 commands.
 
+## `examples/quickstart.py`: The First Live Check
+
+Start here when you want the shortest path from environment variables to a
+confirmed GemStone round trip.
+
+```bash
+python -m examples.quickstart
+gemstone-examples quickstart
+```
+
+It does three things:
+
+- connects with `GemStoneConfig.from_env()`
+- verifies the session with `3 + 4`
+- stores a small dictionary under `UserGlobals` through `PersistentRoot`
+
+This is the example to copy when you are creating a new application skeleton.
+The other examples are cookbook entries for specific features.
+
 ## `examples/example.py`: The Grand Tour
 
-If you only run one example, run this one.
+If you only run one broad example after the quickstart, run this one.
 
 Why it matters:
 
@@ -766,16 +786,18 @@ You need both. They are not interchangeable.
 
 ### Path 1: New user
 
-1. `examples/example.py`
-2. `examples/misc/smalltalk_demo.py`
-3. this guide again, now with less fear
+1. `examples/quickstart.py`
+2. `examples/example.py`
+3. `examples/misc/smalltalk_demo.py`
+4. this guide again, now with less fear
 
 ### Path 2: Persistence-focused user
 
-1. `examples/example.py`
-2. `examples/persistence/indexing/*`
-3. `examples/persistence/gstore/main.py`
-4. `examples/persistence/migrations/*`
+1. `examples/quickstart.py`
+2. `examples/example.py`
+3. `examples/persistence/indexing/*`
+4. `examples/persistence/gstore/main.py`
+5. `examples/persistence/migrations/*`
 
 ### Path 3: Async or FastAPI user
 
@@ -808,7 +830,8 @@ You need both. They are not interchangeable.
 
 1. `examples/native_backend/check_backend.py`
 2. `gemstone-benchmarks --suite gci --entries 1000000`
-3. `./scripts/run_native_checks.sh`
+3. `docs/performance.md`
+4. `./scripts/run_native_checks.sh`
 
 ## Practical Advice
 

@@ -645,6 +645,8 @@ learning or maintaining `gemstone-py`:
 - rebuild the documentation PDFs
 - run CI, live checks, benchmarks, and native checks explicitly
 - launch a configured `python-gemstone-database-explorer` checkout
+- embed the running database explorer in a VS Code webview
+- verify the workbench setup and copy the resulting report or export script
 - open Jasper when you need Smalltalk IDE tooling
 
 By default, the extension treats the current VS Code workspace as the

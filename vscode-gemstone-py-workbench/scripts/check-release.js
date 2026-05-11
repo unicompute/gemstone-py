@@ -80,6 +80,7 @@ const screenshotNames = [
   "examples-runner.png",
   "environment-checks.png",
   "database-explorer.png",
+  "workbench-setup-flow.png",
 ];
 
 for (const screenshotName of screenshotNames) {

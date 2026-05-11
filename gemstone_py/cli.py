@@ -7,11 +7,19 @@ import platform
 import sys
 from collections.abc import Sequence
 
-from gemstone_py.example_support import MANUAL_POLICY, example_session
+from gemstone_py.example_support import (
+    MANUAL_POLICY,
+    WRITE_POLICY,
+    example_config,
+    example_session,
+)
 from gemstone_py.fastapi_example import add_runner_arguments
 from gemstone_py.fastapi_example import main as run_fastapi_example
+from gemstone_py.persistent_root import PersistentRoot
 from gemstone_py.session_facade import GemStoneSessionFacade
 from gemstone_py.smalltalk_bridge import SmalltalkBridge
+
+QUICKSTART_ROOT_KEY = "GemstonePyQuickstart"
 
 
 def run_hello() -> None:
@@ -19,6 +27,25 @@ def run_hello() -> None:
     print("Hello from:")
     print(f"  Python version: {sys.version.split()[0]}")
     print(f"  Python engine:  {platform.python_implementation()}")
+
+
+def run_quickstart() -> None:
+    """Run the smallest live GemStone connection example."""
+    config = example_config()
+    with example_session(transaction_policy=WRITE_POLICY) as session:
+        print(f"Connected to {config.stone} as {config.username}.")
+        print(f"3 + 4 = {session.eval('3 + 4')}")
+
+        root = PersistentRoot(session)
+        root[QUICKSTART_ROOT_KEY] = {
+            "message": "Hello from Python",
+            "stone": config.stone,
+        }
+        saved = root[QUICKSTART_ROOT_KEY]
+        saved_message = saved["message"]
+        saved_stone = saved["stone"]
+
+    print(f"Saved {QUICKSTART_ROOT_KEY}: {saved_message} on {saved_stone}")
 
 
 def run_smalltalk_demo() -> None:
@@ -68,6 +95,10 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.required = True
     subparsers.add_parser("hello", help="Print Python runtime information.")
     subparsers.add_parser(
+        "quickstart",
+        help="Run the smallest live GemStone connection example.",
+    )
+    subparsers.add_parser(
         "smalltalk-demo",
         help="Run the Smalltalk bridge demo against GemStone.",
     )
@@ -86,6 +117,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "hello":
         run_hello()
+        return 0
+    if args.command == "quickstart":
+        run_quickstart()
         return 0
     if args.command == "smalltalk-demo":
         run_smalltalk_demo()

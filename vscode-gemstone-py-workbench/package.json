@@ -2,7 +2,7 @@
   "name": "gemstone-py-workbench",
   "displayName": "gemstone-py Workbench",
   "description": "Run gemstone-py examples, check GemStone environment state, open docs, and launch the Python GemStone database explorer.",
-  "version": "0.1.11",
+  "version": "0.2.0",
   "publisher": "unicompute",
   "icon": "media/emerald-logo.png",
   "license": "MIT",
@@ -46,11 +46,14 @@
     "onCommand:gemstonePy.showEnvironment",
     "onCommand:gemstonePy.configureWorkbench",
     "onCommand:gemstonePy.verifyWorkbenchSetup",
+    "onCommand:gemstonePy.openSettings",
+    "onCommand:gemstonePy.copySetupReport",
     "onCommand:gemstonePy.copyEnvScript",
     "onCommand:gemstonePy.checkBackend",
     "onCommand:gemstonePy.openSetupGuide",
     "onCommand:gemstonePy.launchDatabaseExplorer",
     "onCommand:gemstonePy.openDatabaseExplorer",
+    "onCommand:gemstonePy.openDatabaseExplorerWebview",
     "onCommand:gemstonePy.runDatabaseExplorerTests",
     "onCommand:gemstonePy.runDatabaseExplorerUiTests",
     "onCommand:gemstonePy.runDatabaseExplorerLiveUiTests",
@@ -104,12 +107,16 @@
           "default": {
             "GEMSTONE": "",
             "GS_LIB": "",
+            "GS_LIB_PATH": "",
             "GS_STONE": "gs64stone",
             "GS_STONE_NAME": "gs64stone",
             "GS_USERNAME": "DataCurator",
             "GS_PASSWORD": "",
             "GS_HOST": "localhost",
             "GS_NETLDI": "netldi",
+            "GS_GEM_SERVICE": "gemnetobject",
+            "GS_HOST_USERNAME": "",
+            "GS_HOST_PASSWORD": "",
             "DYLD_LIBRARY_PATH": ""
           },
           "additionalProperties": {
@@ -170,6 +177,14 @@
         "title": "gemstone-py: Verify Workbench Setup"
       },
       {
+        "command": "gemstonePy.openSettings",
+        "title": "gemstone-py: Open Workbench Settings"
+      },
+      {
+        "command": "gemstonePy.copySetupReport",
+        "title": "gemstone-py: Copy Setup Verification Report"
+      },
+      {
         "command": "gemstonePy.copyEnvScript",
         "title": "gemstone-py: Copy Environment Export Script"
       },
@@ -188,6 +203,10 @@
       {
         "command": "gemstonePy.openDatabaseExplorer",
         "title": "gemstone-py: Open Database Explorer"
+      },
+      {
+        "command": "gemstonePy.openDatabaseExplorerWebview",
+        "title": "gemstone-py: Open Database Explorer in VS Code"
       },
       {
         "command": "gemstonePy.runDatabaseExplorerTests",
@@ -301,6 +320,7 @@
     "compile": "tsc -p ./",
     "check": "tsc -p ./ --noEmit",
     "test:integration": "node test/integration/run.js",
+    "test:integration:live": "node test/integration/run.js",
     "test:smoke": "npm run compile && node --test test/*.test.js",
     "release:preflight": "node scripts/check-release.js",
     "release:verify-vsix": "node scripts/check-release.js --vsix",

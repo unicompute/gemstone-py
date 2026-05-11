@@ -18,6 +18,7 @@ This extension focuses on the `gemstone-py` repository:
   connectivity from one report
 - open the setup, manual, examples, Medium article, and generated PDF docs
 - launch a configured `python-gemstone-database-explorer` checkout
+- embed a running database explorer in a VS Code webview
 - run database explorer tests and UI tests
 - run maintainer CI, live, benchmark, and native-check scripts explicitly
 
@@ -35,6 +36,10 @@ This extension focuses on the `gemstone-py` repository:
 
 ![gemstone-py Workbench database explorer launcher](https://raw.githubusercontent.com/unicompute/gemstone-py/main/vscode-gemstone-py-workbench/media/screenshots/database-explorer.png)
 
+### Configure Verify And Explore
+
+![gemstone-py Workbench configure verify and explorer webview flow](https://raw.githubusercontent.com/unicompute/gemstone-py/main/vscode-gemstone-py-workbench/media/screenshots/workbench-setup-flow.png)
+
 ## Development
 
 From this directory:
@@ -44,6 +49,13 @@ npm install
 npm run compile
 npm run test:smoke
 npm run test:integration
+```
+
+To run the live setup verifier against a configured GemStone host, set the
+usual `GS_*` variables and run:
+
+```bash
+GEMSTONE_PY_LIVE_SETUP_VERIFY=1 npm run test:integration:live
 ```
 
 Open this folder in VS Code and press `F5` to start an extension development
@@ -74,12 +86,16 @@ The extension contributes these settings:
   "gemstonePy.env": {
     "GEMSTONE": "",
     "GS_LIB": "",
+    "GS_LIB_PATH": "",
     "GS_STONE": "gs64stone",
     "GS_STONE_NAME": "gs64stone",
     "GS_USERNAME": "DataCurator",
     "GS_PASSWORD": "",
     "GS_HOST": "localhost",
     "GS_NETLDI": "netldi",
+    "GS_GEM_SERVICE": "gemnetobject",
+    "GS_HOST_USERNAME": "",
+    "GS_HOST_PASSWORD": "",
     "DYLD_LIBRARY_PATH": ""
   }
 }
@@ -108,7 +124,8 @@ Python executable, `gemstone-py` checkout, database explorer checkout,
 `GS_USERNAME`, `GS_PASSWORD`, `GS_STONE`/`GS_STONE_NAME`,
 `GS_LIB`/`GS_LIB_PATH`, the installed `gemstone_py` and `gemstone_py_native`
 packages, the active GCI backend, and a live GemStone `3 + 4` probe when
-credentials are available.
+credentials are available. The completion action buttons can open the extension
+settings, copy the report, or copy an environment export script.
 
 ## Example Runner
 
@@ -159,6 +176,10 @@ npm run test:ui
 npm run test:ui:live
 ```
 
+Use `Open explorer in VS Code` to embed the running explorer at the configured
+host and port in a VS Code webview. The external browser command remains
+available as a fallback.
+
 ## Jasper Handoff
 
 Use Jasper for full GemStone/S Smalltalk IDE work. Jasper is the Marketplace
@@ -198,8 +219,11 @@ Before publishing a new version, the workflow runs release preflight checks for
 `package.json`, `package-lock.json`, `CHANGELOG.md`, README screenshot links,
 the packaged VSIX metadata, and VS Code extension-host integration smoke tests.
 After publishing, it verifies that the public Marketplace listing is reachable
-and still renders `gemstone-py Workbench`. GitHub releases include the packaged
-VSIX and a matching `.vsix.sha256` checksum asset.
+and still renders `gemstone-py Workbench`. The manual workflow also checks that
+the Marketplace publisher domain is `https://unicompute.com`; set
+`require-domain-verified=true` once Microsoft shows the domain as verified.
+GitHub releases include the packaged VSIX and a matching `.vsix.sha256`
+checksum asset.
 
 To verify a downloaded VSIX checksum:
 
@@ -210,7 +234,13 @@ shasum -a 256 -c gemstone-py-workbench-<version>.vsix.sha256
 Keep the Marketplace publisher owner account, `VSCE_PAT` owner account, and
 `unicompute.com` domain verification documented in the publisher admin notes so
 future releases do not depend on a single browser session or a stale personal
-access token.
+access token. To finish domain verification, open the `unicompute` publisher in
+the Marketplace management portal, start domain verification for
+`unicompute.com`, publish the DNS record Microsoft provides, then rerun:
+
+```bash
+npx vsce show unicompute.gemstone-py-workbench --json
+```
 
 ## Changelog
 
@@ -218,7 +248,6 @@ See [CHANGELOG.md](CHANGELOG.md).
 
 ## Roadmap
 
-The MVP opens the database explorer in an external browser. A later richer UI
-can add a VS Code webview command that embeds a running explorer instance,
-checks whether the Flask server is already available, starts it when needed,
-and keeps the external-browser command as a fallback.
+The current workbench can open the database explorer in a VS Code webview or in
+an external browser. A later richer UI can add server health detection before
+opening the webview and start the Flask server only when needed.

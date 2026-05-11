@@ -20,10 +20,12 @@ let warnings = [];
 let clipboardText = "";
 let inputBoxValues = [];
 let informationMessages = [];
+let informationMessageSelection;
 let configUpdates = [];
 let refreshedProviders = 0;
 let outputLines = [];
 let outputShown = false;
+let webviewPanels = [];
 
 function resetState() {
   configurationValues = {
@@ -50,10 +52,12 @@ function resetState() {
   clipboardText = "";
   inputBoxValues = [];
   informationMessages = [];
+  informationMessageSelection = undefined;
   configUpdates = [];
   refreshedProviders = 0;
   outputLines = [];
   outputShown = false;
+  webviewPanels = [];
 }
 
 class EventEmitter {
@@ -95,6 +99,9 @@ const fakeVscode = {
     Collapsed: 1,
     Expanded: 2,
   },
+  ViewColumn: {
+    One: 1,
+  },
   ConfigurationTarget: {
     Global: 1,
     Workspace: 2,
@@ -115,6 +122,9 @@ const fakeVscode = {
           registeredCommands.delete(command);
         },
       };
+    },
+    getCommands() {
+      return Promise.resolve(Array.from(registeredCommands.keys()));
     },
     executeCommand(command, ...args) {
       executedCommands.push({ command, args });
@@ -168,12 +178,25 @@ const fakeVscode = {
       terminals.push(terminal);
       return terminal;
     },
+    createWebviewPanel(viewType, title, column, options) {
+      const panel = {
+        viewType,
+        title,
+        column,
+        options,
+        webview: {
+          html: "",
+        },
+      };
+      webviewPanels.push(panel);
+      return panel;
+    },
     registerTreeDataProvider(viewId, provider) {
       return { viewId, provider, dispose() {} };
     },
-    showInformationMessage() {
-      informationMessages.push([...arguments].join(" "));
-      return Promise.resolve();
+    showInformationMessage(message) {
+      informationMessages.push(message);
+      return Promise.resolve(informationMessageSelection);
     },
     showInputBox(options) {
       const value = inputBoxValues.shift();
@@ -357,6 +380,7 @@ test("tree providers expose expected commands and mask environment secrets", () 
     [
       "gemstonePy.launchDatabaseExplorer",
       "gemstonePy.openDatabaseExplorer",
+      "gemstonePy.openDatabaseExplorerWebview",
       "gemstonePy.runDatabaseExplorerTests",
       "gemstonePy.runDatabaseExplorerUiTests",
       "gemstonePy.runDatabaseExplorerLiveUiTests",
@@ -417,6 +441,36 @@ test("openJasper activates installed Jasper and opens the GemStone sidebar", asy
     { command: "workbench.view.extension.gemstone", args: [] },
   ]);
   assert.deepEqual(openedExternal, []);
+});
+
+test("verifyWorkbenchSetup reports installed Jasper handoff status", async () => {
+  const jasper = {
+    isActive: true,
+    activate() {
+      return Promise.resolve({});
+    },
+  };
+  extensionsById.set("gemtalksystems.gemstone-ide", jasper);
+  registeredCommands.set("workbench.view.extension.gemstone", () =>
+    Promise.resolve("opened"),
+  );
+  configurationValues.env.GS_PASSWORD = "";
+
+  const result = await registeredCommand("gemstonePy.verifyWorkbenchSetup")();
+
+  assert.ok(
+    result.find(
+      (check) =>
+        check.name === "Jasper IDE handoff" &&
+        check.status === "ok" &&
+        check.detail.includes("GemStone sidebar opened"),
+    ),
+  );
+  assert.ok(
+    executedCommands.find(
+      (entry) => entry.command === "workbench.view.extension.gemstone",
+    ),
+  );
 });
 
 test("openJasper opens the VS Code Extensions view when Jasper is not installed", async () => {
@@ -500,6 +554,17 @@ test("launchDatabaseExplorer starts Python directly without shell sendText", () 
   assert.equal(terminals[0].shown, true);
 });
 
+test("openDatabaseExplorerWebview embeds the configured explorer URL", () => {
+  const result = registeredCommand("gemstonePy.openDatabaseExplorerWebview")();
+
+  assert.equal(result, "http://127.0.0.1:9292/");
+  assert.equal(webviewPanels.length, 1);
+  assert.equal(webviewPanels[0].viewType, "gemstonePyDatabaseExplorer");
+  assert.equal(webviewPanels[0].title, "GemStone Database Explorer");
+  assert.match(webviewPanels[0].webview.html, /<iframe/);
+  assert.match(webviewPanels[0].webview.html, /http:\/\/127\.0\.0\.1:9292\//);
+});
+
 test("configureWorkbench writes workspace settings and refreshes views", async () => {
   inputBoxValues = [
     "/workspace/gemstone-py/.venv/bin/python",
@@ -560,6 +625,37 @@ test("verifyWorkbenchSetup reports paths packages and skipped connectivity", asy
   assert.equal(terminals.length, 0);
 });
 
+test("verifyWorkbenchSetup can copy the current report from its action", async () => {
+  informationMessageSelection = "Copy Report";
+  configurationValues.env.GS_PASSWORD = "";
+
+  await registeredCommand("gemstonePy.verifyWorkbenchSetup")();
+  await waitForAsyncActions();
+
+  assert.match(clipboardText, /gemstone-py Workbench setup verification/);
+  assert.match(clipboardText, /Actions: Open Settings, Copy Report/);
+  assert.deepEqual(informationMessages, [
+    "gemstone-py setup verification complete.",
+    "Copied gemstone-py setup verification report.",
+  ]);
+});
+
+test("verifyWorkbenchSetup can open settings from its action", async () => {
+  informationMessageSelection = "Open Settings";
+  configurationValues.env.GS_PASSWORD = "";
+
+  await registeredCommand("gemstonePy.verifyWorkbenchSetup")();
+  await waitForAsyncActions();
+
+  assert.ok(
+    executedCommands.find(
+      (entry) =>
+        entry.command === "workbench.action.openSettings" &&
+        entry.args[0] === "@ext:unicompute.gemstone-py-workbench",
+    ),
+  );
+});
+
 test("configureWorkbench cancels without writing settings", async () => {
   inputBoxValues = [undefined];
 
@@ -575,4 +671,8 @@ function registeredCommand(command) {
   const callback = registeredCommands.get(command);
   assert.ok(callback, `expected ${command} to be registered`);
   return callback;
+}
+
+function waitForAsyncActions() {
+  return new Promise((resolve) => setImmediate(resolve));
 }

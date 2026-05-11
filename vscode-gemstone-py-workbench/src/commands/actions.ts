@@ -26,6 +26,7 @@ const JASPER_VIEW_COMMAND = "workbench.view.extension.gemstone";
 
 const execFileAsync = promisify(execFile);
 const output = vscode.window.createOutputChannel("gemstone-py Workbench");
+let lastSetupReport = "";
 
 type SetupCheckStatus = "ok" | "warning" | "error";
 
@@ -84,6 +85,8 @@ export function registerCommands(
       "gemstonePy.verifyWorkbenchSetup",
       verifyWorkbenchSetup,
     ),
+    vscode.commands.registerCommand("gemstonePy.openSettings", openWorkbenchSettings),
+    vscode.commands.registerCommand("gemstonePy.copySetupReport", copySetupReport),
     vscode.commands.registerCommand("gemstonePy.copyEnvScript", copyEnvScript),
     vscode.commands.registerCommand("gemstonePy.checkBackend", checkBackend),
     vscode.commands.registerCommand("gemstonePy.openReadme", () => openRepoFile("README.md")),
@@ -92,6 +95,10 @@ export function registerCommands(
     ),
     vscode.commands.registerCommand("gemstonePy.launchDatabaseExplorer", launchExplorer),
     vscode.commands.registerCommand("gemstonePy.openDatabaseExplorer", openExplorer),
+    vscode.commands.registerCommand(
+      "gemstonePy.openDatabaseExplorerWebview",
+      openExplorerWebview,
+    ),
     vscode.commands.registerCommand(
       "gemstonePy.runDatabaseExplorerTests",
       runExplorerTests,
@@ -370,17 +377,57 @@ async function verifyWorkbenchSetup(): Promise<SetupCheck[]> {
     });
   }
 
+  checks.push(await probeJasperStatus());
+
+  const report = formatSetupReport(checks);
+  lastSetupReport = report;
   output.clear();
-  output.appendLine("gemstone-py Workbench setup verification");
-  output.appendLine("");
-  for (const check of checks) {
-    output.appendLine(
-      `[${check.status.toUpperCase()}] ${check.name}: ${check.detail}`,
-    );
-  }
+  output.appendLine(report);
   output.show(true);
-  void vscode.window.showInformationMessage("gemstone-py setup verification complete.");
+  void vscode.window.showInformationMessage(
+    "gemstone-py setup verification complete.",
+    "Open Settings",
+    "Copy Report",
+    "Copy Environment Export Script",
+  )
+    .then(
+      async (action) => {
+        try {
+          if (action === "Open Settings") {
+            await openWorkbenchSettings();
+          } else if (action === "Copy Report") {
+            await copySetupReport();
+          } else if (action === "Copy Environment Export Script") {
+            await copyEnvScript();
+          }
+        } catch (error) {
+          reportSetupActionError(error);
+        }
+      },
+      (error: unknown) => {
+        reportSetupActionError(error);
+      },
+    );
   return checks;
+}
+
+function reportSetupActionError(error: unknown): void {
+      const message = error instanceof Error ? error.message : String(error);
+      output.appendLine(`Could not complete setup verification action: ${message}`);
+      output.show(true);
+}
+
+async function openWorkbenchSettings(): Promise<void> {
+  await vscode.commands.executeCommand(
+    "workbench.action.openSettings",
+    "@ext:unicompute.gemstone-py-workbench",
+  );
+}
+
+async function copySetupReport(): Promise<void> {
+  const report = lastSetupReport || "No gemstone-py setup verification report is available yet.";
+  await vscode.env.clipboard.writeText(report);
+  void vscode.window.showInformationMessage("Copied gemstone-py setup verification report.");
 }
 
 async function copyEnvScript(): Promise<void> {
@@ -441,6 +488,69 @@ async function openExplorer(): Promise<void> {
   );
 }
 
+function openExplorerWebview(): string {
+  const config = getConfig();
+  const explorerUrl = `http://${config.explorerHost}:${config.explorerPort}/`;
+  const panel = vscode.window.createWebviewPanel(
+    "gemstonePyDatabaseExplorer",
+    "GemStone Database Explorer",
+    vscode.ViewColumn.One,
+    {
+      enableScripts: true,
+      retainContextWhenHidden: true,
+    },
+  );
+  panel.webview.html = explorerWebviewHtml(explorerUrl);
+  return explorerUrl;
+}
+
+function explorerWebviewHtml(explorerUrl: string): string {
+  const safeUrl = escapeHtml(explorerUrl);
+  const frameOrigin = escapeHtml(new URL(explorerUrl).origin);
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'none'; frame-src ${frameOrigin}; style-src 'unsafe-inline';"
+  >
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GemStone Database Explorer</title>
+  <style>
+    html, body, iframe {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      overflow: hidden;
+      background: #ffffff;
+    }
+    .fallback {
+      box-sizing: border-box;
+      padding: 12px;
+      font-family: var(--vscode-font-family);
+      color: var(--vscode-foreground);
+      background: var(--vscode-editor-background);
+    }
+  </style>
+</head>
+<body>
+  <iframe
+    title="GemStone Database Explorer"
+    src="${safeUrl}"
+    sandbox="allow-forms allow-popups allow-same-origin allow-scripts"
+  ></iframe>
+  <noscript>
+    <div class="fallback">
+      Open the database explorer at ${safeUrl}.
+    </div>
+  </noscript>
+</body>
+</html>`;
+}
+
 async function openJasper(): Promise<"jasper-sidebar" | "extensions-search"> {
   const jasper = getJasperExtension();
   if (!jasper) {
@@ -474,6 +584,43 @@ function getJasperExtension(): vscode.Extension<unknown> | undefined {
     vscode.extensions.getExtension(JASPER_EXTENSION_ID) ??
     vscode.extensions.getExtension(JASPER_MARKETPLACE_ID)
   );
+}
+
+async function probeJasperStatus(): Promise<SetupCheck> {
+  const jasper = getJasperExtension();
+  if (!jasper) {
+    return {
+      name: "Jasper IDE handoff",
+      status: "warning",
+      detail: `not installed (${JASPER_MARKETPLACE_ID})`,
+    };
+  }
+
+  const wasActive = jasper.isActive;
+  try {
+    await jasper.activate();
+    const commands = await vscode.commands.getCommands(true);
+    if (!commands.includes(JASPER_VIEW_COMMAND)) {
+      return {
+        name: "Jasper IDE handoff",
+        status: "warning",
+        detail: `installed${wasActive ? " and active" : ""}, but ${JASPER_VIEW_COMMAND} is not registered`,
+      };
+    }
+    await vscode.commands.executeCommand(JASPER_VIEW_COMMAND);
+    return {
+      name: "Jasper IDE handoff",
+      status: "ok",
+      detail: `installed${wasActive ? " and active" : ""}; GemStone sidebar opened`,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      name: "Jasper IDE handoff",
+      status: "error",
+      detail: `installed, but sidebar handoff failed: ${message}`,
+    };
+  }
 }
 
 function runExplorerTests(): void {
@@ -593,6 +740,35 @@ function lastJsonLine(stdout: string): string {
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
   return lines[lines.length - 1] ?? "{}";
+}
+
+function formatSetupReport(checks: SetupCheck[]): string {
+  const lines = ["gemstone-py Workbench setup verification", ""];
+  for (const check of checks) {
+    lines.push(`[${check.status.toUpperCase()}] ${check.name}: ${check.detail}`);
+  }
+  lines.push("");
+  lines.push("Actions: Open Settings, Copy Report, Copy Environment Export Script");
+  return lines.join("\n");
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => {
+    switch (char) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&#39;";
+      default:
+        return char;
+    }
+  });
 }
 
 function status(candidate: string): string {

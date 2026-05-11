@@ -9,6 +9,7 @@ tsconfig.json
 *.vsix
 *.vsix.sha256
 marketplace.json
+media/screenshots/*.svg
 **/*.map
 .gitignore
 npm-debug.log

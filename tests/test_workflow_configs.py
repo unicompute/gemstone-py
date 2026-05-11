@@ -34,6 +34,17 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertIn("run-soak:", content)
         self.assertIn("GS_RUN_LIVE_SOAK", content)
 
+    def test_vscode_workbench_live_workflow_verifies_setup_command(self) -> None:
+        content = pathlib.Path(".github/workflows/vscode-workbench-live.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("live-verify-workbench-setup:", content)
+        self.assertIn("GEMSTONE_PY_LIVE_SETUP_VERIFY: \"1\"", content)
+        self.assertIn("GS_STONE_NAME", content)
+        self.assertIn("npm run test:integration:live", content)
+        self.assertIn("actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae", content)
+        self.assertIn("vscode-gemstone-py-workbench/.vscode-test", content)
+
     def test_runner_health_workflow_exists(self) -> None:
         content = pathlib.Path(".github/workflows/runner-health.yml").read_text(
             encoding="utf-8"
@@ -60,6 +71,7 @@ class WorkflowConfigTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("publish-to-marketplace", content)
+        self.assertIn("require-domain-verified", content)
         self.assertIn("VSCE_PAT", content)
         self.assertIn("--pat \"${VSCE_PAT}\"", content)
         self.assertIn("Check Marketplace version before publish", content)
@@ -77,6 +89,9 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertIn("Verify Marketplace version", content)
         self.assertIn("npx vsce show unicompute.gemstone-py-workbench --json", content)
         self.assertIn("EXPECTED_VERSION", content)
+        self.assertIn("REQUIRE_DOMAIN_VERIFIED", content)
+        self.assertIn("publisher.isDomainVerified", content)
+        self.assertIn("https://unicompute.com", content)
         self.assertIn("versions[0]", content)
         self.assertIn("seq 1 20", content)
         self.assertIn("sleep 60", content)
@@ -100,6 +115,20 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertIn("actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e", content)
         self.assertIn("node-version: \"24\"", content)
         self.assertIn("SKIP_VSCODE_INTEGRATION: \"1\"", content)
+
+    def test_full_release_verify_workflow_runs_complete_wrapper(self) -> None:
+        content = pathlib.Path(".github/workflows/full-release-verify.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("schedule:", content)
+        self.assertIn("workflow_dispatch:", content)
+        self.assertIn("require-marketplace-domain-verified", content)
+        self.assertIn("REQUIRE_VSCODE_DOMAIN_VERIFIED", content)
+        self.assertIn("python -m pip install -e .[dev] maturin", content)
+        self.assertIn("scripts/release_all.sh", content)
+        self.assertNotIn("--skip-ci", content)
+        self.assertNotIn("--skip-native", content)
+        self.assertNotIn("--skip-public-verify", content)
 
     def test_release_workflows_use_trusted_publishing(self) -> None:
         testpypi_content = pathlib.Path(

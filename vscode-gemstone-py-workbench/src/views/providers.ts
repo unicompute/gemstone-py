@@ -211,6 +211,12 @@ export function createIdeProvider(): WorkbenchTreeProvider {
           ),
           commandItem("Open explorer", "gemstonePy.openDatabaseExplorer", explorerUrl, "link-external"),
           commandItem(
+            "Open explorer in VS Code",
+            "gemstonePy.openDatabaseExplorerWebview",
+            explorerUrl,
+            "layout",
+          ),
+          commandItem(
             "Run Python tests",
             "gemstonePy.runDatabaseExplorerTests",
             "pytest",

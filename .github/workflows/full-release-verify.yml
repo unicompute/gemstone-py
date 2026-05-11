@@ -1,0 +1,63 @@
+name: Full Release Verify
+
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+    inputs:
+      gemstone-version:
+        description: gemstone-py version to verify; defaults to pyproject.toml
+        required: false
+      native-version:
+        description: gemstone-py-native version to verify; defaults to native pyproject.toml
+        required: false
+      vscode-version:
+        description: VS Code workbench version to verify; defaults to package.json
+        required: false
+      require-marketplace-domain-verified:
+        description: Fail unless the Marketplace publisher domain is verified
+        required: true
+        default: "true"
+
+permissions:
+  contents: read
+
+jobs:
+  full-release-verify:
+    runs-on: ubuntu-latest
+    env:
+      GEMSTONE_VERSION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs['gemstone-version'] || '' }}
+      NATIVE_VERSION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs['native-version'] || '' }}
+      VSCODE_VERSION: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs['vscode-version'] || '' }}
+      REQUIRE_VSCODE_DOMAIN_VERIFIED: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs['require-marketplace-domain-verified'] == 'false' && '0' || '1' }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: vscode-gemstone-py-workbench/package-lock.json
+
+      - name: Cache VS Code test host
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: vscode-gemstone-py-workbench/.vscode-test
+          key: vscode-test-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('vscode-gemstone-py-workbench/package-lock.json') }}
+          restore-keys: |
+            vscode-test-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Install release verification tooling
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .[dev] maturin
+          cargo --version
+
+      - name: Run full release verification wrapper
+        run: scripts/release_all.sh
