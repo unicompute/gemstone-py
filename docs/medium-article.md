@@ -283,7 +283,8 @@ Generate and check in the wrapper package:
 ```bash
 gemstone-codegen \
   --module examples.typed_access.codegen_demo.models \
-  --output examples/typed_access/codegen_demo/generated
+  --output examples/typed_access/codegen_demo/generated \
+  --clean
 ```
 
 Then application code uses normal Python methods while the generated wrapper

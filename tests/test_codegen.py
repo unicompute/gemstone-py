@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
 import sys
 import textwrap
 import unittest
@@ -191,6 +192,10 @@ class CodegenTests(unittest.TestCase):
                     from typing import Protocol
                     from gemstone_py import gemstone_class, gemstone_selector
 
+                    @gemstone_class("CodegenCustomer")
+                    class CustomerProto(Protocol):
+                        name: str
+
                     @gemstone_class("CodegenInvoice")
                     class InvoiceProto(Protocol):
                         total: int
@@ -199,22 +204,46 @@ class CodegenTests(unittest.TestCase):
                         @gemstone_selector("findById:")
                         def find_by_id(cls, invoice_id: str) -> "InvoiceProto":
                             ...
+
+                        def buyer(self) -> "CustomerProto":
+                            ...
                     """
                 ),
                 encoding="utf-8",
             )
             output = root / "generated"
+            output.mkdir()
+            stale = output / "stale.py"
+            stale.write_text(
+                '"""Generated GemStone wrappers.\n\n'
+                "Regenerate with `gemstone-codegen`; do not edit by hand.\n"
+                '"""\n',
+                encoding="utf-8",
+            )
             sys.path.insert(0, str(root))
             try:
-                files = generate_package("models", output)
+                files = generate_package("models", output, clean=True)
                 checked = generate_package("models", output, check=True)
+                importlib.invalidate_caches()
+                generated_package = importlib.import_module("generated")
+                invoice = generated_package.Invoice(0xD00, session=FakeSyncSession())
+                buyer = invoice.buyer()
+                buyer_is_customer = isinstance(buyer, generated_package.Customer)
+                buyer_oop = int(buyer)
             finally:
                 sys.path.remove(str(root))
-                sys.modules.pop("models", None)
+                for module_name in list(sys.modules):
+                    if module_name == "models" or module_name.startswith("generated"):
+                        sys.modules.pop(module_name, None)
 
         self.assertTrue(all(file.up_to_date for file in files))
         self.assertTrue(all(file.up_to_date for file in checked))
         self.assertTrue(any(file.path.name == "invoice.py" for file in files))
+        self.assertTrue(any(file.path.name == "customer.py" for file in files))
+        self.assertTrue(any(file.path.name == "py.typed" for file in files))
+        self.assertFalse(stale.exists())
+        self.assertTrue(buyer_is_customer)
+        self.assertEqual(buyer_oop, 0xB01)
 
     def test_repository_codegen_check_script_tracks_demo_wrapper(self) -> None:
         script = Path("scripts/check_codegen.sh").read_text(encoding="utf-8")

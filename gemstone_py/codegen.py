@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import inspect
 import sys
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
@@ -15,7 +15,7 @@ from typing import Any, Final, Literal, TypeVar
 from gemstone_py.oop import gemstone_class_name
 
 F = TypeVar("F", bound=Callable[..., Any])
-ReturnKind = Literal["value", "none", "self_oop"]
+ReturnKind = Literal["value", "none", "oop_wrapper"]
 
 SELECTOR_ATTR: Final = "__gemstone_selector__"
 ASYNC_ATTR: Final = "__gemstone_codegen_async__"
@@ -45,6 +45,14 @@ class GeneratedWrapper:
 
 
 @dataclass(frozen=True)
+class _KnownWrapper:
+    protocol_name: str
+    class_name: str
+    module_name: str
+    include_async: bool
+
+
+@dataclass(frozen=True)
 class _PropertySpec:
     python_name: str
     selector: str
@@ -65,6 +73,10 @@ class _MethodSpec:
     class_side: bool
     return_kind: ReturnKind
     return_annotation: str
+    async_return_annotation: str
+    return_wrapper_class: str | None = None
+    return_async_wrapper_class: str | None = None
+    return_module_name: str | None = None
 
     @property
     def arg_names(self) -> tuple[str, ...]:
@@ -117,12 +129,22 @@ def generate_wrapper(protocol_cls: type[Any]) -> str:
 
 def generate_wrapper_details(protocol_cls: type[Any]) -> GeneratedWrapper:
     """Generate Python source plus warnings for one registered protocol class."""
+    wrapper_name = _wrapper_class_name(protocol_cls.__name__)
+    known_wrappers = _known_wrappers((protocol_cls,))
+    return _generate_wrapper_details(protocol_cls, wrapper_name, known_wrappers)
+
+
+def _generate_wrapper_details(
+    protocol_cls: type[Any],
+    wrapper_name: str,
+    known_wrappers: Mapping[str, _KnownWrapper],
+) -> GeneratedWrapper:
+    """Generate Python source plus warnings with package-level type context."""
     gs_name = gemstone_class_name(protocol_cls)
     if gs_name is None:
         raise ValueError(f"{protocol_cls.__qualname__} is not decorated with @gemstone_class")
 
-    wrapper_name = _wrapper_class_name(protocol_cls.__name__)
-    properties, methods, warnings = _collect_specs(protocol_cls, wrapper_name)
+    properties, methods, warnings = _collect_specs(protocol_cls, wrapper_name, known_wrappers)
     source = _render_source(
         wrapper_name=wrapper_name,
         protocol_name=protocol_cls.__name__,
@@ -147,6 +169,7 @@ def generate_package(
     output_dir: Path | str,
     *,
     check: bool = False,
+    clean: bool = False,
 ) -> tuple[GeneratedFile, ...]:
     """
     Generate wrapper files for all registered Protocol classes in ``module``.
@@ -159,10 +182,17 @@ def generate_package(
     if not check:
         output_path.mkdir(parents=True, exist_ok=True)
 
-    generated = tuple(generate_wrapper_details(cls) for cls in _iter_registered_classes(module))
+    classes = _iter_registered_classes(module)
+    known_wrappers = _known_wrappers(classes)
+    generated = tuple(
+        _generate_wrapper_details(cls, _wrapper_class_name(cls.__name__), known_wrappers)
+        for cls in classes
+    )
     files: list[GeneratedFile] = []
+    expected_paths: set[Path] = set()
     init_path = output_path / "__init__.py"
     init_source = _render_package_init(generated)
+    expected_paths.add(init_path)
     files.append(
         _write_or_check(
             protocol_name="__init__",
@@ -175,6 +205,7 @@ def generate_package(
     )
     for wrapper in generated:
         path = output_path / f"{_to_snake(wrapper.class_name)}.py"
+        expected_paths.add(path)
         files.append(
             _write_or_check(
                 protocol_name=wrapper.protocol_name,
@@ -185,6 +216,20 @@ def generate_package(
                 check=check,
             )
         )
+    typed_path = output_path / "py.typed"
+    expected_paths.add(typed_path)
+    files.append(
+        _write_or_check(
+            protocol_name="py.typed",
+            class_name="py.typed",
+            path=typed_path,
+            source="",
+            warnings=(),
+            check=check,
+        )
+    )
+    if clean and not check:
+        _remove_stale_generated_files(output_path, expected_paths)
     return tuple(files)
 
 
@@ -210,6 +255,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Fail if generated files are missing or out of date without writing them.",
     )
+    parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="Remove stale gemstone-codegen wrapper modules from the output directory.",
+    )
     return parser
 
 
@@ -218,7 +268,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
     try:
-        files = generate_package(args.module, args.output, check=bool(args.check))
+        files = generate_package(
+            args.module,
+            args.output,
+            check=bool(args.check),
+            clean=bool(args.clean),
+        )
     except (ImportError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         return 2
@@ -251,9 +306,24 @@ def _iter_registered_classes(module: ModuleType) -> tuple[type[Any], ...]:
     return tuple(sorted(classes, key=lambda cls: cls.__name__))
 
 
+def _known_wrappers(classes: Sequence[type[Any]]) -> Mapping[str, _KnownWrapper]:
+    known: dict[str, _KnownWrapper] = {}
+    for cls in classes:
+        wrapper = _KnownWrapper(
+            protocol_name=cls.__name__,
+            class_name=_wrapper_class_name(cls.__name__),
+            module_name=_to_snake(_wrapper_class_name(cls.__name__)),
+            include_async=bool(getattr(cls, ASYNC_ATTR, False)),
+        )
+        known[wrapper.protocol_name] = wrapper
+        known[wrapper.class_name] = wrapper
+    return known
+
+
 def _collect_specs(
     protocol_cls: type[Any],
     wrapper_name: str,
+    known_wrappers: Mapping[str, _KnownWrapper],
 ) -> tuple[tuple[_PropertySpec, ...], tuple[_MethodSpec, ...], tuple[str, ...]]:
     properties: list[_PropertySpec] = []
     methods: list[_MethodSpec] = []
@@ -269,7 +339,12 @@ def _collect_specs(
                 _PropertySpec(
                     python_name,
                     _snake_to_camel(python_name),
-                    _annotation_to_source(annotation, protocol_cls.__name__, wrapper_name),
+                    _annotation_to_source(
+                        annotation,
+                        protocol_cls.__name__,
+                        wrapper_name,
+                        known_wrappers,
+                    ),
                 )
             )
             seen_properties.add(python_name)
@@ -292,6 +367,7 @@ def _collect_specs(
                             return_annotation,
                             protocol_cls.__name__,
                             wrapper_name,
+                            known_wrappers,
                         ),
                     )
                 )
@@ -304,6 +380,7 @@ def _collect_specs(
                 class_side=True,
                 protocol_name=protocol_cls.__name__,
                 wrapper_name=wrapper_name,
+                known_wrappers=known_wrappers,
             )
             methods.append(spec)
             if warning is not None:
@@ -316,6 +393,7 @@ def _collect_specs(
                 class_side=False,
                 protocol_name=protocol_cls.__name__,
                 wrapper_name=wrapper_name,
+                known_wrappers=known_wrappers,
             )
             methods.append(spec)
             if warning is not None:
@@ -331,6 +409,7 @@ def _method_spec(
     class_side: bool,
     protocol_name: str,
     wrapper_name: str,
+    known_wrappers: Mapping[str, _KnownWrapper],
 ) -> tuple[_MethodSpec, str | None]:
     signature = inspect.signature(fn)
     params = list(signature.parameters.values())
@@ -353,16 +432,29 @@ def _method_spec(
         arg_specs.append(
             _ArgSpec(
                 param.name,
-                _annotation_to_source(param.annotation, protocol_name, wrapper_name),
+                _annotation_to_source(
+                    param.annotation,
+                    protocol_name,
+                    wrapper_name,
+                    known_wrappers,
+                ),
             )
         )
 
     arg_names = tuple(arg.python_name for arg in arg_specs)
     selector = _selector_for_callable(python_name, tuple(arg_names), fn=fn)
-    return_kind, return_annotation = _return_spec(
+    (
+        return_kind,
+        return_annotation,
+        async_return_annotation,
+        return_wrapper_class,
+        return_async_wrapper_class,
+        return_module_name,
+    ) = _return_spec(
         signature.return_annotation,
         protocol_name,
         wrapper_name,
+        known_wrappers,
     )
     warning = None
     if len(arg_names) > 1 and getattr(fn, SELECTOR_ATTR, None) is None:
@@ -377,6 +469,10 @@ def _method_spec(
         class_side=class_side,
         return_kind=return_kind,
         return_annotation=return_annotation,
+        async_return_annotation=async_return_annotation,
+        return_wrapper_class=return_wrapper_class,
+        return_async_wrapper_class=return_async_wrapper_class,
+        return_module_name=return_module_name,
     ), warning
 
 
@@ -402,6 +498,16 @@ def _render_source(
     include_async: bool,
     warnings: Sequence[str],
 ) -> str:
+    type_checking_imports = _type_checking_imports(
+        wrapper_name,
+        methods,
+        include_async=include_async,
+    )
+    typing_import = (
+        "from typing import TYPE_CHECKING, Any"
+        if type_checking_imports
+        else "from typing import Any"
+    )
     lines = [
         '"""Generated GemStone wrappers.',
         "",
@@ -411,12 +517,19 @@ def _render_source(
         "",
         "from __future__ import annotations",
         "",
-        "from typing import Any",
+        typing_import,
         "",
         "from gemstone_py import TypedOop",
         "",
-        "",
     ]
+    if type_checking_imports:
+        lines.append("if TYPE_CHECKING:")
+        for module_name, names in type_checking_imports:
+            lines.append(f"    from .{module_name} import {', '.join(names)}")
+        lines.append("")
+        lines.append("")
+    else:
+        lines.append("")
     if warnings:
         lines.append("# Code generation warnings:")
         for warning in warnings:
@@ -446,6 +559,30 @@ def _render_source(
     lines.append(f"__all__ = {public_names!r}")
     lines.append("")
     return "\n".join(lines)
+
+
+def _type_checking_imports(
+    wrapper_name: str,
+    methods: Sequence[_MethodSpec],
+    *,
+    include_async: bool,
+) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    imports: dict[str, set[str]] = {}
+    for method in methods:
+        module_name = method.return_module_name
+        if method.return_kind != "oop_wrapper" or module_name is None:
+            continue
+        if method.return_wrapper_class == wrapper_name:
+            continue
+        names = imports.setdefault(module_name, set())
+        if method.return_wrapper_class is not None:
+            names.add(method.return_wrapper_class)
+        if include_async and method.return_async_wrapper_class is not None:
+            names.add(method.return_async_wrapper_class)
+    return tuple(
+        (module_name, tuple(sorted(names)))
+        for module_name, names in sorted(imports.items())
+    )
 
 
 def _literal_helpers() -> list[str]:
@@ -543,7 +680,7 @@ def _render_method(
     call_args = ", ".join(method.arg_names)
     call_tuple = _tuple_expression(method.arg_names)
     return_annotation = (
-        class_name if method.return_kind == "self_oop" else method.return_annotation
+        method.async_return_annotation if async_class else method.return_annotation
     )
     if method.class_side:
         prefix = "async " if async_class else ""
@@ -562,17 +699,17 @@ def _render_method(
             f"            {call_tuple},",
             "        )",
         ]
-        if method.return_kind == "self_oop":
+        if method.return_kind == "oop_wrapper":
+            target = _wrapper_target(method, class_name, async_class=async_class, cls_expr="cls")
+            lines.extend(_lazy_import_lines(method, class_name, async_class=async_class))
+            lines.append(f"        oop = {await_prefix}session.execute_oop(source)")
             lines.extend(
-                [
-                    f"        oop = {await_prefix}session.execute_oop(source)",
-                    "        return cls(",
-                    "            oop,",
-                    "            session=session,",
-                    "            wrapper_type=cls,",
-                    "            gemstone_class_name=cls.__gemstone_class_name__,",
-                    "        )",
-                ]
+                _construct_wrapper_lines(
+                    target,
+                    oop_expr="oop",
+                    session_expr="session",
+                    indent="        ",
+                )
             )
         elif method.return_kind == "none":
             lines.append(f"        {await_prefix}session.eval(source)")
@@ -595,18 +732,25 @@ def _render_method(
         ]
         if call_args:
             lines.append(f"        raw_args = {raw_args}")
-        if method.return_kind == "self_oop":
+        if method.return_kind == "oop_wrapper":
+            target = _wrapper_target(
+                method,
+                class_name,
+                async_class=True,
+                cls_expr="type(self)",
+            )
+            lines.extend(_lazy_import_lines(method, class_name, async_class=True))
+            lines.append(
+                f"        oop = await session.perform_oop("
+                f"int(self), {method.selector!r}{call_suffix})"
+            )
             lines.extend(
-                [
-                    f"        oop = await session.perform_oop("
-                    f"int(self), {method.selector!r}{call_suffix})",
-                    "        return type(self)(",
-                    "            oop,",
-                    "            session=session,",
-                    "            wrapper_type=type(self),",
-                    "            gemstone_class_name=self.__gemstone_class_name__,",
-                    "        )",
-                ]
+                _construct_wrapper_lines(
+                    target,
+                    oop_expr="oop",
+                    session_expr="session",
+                    indent="        ",
+                )
             )
         elif method.return_kind == "none":
             lines.append(
@@ -622,23 +766,71 @@ def _render_method(
     signature_args = f"{', ' if args else ''}{args}"
     call_suffix = f", {call_args}" if call_args else ""
     lines = [f"    def {method.python_name}(self{signature_args}) -> {return_annotation}:"]
-    if method.return_kind == "self_oop":
+    if method.return_kind == "oop_wrapper":
+        target = _wrapper_target(method, class_name, async_class=False, cls_expr="type(self)")
+        lines.extend(_lazy_import_lines(method, class_name, async_class=False))
+        lines.append(f"        oop = self.send_oop({method.selector!r}{call_suffix})")
         lines.extend(
-            [
-                f"        oop = self.send_oop({method.selector!r}{call_suffix})",
-                "        return type(self)(",
-                "            oop,",
-                "            session=self.session,",
-                "            wrapper_type=type(self),",
-                "            gemstone_class_name=self.__gemstone_class_name__,",
-                "        )",
-            ]
+            _construct_wrapper_lines(
+                target,
+                oop_expr="oop",
+                session_expr="self.session",
+                indent="        ",
+            )
         )
     elif method.return_kind == "none":
         lines.append(f"        self.send({method.selector!r}{call_suffix})")
     else:
         lines.append(f"        return self.send({method.selector!r}{call_suffix})")
     return lines
+
+
+def _lazy_import_lines(
+    method: _MethodSpec,
+    current_class_name: str,
+    *,
+    async_class: bool,
+) -> list[str]:
+    if method.return_kind != "oop_wrapper" or method.return_module_name is None:
+        return []
+    target_name = (
+        method.return_async_wrapper_class if async_class else method.return_wrapper_class
+    )
+    if target_name is None or target_name == current_class_name:
+        return []
+    return [f"        from .{method.return_module_name} import {target_name}"]
+
+
+def _wrapper_target(
+    method: _MethodSpec,
+    current_class_name: str,
+    *,
+    async_class: bool,
+    cls_expr: str,
+) -> str:
+    target_name = (
+        method.return_async_wrapper_class if async_class else method.return_wrapper_class
+    )
+    if target_name is None or target_name == current_class_name:
+        return cls_expr
+    return target_name
+
+
+def _construct_wrapper_lines(
+    target_expr: str,
+    *,
+    oop_expr: str,
+    session_expr: str,
+    indent: str,
+) -> list[str]:
+    return [
+        f"{indent}return {target_expr}(",
+        f"{indent}    {oop_expr},",
+        f"{indent}    session={session_expr},",
+        f"{indent}    wrapper_type={target_expr},",
+        f"{indent}    gemstone_class_name={target_expr}.__gemstone_class_name__,",
+        f"{indent})",
+    ]
 
 
 def _render_package_init(wrappers: Sequence[GeneratedWrapper]) -> str:
@@ -686,6 +878,24 @@ def _write_or_check(
     )
 
 
+def _remove_stale_generated_files(output_path: Path, expected_paths: set[Path]) -> None:
+    if not output_path.exists():
+        return
+    for path in output_path.glob("*.py"):
+        if path in expected_paths:
+            continue
+        if _is_generated_wrapper_file(path):
+            path.unlink()
+
+
+def _is_generated_wrapper_file(path: Path) -> bool:
+    try:
+        prefix = path.read_text(encoding="utf-8")[:512]
+    except OSError:
+        return False
+    return "Regenerate with `gemstone-codegen`; do not edit by hand." in prefix
+
+
 def _validate_selector_arity(selector: str, argc: int, python_name: str) -> None:
     colon_count = selector.count(":")
     if colon_count != argc:
@@ -699,23 +909,45 @@ def _return_spec(
     annotation: Any,
     protocol_name: str,
     wrapper_name: str,
-) -> tuple[ReturnKind, str]:
+    known_wrappers: Mapping[str, _KnownWrapper],
+) -> tuple[ReturnKind, str, str, str | None, str | None, str | None]:
     normalized = _normalized_annotation(annotation)
     if normalized is None:
-        return "value", "Any"
+        return "value", "Any", "Any", None, None, None
     if normalized in {"None", "NoneType"}:
-        return "none", "None"
+        return "none", "None", "None", None, None, None
     if normalized in {protocol_name, wrapper_name, "Self", "typing.Self"}:
-        return "self_oop", wrapper_name
-    return "value", _safe_annotation_source(normalized)
+        async_wrapper = f"Async{wrapper_name}"
+        return "oop_wrapper", wrapper_name, async_wrapper, wrapper_name, async_wrapper, None
+    known = known_wrappers.get(normalized)
+    if known is not None:
+        async_wrapper = f"Async{known.class_name}" if known.include_async else known.class_name
+        return (
+            "oop_wrapper",
+            known.class_name,
+            async_wrapper,
+            known.class_name,
+            async_wrapper,
+            known.module_name,
+        )
+    safe = _safe_annotation_source(normalized)
+    return "value", safe, safe, None, None, None
 
 
-def _annotation_to_source(annotation: Any, protocol_name: str, wrapper_name: str) -> str:
+def _annotation_to_source(
+    annotation: Any,
+    protocol_name: str,
+    wrapper_name: str,
+    known_wrappers: Mapping[str, _KnownWrapper],
+) -> str:
     normalized = _normalized_annotation(annotation)
     if normalized is None:
         return "Any"
     if normalized in {protocol_name, wrapper_name, "Self", "typing.Self"}:
         return wrapper_name
+    known = known_wrappers.get(normalized)
+    if known is not None:
+        return known.class_name
     return _safe_annotation_source(normalized)
 
 

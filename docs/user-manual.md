@@ -316,7 +316,8 @@ Generate and check in the wrapper package:
 ```bash
 gemstone-codegen \
   --module examples.typed_access.codegen_demo.models \
-  --output examples/typed_access/codegen_demo/generated
+  --output examples/typed_access/codegen_demo/generated \
+  --clean
 ```
 
 Application code can then use regular Python methods:

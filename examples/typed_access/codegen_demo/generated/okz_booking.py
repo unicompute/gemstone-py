@@ -6,9 +6,12 @@ Regenerate with `gemstone-codegen`; do not edit by hand.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from gemstone_py import TypedOop
+
+if TYPE_CHECKING:
+    from .okz_customer import AsyncOkzCustomer, OkzCustomer
 
 
 def _smalltalk_literal(value: Any) -> str:
@@ -77,7 +80,17 @@ class OkzBooking(TypedOop[Any]):
             oop,
             session=self.session,
             wrapper_type=type(self),
-            gemstone_class_name=self.__gemstone_class_name__,
+            gemstone_class_name=type(self).__gemstone_class_name__,
+        )
+
+    def customer(self) -> OkzCustomer:
+        from .okz_customer import OkzCustomer
+        oop = self.send_oop('customer')
+        return OkzCustomer(
+            oop,
+            session=self.session,
+            wrapper_type=OkzCustomer,
+            gemstone_class_name=OkzCustomer.__gemstone_class_name__,
         )
 
     def mark_paid(self, at_posix_seconds: int) -> None:
@@ -120,7 +133,20 @@ class AsyncOkzBooking(TypedOop[Any]):
             oop,
             session=session,
             wrapper_type=type(self),
-            gemstone_class_name=self.__gemstone_class_name__,
+            gemstone_class_name=type(self).__gemstone_class_name__,
+        )
+
+    async def customer(self) -> AsyncOkzCustomer:
+        session = self.session
+        if session is None:
+            raise RuntimeError("TypedOop has no associated GemStoneSession")
+        from .okz_customer import AsyncOkzCustomer
+        oop = await session.perform_oop(int(self), 'customer')
+        return AsyncOkzCustomer(
+            oop,
+            session=session,
+            wrapper_type=AsyncOkzCustomer,
+            gemstone_class_name=AsyncOkzCustomer.__gemstone_class_name__,
         )
 
     async def mark_paid(self, at_posix_seconds: int) -> None:

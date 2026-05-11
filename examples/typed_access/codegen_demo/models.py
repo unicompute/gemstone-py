@@ -7,6 +7,16 @@ from typing import Protocol
 from gemstone_py import gemstone_class, gemstone_selector
 
 
+@gemstone_class("OkzCustomer", async_=True)
+class OkzCustomerProto(Protocol):
+    """Python-side type contract for a GemStone ``OkzCustomer`` object."""
+
+    name: str
+
+    def yourself(self) -> "OkzCustomerProto":
+        ...
+
+
 @gemstone_class("OkzBooking", async_=True)
 class OkzBookingProto(Protocol):
     """Python-side type contract for a GemStone ``OkzBooking`` object."""
@@ -19,6 +29,9 @@ class OkzBookingProto(Protocol):
         ...
 
     def yourself(self) -> "OkzBookingProto":
+        ...
+
+    def customer(self) -> OkzCustomerProto:
         ...
 
     def mark_paid(self, at_posix_seconds: int) -> None:

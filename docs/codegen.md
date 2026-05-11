@@ -44,9 +44,16 @@ class OkzBookingProto(Protocol):
     def yourself(self) -> "OkzBookingProto":
         ...
 
+    def customer(self) -> "OkzCustomerProto":
+        ...
+
     @gemstone_selector("transferTo:byUserId:")
     def transfer(self, user_id: int, by_user_id: int) -> None:
         ...
+
+@gemstone_class("OkzCustomer", async_=True)
+class OkzCustomerProto(Protocol):
+    name: str
 ```
 
 `async_=True` asks the generator to emit both sync and async wrappers.
@@ -58,7 +65,8 @@ Run the generator from the repository or application root:
 ```bash
 gemstone-codegen \
   --module examples.typed_access.codegen_demo.models \
-  --output examples/typed_access/codegen_demo/generated
+  --output examples/typed_access/codegen_demo/generated \
+  --clean
 ```
 
 The output is meant to be checked in. That keeps reviews, editor indexing, and
@@ -67,6 +75,14 @@ type checking predictable:
 ```bash
 git add examples/typed_access/codegen_demo/generated
 ```
+
+The generated package includes `py.typed` so type checkers treat the checked-in
+wrapper package as typed. `--clean` removes stale generated wrapper modules
+when a Protocol is renamed or deleted.
+
+Use package generation for protocols that return other generated protocols.
+Single-class `generate_wrapper(...)` only has enough context to resolve
+self-typed returns.
 
 Use `--check` in CI or pre-commit hooks to catch drift:
 
@@ -118,12 +134,20 @@ generated Python return type:
 | no annotation | `perform_value(...)` / `session.eval(...)`, returns `Any` |
 | `None` | sends the message and returns `None` |
 | same Protocol class, wrapper class, or `Self` | uses `perform_oop(...)` or `execute_oop(...)` and wraps the returned OOP |
+| another generated Protocol in the same module | uses `perform_oop(...)` or `execute_oop(...)` and lazily imports the target wrapper |
 | simple builtins such as `str`, `int`, `float`, `bool` | value send with that return annotation |
 
 That means this method returns another typed wrapper:
 
 ```python
 def yourself(self) -> "OkzBookingProto":
+    ...
+```
+
+and this method returns a generated `OkzCustomer` or `AsyncOkzCustomer` wrapper:
+
+```python
+def customer(self) -> "OkzCustomerProto":
     ...
 ```
 
@@ -147,6 +171,8 @@ with GemStoneSession(config=GemStoneConfig.from_env()) as session:
     print(booking.status)
     booking.mark_paid(1_779_912_000)
     same_booking = booking.yourself()
+    customer = booking.customer()
+    print(customer.name)
 ```
 
 That class-side call evaluates:
@@ -192,9 +218,11 @@ The first generator pass handles:
   return annotations
 - class methods as class-side Smalltalk source strings
 - self-returning class and instance methods as wrapped `TypedOop` results
+- same-module cross-Protocol returns as lazily imported generated wrappers
 - string, integer, float, boolean, and `None` literals in class-side calls
 - explicit selector overrides with `@gemstone_selector(...)`
-- checked-in sync and async generated modules plus CI/pre-commit drift checks
+- checked-in sync and async generated modules with `py.typed`, stale-file
+  cleanup, and CI/pre-commit drift checks
 - an opt-in live smoke test for generated wrappers against GemStone `Date`
 
 It does not marshal arbitrary Python objects into class-side source literals or

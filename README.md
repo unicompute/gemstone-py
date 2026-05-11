@@ -408,7 +408,8 @@ Generate wrappers and commit the output:
 ```bash
 gemstone-codegen \
   --module examples.typed_access.codegen_demo.models \
-  --output examples/typed_access/codegen_demo/generated
+  --output examples/typed_access/codegen_demo/generated \
+  --clean
 ```
 
 Then use the generated sync or async wrapper:

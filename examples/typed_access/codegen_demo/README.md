@@ -12,7 +12,8 @@ Generate wrappers from the repository root:
 ```bash
 gemstone-codegen \
   --module examples.typed_access.codegen_demo.models \
-  --output examples/typed_access/codegen_demo/generated
+  --output examples/typed_access/codegen_demo/generated \
+  --clean
 ```
 
 Check that committed wrappers are current:
@@ -35,6 +36,8 @@ with GemStoneSession(config=GemStoneConfig.from_env()) as session:
     print(booking.status)
     booking.mark_paid(1_779_912_000)
     same_booking = booking.yourself()
+    customer = booking.customer()
+    print(customer.name)
 ```
 
 Use the generated async wrapper in a FastAPI handler:
@@ -69,5 +72,6 @@ Instance methods use `perform_value(...)` through the typed OOP session:
 ```python
 booking.mark_paid(1_779_912_000)  # Smalltalk selector markPaid:
 booking.yourself()                # wraps the returned OOP as OkzBooking
+booking.customer()                # wraps the returned OOP as OkzCustomer
 booking.transfer(42, 7)           # Smalltalk selector transferTo:byUserId:
 ```
