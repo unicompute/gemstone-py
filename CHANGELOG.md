@@ -31,6 +31,8 @@ All notable changes to `gemstone-py` should be recorded here.
 - Added `docs/plan3-feature-map.md`, `examples/cookbook/plan3_feature_map.py`,
   and `gemstone-examples plan3-map` to map each plan3 stream to code, examples,
   and docs.
+- Expanded the Medium article with a plan3 summary section that emphasizes
+  Codegen and maps all streams to user-facing features.
 - Added chunked `GSCollection.iter(...)`, `search_iter(...)`, typed
   `Query.iter(...)`, and async iterator equivalents for large result sets.
 - Made `GSCollection.search()`, `GSCollection.all()`, and typed `Query.all()`

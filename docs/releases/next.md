@@ -34,6 +34,8 @@ feature milestone:
   `gemstone-examples litestar`.
 - Added `docs/plan3-feature-map.md` to map each plan3 stream to the current
   modules, examples, and docs.
+- Expanded the Medium article with a plan3 summary section that emphasizes
+  Codegen and ties every stream back to a user-facing feature.
 - Added `docs/framework-adapters.md` with the sync and async adapter recipe.
 - Reworked the README first screen around a two-minute start path and clearer
   production/cookbook links.
@@ -102,6 +104,7 @@ Run the full release wrapper when public artifacts are expected to exist:
 - Added `examples/cookbook/` as the stable table of contents for example
   selection.
 - Added a plan3 feature map for users navigating by stream.
+- Expanded the Medium article with a plan3 summary centered on Codegen.
 - Polished the README around a two-minute start path.
 
 ## Install
