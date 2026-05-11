@@ -3,6 +3,7 @@ import sys
 import types
 import unittest
 from contextlib import redirect_stdout
+from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import mock
@@ -10,10 +11,12 @@ from unittest import mock
 from gemstone_py import gemstone_class
 from gemstone_py.inspection import ClassDescription
 from gemstone_py.migrations import (
+    DEFAULT_LOCK_ROOT,
     DEFAULT_VERSION_ROOT,
     Migration,
     MigrationError,
     MigrationStep,
+    acquire_migration_lock,
     current_version,
     diff_class,
     downgrade,
@@ -23,6 +26,7 @@ from gemstone_py.migrations import (
     migration_status,
     plan_downgrade,
     plan_upgrade,
+    release_migration_lock,
     scaffold,
     upgrade,
     validate_migration_state,
@@ -166,9 +170,10 @@ class ModuleMigrationTests(unittest.TestCase):
 
         self.assertEqual(result.steps, ("001_initial", "002_add_total"))
         self.assertEqual(calls, [("up", session), ("up2", session)])
-        self.assertEqual(session.commit.call_count, 2)
+        self.assertEqual(session.commit.call_count, 4)
         self.assertIn("001_initial", root[DEFAULT_VERSION_ROOT])
         self.assertEqual(root[DEFAULT_VERSION_ROOT]["002_add_total"]["checksum"], "abc")
+        self.assertNotIn(DEFAULT_LOCK_ROOT, root)
 
     def test_upgrade_dry_run_does_not_touch_session(self):
         root = {}
@@ -182,6 +187,7 @@ class ModuleMigrationTests(unittest.TestCase):
         self.assertTrue(result.dry_run)
         session.commit.assert_not_called()
         self.assertNotIn(DEFAULT_VERSION_ROOT, root)
+        self.assertNotIn(DEFAULT_LOCK_ROOT, root)
 
     def test_downgrade_removes_records_and_commits_each_step(self):
         root = {
@@ -205,9 +211,10 @@ class ModuleMigrationTests(unittest.TestCase):
 
         self.assertEqual(result.steps, ("002_add_total",))
         self.assertEqual(calls, [("down", session)])
-        session.commit.assert_called_once_with()
+        self.assertEqual(session.commit.call_count, 3)
         self.assertIn("001_initial", root[DEFAULT_VERSION_ROOT])
         self.assertNotIn("002_add_total", root[DEFAULT_VERSION_ROOT])
+        self.assertNotIn(DEFAULT_LOCK_ROOT, root)
 
     def test_downgrade_requires_callback(self):
         root = {
@@ -223,6 +230,56 @@ class ModuleMigrationTests(unittest.TestCase):
                 downgrade(session, [step], target="base")
 
         session.commit.assert_not_called()
+
+    def test_upgrade_rejects_active_migration_lock(self):
+        root = {
+            DEFAULT_LOCK_ROOT: {
+                "owner": "other",
+                "acquired_at": datetime.now(timezone.utc).isoformat(),
+            }
+        }
+        session = mock.Mock()
+        step = MigrationStep("001_initial", lambda current: None)
+
+        with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value=root):
+            with self.assertRaisesRegex(MigrationError, "migration lock"):
+                upgrade(session, [step], lock_stale_after_seconds=None)
+
+        session.commit.assert_not_called()
+
+    def test_upgrade_releases_lock_after_failure(self):
+        root = {}
+        session = mock.Mock()
+
+        def fail(_current):
+            raise RuntimeError("boom")
+
+        step = MigrationStep("001_initial", fail)
+
+        with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value=root):
+            with self.assertRaisesRegex(MigrationError, "failed to apply"):
+                upgrade(session, [step], lock_owner="test-owner")
+
+        self.assertNotIn(DEFAULT_LOCK_ROOT, root)
+        session.abort.assert_called_once_with()
+        self.assertEqual(session.commit.call_count, 2)
+
+    def test_acquire_migration_lock_replaces_stale_lock(self):
+        root = {
+            DEFAULT_LOCK_ROOT: {
+                "owner": "old",
+                "acquired_at": "2000-01-01T00:00:00+00:00",
+            }
+        }
+        session = mock.Mock()
+
+        with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value=root):
+            lock = acquire_migration_lock(session, owner="new", stale_after_seconds=1)
+            release_migration_lock(session, lock)
+
+        self.assertEqual(lock.owner, "new")
+        self.assertNotIn(DEFAULT_LOCK_ROOT, root)
+        self.assertEqual(session.commit.call_count, 2)
 
     def test_current_version_returns_latest_applied_id(self):
         root = {
@@ -380,13 +437,46 @@ class ModuleMigrationTests(unittest.TestCase):
                 with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value={}):
                     with redirect_stdout(stream):
                         result = main(
-                            ["upgrade", "--manifest", "app.migrations.manifest", "--dry-run"]
+                            [
+                                "upgrade",
+                                "--manifest",
+                                "app.migrations.manifest",
+                                "--dry-run",
+                                "--lock-owner",
+                                "ignored",
+                            ]
                         )
 
         self.assertEqual(result, 0)
         self.assertIn("upgrade dry-run: 1 step(s)", stream.getvalue())
         self.assertIn("001_initial", stream.getvalue())
         session.commit.assert_not_called()
+
+    def test_upgrade_cli_can_disable_lock_for_apply(self):
+        stream = io.StringIO()
+        step = MigrationStep("001_initial", lambda current: None)
+        session = mock.Mock()
+        session_cm = mock.Mock()
+        session_cm.__enter__ = mock.Mock(return_value=session)
+        session_cm.__exit__ = mock.Mock(return_value=False)
+        root = {}
+
+        with mock.patch("gemstone_py.migrations.load_manifest", return_value=(step,)):
+            with mock.patch("gemstone_py.migrations._session_from_env", return_value=session_cm):
+                with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value=root):
+                    with redirect_stdout(stream):
+                        result = main(
+                            [
+                                "upgrade",
+                                "--manifest",
+                                "app.migrations.manifest",
+                                "--no-lock",
+                            ]
+                        )
+
+        self.assertEqual(result, 0)
+        self.assertNotIn(DEFAULT_LOCK_ROOT, root)
+        session.commit.assert_called_once_with()
 
     def test_current_cli_prints_base_for_empty_version_table(self):
         stream = io.StringIO()

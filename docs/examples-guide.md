@@ -650,6 +650,18 @@ Before applying a new step, the runner checks that every GemStone-applied
 migration id still exists in the local manifest and that stored checksums still
 match local migration files when checksums are available.
 
+Real `upgrade` and `downgrade` runs also acquire an advisory lock in
+`UserGlobals` before applying steps. Dry-runs do not acquire the lock. If a
+previous process crashed and left a stale lock, use a reviewed override:
+
+```bash
+gemstone-migrations upgrade --manifest my_app.migrations.manifest \
+  --force-lock --lock-owner release-2026-05-11
+```
+
+Use `--no-lock` only for controlled maintenance windows where another guard is
+already preventing concurrent migration runs.
+
 When a local Protocol or type witness has drifted from a GemStone class, compare
 the two before writing a migration:
 

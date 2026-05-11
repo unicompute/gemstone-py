@@ -46,6 +46,8 @@ All notable changes to `gemstone-py` should be recorded here.
   `gemstone-migrations status` and `gemstone-migrations diff-class`, for
   comparing local Protocol/type-witness fields with live GemStone class
   instance variables.
+- Added a GemStone-side advisory migration lock for real upgrade/downgrade
+  runs, with stale-lock and forced-lock CLI controls.
 - Added `gemstone-publish-verify`, an end-to-end PyPI/TestPyPI verifier for
   project JSON, version-specific JSON, simple index pages, and temporary
   virtualenv install smoke checks.

@@ -477,6 +477,15 @@ Applied versions are tracked under `GemstonePyMigrations` in `UserGlobals`.
 Before applying new steps, the runner checks that the live version table still
 matches the local manifest and stored migration checksums.
 
+Real `upgrade` and `downgrade` runs acquire an advisory lock in `UserGlobals`
+before applying steps. Dry-runs do not lock. If a previous process crashed and
+left a stale lock, use `--force-lock` with a clear owner string:
+
+```bash
+gemstone-migrations upgrade --manifest my_app.migrations.manifest \
+  --force-lock --lock-owner release-2026-05-11
+```
+
 For class-shape changes, compare a live GemStone class with a local Protocol or
 type witness:
 

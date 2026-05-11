@@ -42,7 +42,9 @@ import argparse
 import hashlib
 import importlib
 import inspect
+import os
 import re
+import socket
 import textwrap
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -60,6 +62,8 @@ class MigrationError(Exception):
 
 
 DEFAULT_VERSION_ROOT = "GemstonePyMigrations"
+DEFAULT_LOCK_ROOT = f"{DEFAULT_VERSION_ROOT}Lock"
+DEFAULT_LOCK_STALE_AFTER_SECONDS = 60 * 60
 MigrationCallback = Callable[[gemstone.GemStoneSession], None]
 
 
@@ -104,6 +108,16 @@ class MigrationStatus:
     current: str | None
     applied: tuple[str, ...]
     pending: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class MigrationLock:
+    """GemStone-side advisory lock record for migration runs."""
+
+    key: str
+    owner: str
+    acquired_at: str
+    root_key: str
 
 
 @dataclass(frozen=True)
@@ -286,6 +300,76 @@ def migration_status(
     )
 
 
+def acquire_migration_lock(
+    session: gemstone.GemStoneSession,
+    *,
+    root_key: str = DEFAULT_VERSION_ROOT,
+    lock_key: str | None = None,
+    owner: str | None = None,
+    stale_after_seconds: float | None = DEFAULT_LOCK_STALE_AFTER_SECONDS,
+    force: bool = False,
+) -> MigrationLock:
+    """
+    Acquire the GemStone-side advisory migration lock.
+
+    The lock is a small record in ``UserGlobals``. Acquiring it commits once so
+    other sessions see the lock before migration steps begin.
+    """
+    from gemstone_py.persistent_root import PersistentRoot
+
+    resolved_key = lock_key or DEFAULT_LOCK_ROOT
+    root = PersistentRoot(session)
+    existing = _normalize_lock(root.get(resolved_key))
+    if existing and not force and not _lock_is_stale(existing, stale_after_seconds):
+        raise MigrationError(
+            f"migration lock {resolved_key!r} is held by {existing.get('owner', 'unknown')}"
+        )
+
+    lock = MigrationLock(
+        key=resolved_key,
+        owner=owner or _default_lock_owner(),
+        acquired_at=_utcnow_iso(),
+        root_key=root_key,
+    )
+    root[resolved_key] = {
+        "owner": lock.owner,
+        "acquired_at": lock.acquired_at,
+        "root_key": lock.root_key,
+    }
+    try:
+        session.commit()
+    except Exception as exc:
+        session.abort()
+        raise MigrationError(f"failed to acquire migration lock {resolved_key!r}") from exc
+    return lock
+
+
+def release_migration_lock(
+    session: gemstone.GemStoneSession,
+    lock: MigrationLock,
+    *,
+    force: bool = False,
+) -> None:
+    """Release a previously acquired GemStone-side migration lock."""
+    from gemstone_py.persistent_root import PersistentRoot
+
+    root = PersistentRoot(session)
+    existing = _normalize_lock(root.get(lock.key))
+    if not existing:
+        return
+    if not force and existing.get("owner") != lock.owner:
+        raise MigrationError(
+            f"migration lock {lock.key!r} is held by {existing.get('owner', 'unknown')}; "
+            f"not releasing lock owned by {lock.owner!r}"
+        )
+    del root[lock.key]
+    try:
+        session.commit()
+    except Exception as exc:
+        session.abort()
+        raise MigrationError(f"failed to release migration lock {lock.key!r}") from exc
+
+
 def diff_class(
     session: gemstone.GemStoneSession,
     class_name: str | None = None,
@@ -338,6 +422,11 @@ def upgrade(
     target: str | None = None,
     dry_run: bool = False,
     root_key: str = DEFAULT_VERSION_ROOT,
+    use_lock: bool = True,
+    lock_key: str | None = None,
+    lock_owner: str | None = None,
+    lock_stale_after_seconds: float | None = DEFAULT_LOCK_STALE_AFTER_SECONDS,
+    force_lock: bool = False,
 ) -> MigrationResult:
     """Apply pending module-style migrations and record each committed step."""
     applied = applied_migrations(session, root_key=root_key)
@@ -346,15 +435,39 @@ def upgrade(
     if dry_run:
         return MigrationResult("upgrade", target, tuple(step.id for step in pending), True)
 
-    for step in pending:
-        try:
-            step.upgrade(session)
-            applied[step.id] = _applied_record(step)
-            _write_applied_migrations(session, applied, root_key=root_key)
-            session.commit()
-        except Exception as exc:
-            session.abort()
-            raise MigrationError(f"failed to apply migration {step.id}") from exc
+    lock = (
+        acquire_migration_lock(
+            session,
+            root_key=root_key,
+            lock_key=lock_key,
+            owner=lock_owner,
+            stale_after_seconds=lock_stale_after_seconds,
+            force=force_lock,
+        )
+        if use_lock and pending
+        else None
+    )
+    operation_error: BaseException | None = None
+    try:
+        for step in pending:
+            try:
+                step.upgrade(session)
+                applied[step.id] = _applied_record(step)
+                _write_applied_migrations(session, applied, root_key=root_key)
+                session.commit()
+            except Exception as exc:
+                session.abort()
+                raise MigrationError(f"failed to apply migration {step.id}") from exc
+    except BaseException as exc:
+        operation_error = exc
+        raise
+    finally:
+        if lock is not None:
+            try:
+                release_migration_lock(session, lock, force=force_lock)
+            except Exception:
+                if operation_error is None:
+                    raise
     return MigrationResult("upgrade", target, tuple(step.id for step in pending))
 
 
@@ -365,6 +478,11 @@ def downgrade(
     target: str | None = None,
     dry_run: bool = False,
     root_key: str = DEFAULT_VERSION_ROOT,
+    use_lock: bool = True,
+    lock_key: str | None = None,
+    lock_owner: str | None = None,
+    lock_stale_after_seconds: float | None = DEFAULT_LOCK_STALE_AFTER_SECONDS,
+    force_lock: bool = False,
 ) -> MigrationResult:
     """Roll back applied module-style migrations down to ``target``."""
     applied = applied_migrations(session, root_key=root_key)
@@ -376,16 +494,40 @@ def downgrade(
     if dry_run:
         return MigrationResult("downgrade", target, tuple(step.id for step in pending), True)
 
-    for step in pending:
-        try:
-            assert step.downgrade is not None
-            step.downgrade(session)
-            applied.pop(step.id, None)
-            _write_applied_migrations(session, applied, root_key=root_key)
-            session.commit()
-        except Exception as exc:
-            session.abort()
-            raise MigrationError(f"failed to roll back migration {step.id}") from exc
+    lock = (
+        acquire_migration_lock(
+            session,
+            root_key=root_key,
+            lock_key=lock_key,
+            owner=lock_owner,
+            stale_after_seconds=lock_stale_after_seconds,
+            force=force_lock,
+        )
+        if use_lock and pending
+        else None
+    )
+    operation_error: BaseException | None = None
+    try:
+        for step in pending:
+            try:
+                assert step.downgrade is not None
+                step.downgrade(session)
+                applied.pop(step.id, None)
+                _write_applied_migrations(session, applied, root_key=root_key)
+                session.commit()
+            except Exception as exc:
+                session.abort()
+                raise MigrationError(f"failed to roll back migration {step.id}") from exc
+    except BaseException as exc:
+        operation_error = exc
+        raise
+    finally:
+        if lock is not None:
+            try:
+                release_migration_lock(session, lock, force=force_lock)
+            except Exception:
+                if operation_error is None:
+                    raise
     return MigrationResult("downgrade", target, tuple(step.id for step in pending))
 
 
@@ -456,6 +598,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     upgrade_parser = subcommands.add_parser("upgrade", help="Apply pending migrations.")
     _add_online_arguments(upgrade_parser)
+    _add_lock_arguments(upgrade_parser)
     upgrade_parser.add_argument("--target", help="Stop after applying this migration id.")
     upgrade_parser.add_argument(
         "--dry-run",
@@ -465,6 +608,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     downgrade_parser = subcommands.add_parser("downgrade", help="Roll back applied migrations.")
     _add_online_arguments(downgrade_parser)
+    _add_lock_arguments(downgrade_parser)
     downgrade_parser.add_argument(
         "--target",
         default="base",
@@ -531,6 +675,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 target=args.target,
                 dry_run=bool(args.dry_run),
                 root_key=args.root_key,
+                use_lock=not bool(args.no_lock),
+                lock_key=args.lock_key,
+                lock_owner=args.lock_owner,
+                lock_stale_after_seconds=args.lock_stale_after,
+                force_lock=bool(args.force_lock),
             )
         _print_result(result)
         return 0
@@ -543,6 +692,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 target=args.target,
                 dry_run=bool(args.dry_run),
                 root_key=args.root_key,
+                use_lock=not bool(args.no_lock),
+                lock_key=args.lock_key,
+                lock_owner=args.lock_owner,
+                lock_stale_after_seconds=args.lock_stale_after,
+                force_lock=bool(args.force_lock),
             )
         _print_result(result)
         return 0
@@ -571,6 +725,27 @@ def _add_online_arguments(parser: argparse.ArgumentParser) -> None:
         "--root-key",
         default=DEFAULT_VERSION_ROOT,
         help="UserGlobals key that stores applied migration metadata.",
+    )
+
+
+def _add_lock_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--no-lock",
+        action="store_true",
+        help="Do not acquire the GemStone-side advisory migration lock.",
+    )
+    parser.add_argument("--lock-key", help="Override the UserGlobals migration lock key.")
+    parser.add_argument("--lock-owner", help="Override the lock owner string.")
+    parser.add_argument(
+        "--lock-stale-after",
+        type=float,
+        default=float(DEFAULT_LOCK_STALE_AFTER_SECONDS),
+        help="Seconds after which an existing lock is considered stale.",
+    )
+    parser.add_argument(
+        "--force-lock",
+        action="store_true",
+        help="Replace an existing lock even when it is not stale.",
     )
 
 
@@ -746,6 +921,41 @@ def _normalize_applied_table(table: object) -> dict[str, dict[str, str]]:
         record.setdefault("applied_at", "")
         result[key] = record
     return result
+
+
+def _normalize_lock(record: object) -> dict[str, str]:
+    if record is None:
+        return {}
+    if not hasattr(record, "items"):
+        return {"owner": str(record), "acquired_at": "", "root_key": DEFAULT_VERSION_ROOT}
+    return {str(key): str(value) for key, value in record.items()}
+
+
+def _lock_is_stale(
+    record: Mapping[str, str],
+    stale_after_seconds: float | None,
+) -> bool:
+    if stale_after_seconds is None:
+        return False
+    acquired_at = record.get("acquired_at", "")
+    if not acquired_at:
+        return False
+    try:
+        acquired = datetime.fromisoformat(acquired_at)
+    except ValueError:
+        return False
+    if acquired.tzinfo is None:
+        acquired = acquired.replace(tzinfo=timezone.utc)
+    elapsed = datetime.now(timezone.utc) - acquired.astimezone(timezone.utc)
+    return elapsed.total_seconds() > stale_after_seconds
+
+
+def _utcnow_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _default_lock_owner() -> str:
+    return f"{socket.gethostname()}:{os.getpid()}"
 
 
 def _current_version_from_applied(applied: Mapping[str, Mapping[str, str]]) -> str | None:

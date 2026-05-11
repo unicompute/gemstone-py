@@ -395,6 +395,8 @@ Applied versions are recorded under `GemstonePyMigrations` in `UserGlobals`.
 The runner refuses to continue when the stone has applied migrations that are
 missing from the local manifest, or when a stored migration checksum differs
 from the local file.
+Real `upgrade` and `downgrade` runs acquire an advisory lock in `UserGlobals`
+before applying steps; dry-runs do not.
 
 The same operations are available from the command line:
 
@@ -405,6 +407,13 @@ gemstone-migrations plan --manifest my_app.migrations.manifest
 gemstone-migrations upgrade --manifest my_app.migrations.manifest --dry-run
 gemstone-migrations upgrade --manifest my_app.migrations.manifest
 gemstone-migrations downgrade --manifest my_app.migrations.manifest --target 001_initial
+```
+
+For a stale lock left by a crashed process, use a deliberate override:
+
+```bash
+gemstone-migrations upgrade --manifest my_app.migrations.manifest \
+  --force-lock --lock-owner release-2026-05-11
 ```
 
 To compare a local Protocol or type witness with the live GemStone class before
