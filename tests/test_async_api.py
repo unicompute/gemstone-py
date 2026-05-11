@@ -1,10 +1,11 @@
+import asyncio
 import threading
 import unittest
 from unittest import mock
 
 import gemstone_py as gemstone
-from gemstone_py.aio import AsyncGSCollection, AsyncManagedOop, AsyncSession
-from gemstone_py.aio.fastapi import session_dependency
+from gemstone_py.aio import AsyncGSCollection, AsyncManagedOop, AsyncSession, AsyncSessionPool
+from gemstone_py.aio.fastapi import pool_session_dependency, session_dependency
 
 
 class FakeGemStoneSession:
@@ -154,6 +155,134 @@ class AsyncSessionTests(unittest.IsolatedAsyncioTestCase):
 
         await session.logout()
         session.close()
+
+
+class AsyncSessionPoolTests(unittest.IsolatedAsyncioTestCase):
+    async def test_pool_reuses_clean_sessions(self):
+        created = []
+
+        def factory(**kwargs):
+            session = FakeGemStoneSession(**kwargs)
+            created.append(session)
+            return session
+
+        pool = AsyncSessionPool(maxsize=1, session_factory=factory, stone="demo")
+
+        first = await pool.acquire()
+        await pool.release(first, clean=True)
+        second = await pool.acquire()
+        await pool.release(second, discard=True)
+        await pool.close()
+
+        self.assertIs(first, second)
+        self.assertEqual(len(created), 1)
+        self.assertEqual(created[0].calls, ["login", "logout"])
+        self.assertEqual(created[0].kwargs["transaction_policy"], gemstone.TransactionPolicy.MANUAL)
+
+    async def test_pool_context_manager_aborts_before_release(self):
+        created = []
+
+        def factory(**kwargs):
+            session = FakeGemStoneSession(**kwargs)
+            created.append(session)
+            return session
+
+        pool = AsyncSessionPool(maxsize=1, session_factory=factory)
+
+        async with pool.acquire() as session:
+            self.assertIsInstance(session, AsyncSession)
+
+        stats = pool.stats()
+        await pool.close()
+
+        self.assertEqual(stats.idle, 1)
+        self.assertEqual(created[0].calls, ["login", "abort", "logout"])
+
+    async def test_pool_timeout_raises_timeout_error(self):
+        pool = AsyncSessionPool(maxsize=1, session_factory=FakeGemStoneSession, acquire_timeout=0)
+
+        session = await pool.acquire()
+        with self.assertRaises(TimeoutError):
+            await pool.acquire()
+        await pool.release(session, discard=True)
+        await pool.close()
+
+    async def test_pool_validation_query_runs_after_interval(self):
+        created = []
+
+        def factory(**kwargs):
+            session = FakeGemStoneSession(**kwargs)
+            created.append(session)
+            return session
+
+        pool = AsyncSessionPool(
+            maxsize=1,
+            session_factory=factory,
+            validation_query="1 + 1",
+            validation_interval_seconds=999,
+        )
+
+        first = await pool.acquire()
+        await pool.release(first, clean=True)
+        setattr(first, "_gemstone_pool_validated_at", 0.0)
+        second = await pool.acquire()
+        await pool.release(second, discard=True)
+        await pool.close()
+
+        self.assertIs(first, second)
+        self.assertEqual(created[0].calls, ["login", "eval:1 + 1", "eval:1 + 1", "logout"])
+
+    async def test_pool_sweep_idle_respects_minsize(self):
+        pool = AsyncSessionPool(
+            maxsize=2,
+            minsize=1,
+            session_factory=FakeGemStoneSession,
+            idle_timeout_seconds=999,
+        )
+
+        await pool.warm(2)
+        drained = []
+        while True:
+            try:
+                session = pool._available.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+            setattr(session, "_gemstone_pool_last_used_at", 0.0)
+            drained.append(session)
+        for session in drained:
+            pool._available.put_nowait(session)
+
+        swept = await pool.sweep_idle()
+        stats = pool.stats()
+        await pool.close()
+
+        self.assertEqual(swept, 1)
+        self.assertEqual(stats.current_capacity, 1)
+        self.assertEqual(stats.idle, 1)
+        self.assertEqual(stats.evicted_total, 1)
+
+    async def test_pool_session_dependency_commits_and_releases_clean_session(self):
+        created = []
+
+        def factory(**kwargs):
+            session = FakeGemStoneSession(**kwargs)
+            created.append(session)
+            return session
+
+        pool = AsyncSessionPool(maxsize=1, session_factory=factory)
+        dependency = pool_session_dependency(pool)
+        generator = dependency()
+
+        session = await generator.__anext__()
+        self.assertIsInstance(session, AsyncSession)
+        with self.assertRaises(StopAsyncIteration):
+            await generator.__anext__()
+
+        stats = pool.stats()
+        await pool.close()
+
+        self.assertEqual(stats.idle, 1)
+        self.assertEqual(created[0].calls, ["login", "commit", "logout"])
 
 
 class AsyncCollectionTests(unittest.IsolatedAsyncioTestCase):

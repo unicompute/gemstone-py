@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator
 from typing import Any, Callable, cast
 
 from gemstone_py.aio import AsyncSession
+from gemstone_py.aio.pool import AsyncSessionPool
 from gemstone_py.client import GemStoneConfig, TransactionPolicy
 
 
@@ -36,6 +37,41 @@ def session_dependency(
 def get_session(**session_kwargs: Any) -> Callable[[], AsyncIterator[AsyncSession]]:
     """Alias for ``session_dependency`` matching FastAPI naming conventions."""
     return session_dependency(**session_kwargs)
+
+
+def pool_session_dependency(
+    pool: AsyncSessionPool,
+    *,
+    commit_on_success: bool = True,
+) -> Callable[[], AsyncIterator[AsyncSession]]:
+    """
+    Build a FastAPI dependency backed by an ``AsyncSessionPool``.
+
+    This avoids opening a fresh GemStone session for each request. Successful
+    handlers commit by default; exceptions abort before the session is returned
+    to the pool.
+    """
+
+    async def get_pooled_session() -> AsyncIterator[AsyncSession]:
+        session = await pool.acquire()
+        clean = False
+        discard = False
+        try:
+            yield session
+            if commit_on_success:
+                await session.commit()
+                clean = True
+        except Exception:
+            try:
+                await session.abort()
+                clean = True
+            except Exception:
+                discard = True
+            raise
+        finally:
+            await pool.release(session, discard=discard, clean=clean)
+
+    return get_pooled_session
 
 
 class GemStoneSessionMiddleware:
@@ -120,6 +156,7 @@ __all__ = [
     "GemStoneSessionMiddleware",
     "get_session",
     "install_fastapi_session",
+    "pool_session_dependency",
     "request_session",
     "session_dependency",
 ]

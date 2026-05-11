@@ -105,7 +105,7 @@ thread while letting your event loop continue serving other work.
 
 ```python
 from gemstone_py import GemStoneConfig
-from gemstone_py.aio import AsyncSession
+from gemstone_py.aio import AsyncSession, AsyncSessionPool
 
 config = GemStoneConfig.from_env()
 
@@ -122,6 +122,25 @@ Use `AsyncSession` when:
 - request handlers are already async
 - you want FastAPI dependency injection
 - you need to keep blocking GCI work out of the event loop
+
+Use `AsyncSessionPool` when async requests should reuse logged-in GemStone
+sessions instead of opening one session per request:
+
+```python
+pool = AsyncSessionPool(
+    maxsize=8,
+    minsize=2,
+    config=config,
+    idle_timeout_seconds=900,
+    validation_query="1 + 1",
+    validation_interval_seconds=60,
+)
+
+async with pool.acquire() as session:
+    value = await session.eval("3 + 4")
+
+await pool.close()
+```
 
 The runnable repository example is
 `examples/async_features/session_root_and_collection.py`.
@@ -456,8 +475,8 @@ FastAPI integration lives in `gemstone_py.aio.fastapi`.
 ```python
 from fastapi import Depends, FastAPI
 from gemstone_py import GemStoneConfig
-from gemstone_py.aio import AsyncSession
-from gemstone_py.aio.fastapi import session_dependency
+from gemstone_py.aio import AsyncSession, AsyncSessionPool
+from gemstone_py.aio.fastapi import pool_session_dependency, session_dependency
 
 app = FastAPI()
 get_gemstone = session_dependency(config=GemStoneConfig.from_env())
@@ -465,6 +484,13 @@ get_gemstone = session_dependency(config=GemStoneConfig.from_env())
 @app.get("/health/gemstone")
 async def gemstone_health(session: AsyncSession = Depends(get_gemstone)):
     return {"result": await session.eval("3 + 4")}
+```
+
+For busier FastAPI apps, use a pool-backed dependency:
+
+```python
+pool = AsyncSessionPool(maxsize=8, minsize=2, config=GemStoneConfig.from_env())
+get_pooled_gemstone = pool_session_dependency(pool)
 ```
 
 Use this when your web stack is async-first. Use the Flask integration when your

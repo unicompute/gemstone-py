@@ -334,8 +334,8 @@ http://127.0.0.1:8000/health/gemstone
 ```python
 from fastapi import Depends, FastAPI
 from gemstone_py import GemStoneConfig
-from gemstone_py.aio import AsyncSession
-from gemstone_py.aio.fastapi import session_dependency
+from gemstone_py.aio import AsyncSession, AsyncSessionPool
+from gemstone_py.aio.fastapi import pool_session_dependency, session_dependency
 
 app = FastAPI()
 get_gemstone = session_dependency(config=GemStoneConfig.from_env())
@@ -343,6 +343,21 @@ get_gemstone = session_dependency(config=GemStoneConfig.from_env())
 @app.get("/health/gemstone")
 async def gemstone_health(session: AsyncSession = Depends(get_gemstone)):
     return {"result": await session.eval("3 + 4")}
+```
+
+For production-style async apps, create an `AsyncSessionPool` during application
+startup and use `pool_session_dependency(...)`:
+
+```python
+pool = AsyncSessionPool(
+    maxsize=8,
+    minsize=2,
+    config=GemStoneConfig.from_env(),
+    idle_timeout_seconds=900,
+    validation_query="1 + 1",
+    validation_interval_seconds=60,
+)
+get_pooled_gemstone = pool_session_dependency(pool)
 ```
 
 See `examples/async_features/session_root_and_collection.py` for async

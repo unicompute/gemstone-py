@@ -405,6 +405,14 @@ def __getattr__(name: str) -> object:
         from gemstone_py.aio.persistent_root import AsyncPersistentRoot
 
         return AsyncPersistentRoot
+    if name == "AsyncSessionPool":
+        from gemstone_py.aio.pool import AsyncSessionPool
+
+        return AsyncSessionPool
+    if name == "AsyncSessionPoolLease":
+        from gemstone_py.aio.pool import AsyncSessionPoolLease
+
+        return AsyncSessionPoolLease
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -414,4 +422,6 @@ __all__ = [
     "AsyncOopHandle",
     "AsyncPersistentRoot",
     "AsyncSession",
+    "AsyncSessionPool",
+    "AsyncSessionPoolLease",
 ]

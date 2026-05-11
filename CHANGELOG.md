@@ -10,6 +10,8 @@ All notable changes to `gemstone-py` should be recorded here.
   idle-timeout eviction on checkout for pooled GemStone sessions.
 - Added pool `minsize`, manual `sweep_idle()`, and optional daemon idle
   sweeping that never evicts checked-out sessions.
+- Added `AsyncSessionPool` and FastAPI `pool_session_dependency(...)` for
+  pool-backed async request handling.
 - Added `gemstone-publish-verify`, an end-to-end PyPI/TestPyPI verifier for
   project JSON, version-specific JSON, simple index pages, and temporary
   virtualenv install smoke checks.
