@@ -470,8 +470,27 @@ each module exposes `upgrade(session)` plus optional `downgrade(session)`.
 gemstone-migrations scaffold add_amount_to_booking --directory migrations
 gemstone-migrations status --manifest my_app.migrations.manifest
 gemstone-migrations upgrade --manifest my_app.migrations.manifest --dry-run
+gemstone-migrations upgrade --manifest my_app.migrations.manifest --dry-run --record
 gemstone-migrations upgrade --manifest my_app.migrations.manifest
 ```
+
+Plain `--dry-run` reports the pending migration ids. `--dry-run --record` also
+runs migration callbacks against a `RecordingMigrationSession`, prints common
+session calls, and never sends those calls to GemStone:
+
+```text
+dry-run upgrade: 1 step(s)
+  002_add_amount_to_booking
+recorded operations:
+  # upgrade 002_add_amount_to_booking
+  session.eval("OkzBooking addInstVarName: 'amount' ifAbsent: [ nil ]")
+  session.commit()
+```
+
+The recorder is deliberately conservative. It returns placeholder OOPs and is
+best for migrations made of direct `session.eval(...)`, `execute(...)`,
+`perform_value(...)`, `commit()`, and `abort()` calls. Use a staging stone for
+migrations that branch on live data.
 
 Applied versions are tracked under `GemstonePyMigrations` in `UserGlobals`.
 Before applying new steps, the runner checks that the live version table still
@@ -496,6 +515,12 @@ gemstone-migrations diff-class OkzBooking \
 
 The output is advisory: review the suggested instance-variable changes before
 copying them into a migration.
+
+The live test lane includes a module migration round trip:
+
+```bash
+GS_RUN_LIVE=1 ./scripts/run_live_checks.sh
+```
 
 ### Commit Conflicts
 

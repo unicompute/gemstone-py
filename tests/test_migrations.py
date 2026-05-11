@@ -16,6 +16,7 @@ from gemstone_py.migrations import (
     Migration,
     MigrationError,
     MigrationStep,
+    RecordingMigrationSession,
     acquire_migration_lock,
     current_version,
     diff_class,
@@ -189,6 +190,50 @@ class ModuleMigrationTests(unittest.TestCase):
         self.assertNotIn(DEFAULT_VERSION_ROOT, root)
         self.assertNotIn(DEFAULT_LOCK_ROOT, root)
 
+    def test_upgrade_recorded_dry_run_captures_session_calls(self):
+        root = {}
+        session = mock.Mock()
+
+        def apply(current):
+            current.eval("UserGlobals at: #Flag put: true")
+            current.perform_value(123, "touch")
+            current.commit()
+
+        step = MigrationStep("001_initial", apply)
+
+        with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value=root):
+            result = upgrade(session, [step], dry_run=True, record_dry_run=True)
+
+        self.assertTrue(result.dry_run)
+        self.assertEqual(result.steps, ("001_initial",))
+        self.assertEqual(
+            result.operations,
+            (
+                "# upgrade 001_initial",
+                "session.eval('UserGlobals at: #Flag put: true')",
+                "session.perform_value(123, 'touch')",
+                "session.commit()",
+            ),
+        )
+        session.commit.assert_not_called()
+        self.assertNotIn(DEFAULT_VERSION_ROOT, root)
+
+    def test_recording_session_returns_placeholders_without_sending(self):
+        recorder = RecordingMigrationSession()
+
+        self.assertEqual(recorder.execute("Object new"), 0)
+        self.assertEqual(recorder.eval_oop("Object new"), 0)
+        self.assertIsNone(recorder.eval("1 + 2"))
+
+        self.assertEqual(
+            recorder.operations,
+            [
+                "session.execute('Object new')",
+                "session.eval_oop('Object new')",
+                "session.eval('1 + 2')",
+            ],
+        )
+
     def test_downgrade_removes_records_and_commits_each_step(self):
         root = {
             DEFAULT_VERSION_ROOT: {
@@ -215,6 +260,49 @@ class ModuleMigrationTests(unittest.TestCase):
         self.assertIn("001_initial", root[DEFAULT_VERSION_ROOT])
         self.assertNotIn("002_add_total", root[DEFAULT_VERSION_ROOT])
         self.assertNotIn(DEFAULT_LOCK_ROOT, root)
+
+    def test_downgrade_recorded_dry_run_captures_rollback_calls(self):
+        root = {
+            DEFAULT_VERSION_ROOT: {
+                "001_initial": {"id": "001_initial", "applied_at": "2026-01-01T00:00:00Z"},
+                "002_add_total": {"id": "002_add_total", "applied_at": "2026-01-02T00:00:00Z"},
+            }
+        }
+        session = mock.Mock()
+        first = MigrationStep(
+            "001_initial",
+            lambda current: None,
+            lambda current: current.abort(),
+        )
+        second = MigrationStep(
+            "002_add_total",
+            lambda current: None,
+            lambda current: current.eval("UserGlobals removeKey: #Flag ifAbsent: []"),
+            dependencies=("001_initial",),
+        )
+
+        with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value=root):
+            result = downgrade(
+                session,
+                [first, second],
+                target="base",
+                dry_run=True,
+                record_dry_run=True,
+            )
+
+        self.assertTrue(result.dry_run)
+        self.assertEqual(result.steps, ("002_add_total", "001_initial"))
+        self.assertEqual(
+            result.operations,
+            (
+                "# downgrade 002_add_total",
+                "session.eval('UserGlobals removeKey: #Flag ifAbsent: []')",
+                "# downgrade 001_initial",
+                "session.abort()",
+            ),
+        )
+        session.commit.assert_not_called()
+        self.assertIn("002_add_total", root[DEFAULT_VERSION_ROOT])
 
     def test_downgrade_requires_callback(self):
         root = {
@@ -450,6 +538,38 @@ class ModuleMigrationTests(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertIn("upgrade dry-run: 1 step(s)", stream.getvalue())
         self.assertIn("001_initial", stream.getvalue())
+        session.commit.assert_not_called()
+
+    def test_upgrade_cli_recorded_dry_run_prints_operations(self):
+        stream = io.StringIO()
+
+        def apply(current):
+            current.eval("3 + 4")
+
+        step = MigrationStep("001_initial", apply)
+        session = mock.Mock()
+        session_cm = mock.Mock()
+        session_cm.__enter__ = mock.Mock(return_value=session)
+        session_cm.__exit__ = mock.Mock(return_value=False)
+
+        with mock.patch("gemstone_py.migrations.load_manifest", return_value=(step,)):
+            with mock.patch("gemstone_py.migrations._session_from_env", return_value=session_cm):
+                with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value={}):
+                    with redirect_stdout(stream):
+                        result = main(
+                            [
+                                "upgrade",
+                                "--manifest",
+                                "app.migrations.manifest",
+                                "--dry-run",
+                                "--record",
+                            ]
+                        )
+
+        self.assertEqual(result, 0)
+        output = stream.getvalue()
+        self.assertIn("recorded operations:", output)
+        self.assertIn("session.eval('3 + 4')", output)
         session.commit.assert_not_called()
 
     def test_upgrade_cli_can_disable_lock_for_apply(self):

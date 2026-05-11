@@ -635,6 +635,25 @@ with GemStoneSession(config=GemStoneConfig.from_env()) as session:
     upgrade(session, steps)
 ```
 
+Example migration body:
+
+```python
+id = "002_add_amount_to_booking"
+dependencies = ("001_initial",)
+
+def upgrade(session):
+    session.eval(
+        "OkzBooking addInstVarName: 'amount' ifAbsent: [ nil ]"
+    )
+    session.commit()
+
+def downgrade(session):
+    session.eval(
+        "OkzBooking removeInstVarName: 'amount' ifAbsent: [ nil ]"
+    )
+    session.commit()
+```
+
 The same workflow is available from the command line:
 
 ```bash
@@ -642,6 +661,7 @@ gemstone-migrations current
 gemstone-migrations status --manifest my_app.migrations.manifest
 gemstone-migrations plan --manifest my_app.migrations.manifest
 gemstone-migrations upgrade --manifest my_app.migrations.manifest --dry-run
+gemstone-migrations upgrade --manifest my_app.migrations.manifest --dry-run --record
 gemstone-migrations upgrade --manifest my_app.migrations.manifest
 gemstone-migrations downgrade --manifest my_app.migrations.manifest --target 001_initial
 ```
@@ -661,6 +681,26 @@ gemstone-migrations upgrade --manifest my_app.migrations.manifest \
 
 Use `--no-lock` only for controlled maintenance windows where another guard is
 already preventing concurrent migration runs.
+
+Plain `--dry-run` prints the planned migration ids. Add `--record` when the
+migration body is mostly direct session calls such as `session.eval(...)`; the
+runner executes callbacks against a recording session and prints the calls it
+would have made without sending them to GemStone.
+
+Recorded output is intentionally plain so it can be reviewed in a release log:
+
+```text
+dry-run upgrade: 1 step(s)
+  002_add_amount_to_booking
+recorded operations:
+  # upgrade 002_add_amount_to_booking
+  session.eval("OkzBooking addInstVarName: 'amount' ifAbsent: [ nil ]")
+  session.commit()
+```
+
+If a migration branches on live query results, use the recorded dry-run as a
+partial review aid only. The recorder returns harmless placeholders for OOPs and
+does not ask GemStone for real state.
 
 When a local Protocol or type witness has drifted from a GemStone class, compare
 the two before writing a migration:

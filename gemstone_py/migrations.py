@@ -64,7 +64,7 @@ class MigrationError(Exception):
 DEFAULT_VERSION_ROOT = "GemstonePyMigrations"
 DEFAULT_LOCK_ROOT = f"{DEFAULT_VERSION_ROOT}Lock"
 DEFAULT_LOCK_STALE_AFTER_SECONDS = 60 * 60
-MigrationCallback = Callable[[gemstone.GemStoneSession], None]
+MigrationCallback = Callable[[Any], None]
 
 
 @dataclass(frozen=True)
@@ -99,6 +99,7 @@ class MigrationResult:
     target: str | None
     steps: tuple[str, ...]
     dry_run: bool = False
+    operations: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -118,6 +119,71 @@ class MigrationLock:
     owner: str
     acquired_at: str
     root_key: str
+
+
+class RecordingMigrationSession:
+    """
+    Session-like recorder used by migration dry-runs.
+
+    It records common GemStone session calls as strings and returns harmless
+    placeholders. It is intentionally limited; migrations that depend on live
+    query results still need a reviewed manual dry-run.
+    """
+
+    def __init__(self) -> None:
+        self.operations: list[str] = []
+
+    def eval(self, source: str) -> None:
+        self._record("eval", source)
+        return None
+
+    def eval_oop(self, source: str) -> int:
+        self._record("eval_oop", source)
+        return 0
+
+    def execute(self, source: str) -> int:
+        self._record("execute", source)
+        return 0
+
+    def execute_oop(self, source: str) -> int:
+        self._record("execute_oop", source)
+        return 0
+
+    def perform_value(self, receiver: int, selector: str, *args: Any) -> None:
+        self._record("perform_value", receiver, selector, *args)
+        return None
+
+    def perform_oop(self, receiver: int, selector: str, *args: Any) -> int:
+        self._record("perform_oop", receiver, selector, *args)
+        return 0
+
+    def new_string(self, value: str) -> int:
+        self._record("new_string", value)
+        return 0
+
+    def new_symbol(self, value: str) -> int:
+        self._record("new_symbol", value)
+        return 0
+
+    def resolve(self, name: str) -> int:
+        self._record("resolve", name)
+        return 0
+
+    def resolve_symbol(self, name: str) -> int:
+        self._record("resolve_symbol", name)
+        return 0
+
+    def commit(self) -> None:
+        self._record("commit")
+
+    def abort(self) -> None:
+        self._record("abort")
+
+    def _record(self, method: str, *args: Any, **kwargs: Any) -> None:
+        rendered = ", ".join(
+            [*(repr(arg) for arg in args), *(f"{key}={value!r}" for key, value in kwargs.items())]
+        )
+        self.operations.append(f"session.{method}({rendered})")
 
 
 @dataclass(frozen=True)
@@ -427,13 +493,21 @@ def upgrade(
     lock_owner: str | None = None,
     lock_stale_after_seconds: float | None = DEFAULT_LOCK_STALE_AFTER_SECONDS,
     force_lock: bool = False,
+    record_dry_run: bool = False,
 ) -> MigrationResult:
     """Apply pending module-style migrations and record each committed step."""
     applied = applied_migrations(session, root_key=root_key)
     ordered = validate_migration_state(steps, applied)
     pending = plan_upgrade(ordered, applied, target=target)
     if dry_run:
-        return MigrationResult("upgrade", target, tuple(step.id for step in pending), True)
+        operations = _record_pending_steps(pending, direction="upgrade") if record_dry_run else ()
+        return MigrationResult(
+            "upgrade",
+            target,
+            tuple(step.id for step in pending),
+            True,
+            operations,
+        )
 
     lock = (
         acquire_migration_lock(
@@ -483,6 +557,7 @@ def downgrade(
     lock_owner: str | None = None,
     lock_stale_after_seconds: float | None = DEFAULT_LOCK_STALE_AFTER_SECONDS,
     force_lock: bool = False,
+    record_dry_run: bool = False,
 ) -> MigrationResult:
     """Roll back applied module-style migrations down to ``target``."""
     applied = applied_migrations(session, root_key=root_key)
@@ -492,7 +567,14 @@ def downgrade(
     if missing:
         raise MigrationError(f"migration(s) do not support downgrade: {', '.join(missing)}")
     if dry_run:
-        return MigrationResult("downgrade", target, tuple(step.id for step in pending), True)
+        operations = _record_pending_steps(pending, direction="downgrade") if record_dry_run else ()
+        return MigrationResult(
+            "downgrade",
+            target,
+            tuple(step.id for step in pending),
+            True,
+            operations,
+        )
 
     lock = (
         acquire_migration_lock(
@@ -605,6 +687,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print the pending steps without applying them.",
     )
+    upgrade_parser.add_argument(
+        "--record",
+        action="store_true",
+        help="With --dry-run, run callbacks against a recording session.",
+    )
 
     downgrade_parser = subcommands.add_parser("downgrade", help="Roll back applied migrations.")
     _add_online_arguments(downgrade_parser)
@@ -618,6 +705,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help="Print the rollback steps without applying them.",
+    )
+    downgrade_parser.add_argument(
+        "--record",
+        action="store_true",
+        help="With --dry-run, run callbacks against a recording session.",
     )
     diff_parser = subcommands.add_parser(
         "diff-class",
@@ -680,6 +772,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 lock_owner=args.lock_owner,
                 lock_stale_after_seconds=args.lock_stale_after,
                 force_lock=bool(args.force_lock),
+                record_dry_run=bool(args.record),
             )
         _print_result(result)
         return 0
@@ -697,6 +790,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 lock_owner=args.lock_owner,
                 lock_stale_after_seconds=args.lock_stale_after,
                 force_lock=bool(args.force_lock),
+                record_dry_run=bool(args.record),
             )
         _print_result(result)
         return 0
@@ -765,6 +859,10 @@ def _print_result(result: MigrationResult) -> None:
     print(f"{label}: {len(result.steps)} step(s)")
     for migration_id in result.steps:
         print(f"  {migration_id}")
+    if result.operations:
+        print("recorded operations:")
+        for operation in result.operations:
+            print(f"  {operation}")
 
 
 def _print_status(status: MigrationStatus) -> None:
@@ -802,6 +900,21 @@ def _coerce_steps(entries: Iterable[MigrationInput]) -> tuple[MigrationStep, ...
         else:
             steps.append(migration_from_module(entry))
     return tuple(steps)
+
+
+def _record_pending_steps(
+    pending: Sequence[MigrationStep],
+    *,
+    direction: str,
+) -> tuple[str, ...]:
+    recorder = RecordingMigrationSession()
+    for step in pending:
+        recorder.operations.append(f"# {direction} {step.id}")
+        callback = step.upgrade if direction == "upgrade" else step.downgrade
+        if callback is None:
+            raise MigrationError(f"migration {step.id} does not support {direction}")
+        callback(recorder)
+    return tuple(recorder.operations)
 
 
 def _load_class(spec: str) -> type[Any]:

@@ -48,6 +48,8 @@ All notable changes to `gemstone-py` should be recorded here.
   instance variables.
 - Added a GemStone-side advisory migration lock for real upgrade/downgrade
   runs, with stale-lock and forced-lock CLI controls.
+- Added recorded migration dry-runs with `--dry-run --record` and a live
+  GemStone migration upgrade/downgrade smoke test in the live check lane.
 - Added `gemstone-publish-verify`, an end-to-end PyPI/TestPyPI verifier for
   project JSON, version-specific JSON, simple index pages, and temporary
   virtualenv install smoke checks.

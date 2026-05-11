@@ -371,10 +371,16 @@ id = "002_add_amount_to_booking"
 dependencies = ("001_initial",)
 
 def upgrade(session):
-    ...
+    session.eval(
+        "OkzBooking addInstVarName: 'amount' ifAbsent: [ nil ]"
+    )
+    session.commit()
 
 def downgrade(session):
-    ...
+    session.eval(
+        "OkzBooking removeInstVarName: 'amount' ifAbsent: [ nil ]"
+    )
+    session.commit()
 ```
 
 Register modules in a manifest and apply them:
@@ -405,6 +411,7 @@ gemstone-migrations current
 gemstone-migrations status --manifest my_app.migrations.manifest
 gemstone-migrations plan --manifest my_app.migrations.manifest
 gemstone-migrations upgrade --manifest my_app.migrations.manifest --dry-run
+gemstone-migrations upgrade --manifest my_app.migrations.manifest --dry-run --record
 gemstone-migrations upgrade --manifest my_app.migrations.manifest
 gemstone-migrations downgrade --manifest my_app.migrations.manifest --target 001_initial
 ```
@@ -415,6 +422,25 @@ For a stale lock left by a crashed process, use a deliberate override:
 gemstone-migrations upgrade --manifest my_app.migrations.manifest \
   --force-lock --lock-owner release-2026-05-11
 ```
+
+`--dry-run --record` uses a recording session for callbacks and prints common
+session calls such as `session.eval(...)`, `execute(...)`, `perform_value(...)`,
+`commit()`, and `abort()` without sending them to GemStone.
+
+Example recorded output:
+
+```text
+dry-run upgrade: 1 step(s)
+  002_add_amount_to_booking
+recorded operations:
+  # upgrade 002_add_amount_to_booking
+  session.eval("OkzBooking addInstVarName: 'amount' ifAbsent: [ nil ]")
+  session.commit()
+```
+
+Treat recorded dry-runs as a release review aid. Migrations that depend on live
+query results still need a real staging run because the recorder returns
+placeholder OOPs and never reads from GemStone.
 
 To compare a local Protocol or type witness with the live GemStone class before
 writing the next migration:

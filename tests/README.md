@@ -7,6 +7,8 @@ Guidelines:
 - keep unit and lightweight integration tests under `tests/`
 - use `tests/_support.py` for repo-root path loading in example-app tests
 - prefer canonical `gemstone_py` imports in new tests; top-level module imports remain supported for compatibility coverage
+- keep live GemStone migration coverage under `tests/test_live_migrations.py`
+  and gate it with `GS_RUN_LIVE`
 
 Run:
 
@@ -20,6 +22,7 @@ Opt-in live integration coverage:
 GS_RUN_LIVE=1 python3 -m unittest \
   tests.test_live_smoke \
   tests.test_live_codegen \
+  tests.test_live_migrations \
   tests.test_live_integration \
   tests.test_live_async_integration
 ```
