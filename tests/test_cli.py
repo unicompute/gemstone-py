@@ -34,6 +34,18 @@ class AggregateCliTests(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertIn("Hello from:", stream.getvalue())
 
+    def test_main_lists_curated_examples(self):
+        stream = io.StringIO()
+
+        with redirect_stdout(stream):
+            result = cli.main(["list"])
+
+        output = stream.getvalue()
+        self.assertEqual(result, 0)
+        self.assertIn("gemstone-py examples", output)
+        self.assertIn("examples/quickstart.py", output)
+        self.assertIn("examples/cookbook/", output)
+
     def test_main_dispatches_smalltalk_demo(self):
         with mock.patch("gemstone_py.cli.run_smalltalk_demo") as run_demo:
             result = cli.main(["smalltalk-demo"])
@@ -55,6 +67,15 @@ class AggregateCliTests(unittest.TestCase):
         self.assertEqual(result, 0)
         run_demo.assert_called_once_with(
             ["--host", "0.0.0.0", "--port", "9001", "--reload"]
+        )
+
+    def test_main_dispatches_litestar_example(self):
+        with mock.patch("gemstone_py.cli.run_litestar_example", return_value=0) as run_demo:
+            result = cli.main(["litestar", "--host", "0.0.0.0", "--port", "9002", "--reload"])
+
+        self.assertEqual(result, 0)
+        run_demo.assert_called_once_with(
+            ["--host", "0.0.0.0", "--port", "9002", "--reload"]
         )
 
     def test_smalltalk_demo_main_rejects_extra_args(self):

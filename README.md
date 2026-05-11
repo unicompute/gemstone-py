@@ -139,11 +139,14 @@ gemstone-bootstrap
 gemstone-codegen --help
 gemstone-hello
 gemstone-smalltalk-demo
+gemstone-examples list
 gemstone-examples hello
 gemstone-examples quickstart
 gemstone-examples smalltalk-demo
 gemstone-examples fastapi --reload
+gemstone-examples litestar --reload
 gemstone-fastapi-example --reload
+gemstone-litestar-example --reload
 gemstone-publish-verify --gemstone-version 0.2.10 --native-version 0.1.2 --skip-install
 ```
 
@@ -157,7 +160,11 @@ gemstone-codegen --module examples.typed_access.codegen_demo.models --output exa
 python -m examples.lifetime.managed_oop_handles
 python -m examples.native_backend.check_backend
 python -m examples.fastapi.run --reload
+python -m examples.litestar.run --reload
 ```
+
+See [`examples/cookbook/`](examples/cookbook/) for the compact example map
+without changing the historical runnable module paths.
 
 If you want to initialize the GemStone-side roots used by the higher-level
 helpers before running examples, use the packaged bootstrap command:

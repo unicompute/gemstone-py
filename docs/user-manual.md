@@ -713,6 +713,8 @@ python -m pip install "gemstone-py[litestar]"
 ```
 
 The runnable repository example is `examples/litestar/app.py`.
+Use `gemstone-examples list` or `examples/cookbook/README.md` when choosing
+between FastAPI, Litestar, Flask, Django, and lower-level examples.
 
 ### Adapter Core
 

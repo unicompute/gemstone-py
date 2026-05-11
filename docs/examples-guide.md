@@ -118,6 +118,12 @@ python -m pip install -e ".[examples]"
 python -m examples.litestar.run --reload
 ```
 
+For a compact map of the broader example set:
+
+```bash
+gemstone-examples list
+```
+
 ## Running Examples From VS Code
 
 The repository now includes `vscode-gemstone-py-workbench/`, a companion VS Code
@@ -168,6 +174,19 @@ It does three things:
 
 This is the example to copy when you are creating a new application skeleton.
 The other examples are cookbook entries for specific features.
+
+## `examples/cookbook/`
+
+This directory is the stable cookbook index. The runnable examples keep their
+historical paths, and `examples/cookbook/README.md` points each topic to the
+right script, package, or installed command.
+
+```bash
+gemstone-examples list
+```
+
+Use it when you know the kind of task you want but do not yet know which example
+directory owns it.
 
 ## `examples/example.py`: The Grand Tour
 

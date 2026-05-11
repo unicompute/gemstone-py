@@ -87,6 +87,8 @@ For source-checkout examples without the full development toolchain:
 ```bash
 python -m pip install -e ".[examples]"
 python -m examples.fastapi.run --reload
+python -m examples.litestar.run --reload
+gemstone-examples list
 ```
 
 ## Required Environment Variables

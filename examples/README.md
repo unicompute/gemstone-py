@@ -14,6 +14,7 @@ python -m examples.quickstart
 Then use the broader examples as a cookbook. The import paths are stable and
 are referenced by tests and docs, so the examples stay in their current
 directories rather than being moved under a physical `cookbook/` package.
+The compact cookbook table of contents lives in `examples/cookbook/`.
 
 For a fresh stone, initialize the GemStone-side roots used by the persistence
 helpers before exploring the larger examples:
@@ -40,6 +41,7 @@ The command creates missing `GStoreRoot` and `GSQueryRoot` entries under
 | Persistence cookbook | `examples/persistence/` | You want indexing, migrations, key/value, and collection recipes. |
 | Flask cookbook | `examples/flask/` | You need request sessions, Flask sessions, or small web ports. |
 | Django comparison | `examples/django/myapp/` | You want a familiar Django CRUD comparison app. |
+| Cookbook index | `examples/cookbook/` | You want a compact table of contents for all examples. |
 
 ## Feature Mapping
 
@@ -91,6 +93,7 @@ packaged demos:
 ```bash
 python -m examples.misc.smalltalk_demo
 gemstone-smalltalk-demo
+gemstone-examples list
 ```
 
 For Flask examples that install request-session handling, use

@@ -15,11 +15,22 @@ from gemstone_py.example_support import (
 )
 from gemstone_py.fastapi_example import add_runner_arguments
 from gemstone_py.fastapi_example import main as run_fastapi_example
+from gemstone_py.litestar_example import main as run_litestar_example
 from gemstone_py.persistent_root import PersistentRoot
 from gemstone_py.session_facade import GemStoneSessionFacade
 from gemstone_py.smalltalk_bridge import SmalltalkBridge
 
 QUICKSTART_ROOT_KEY = "GemstonePyQuickstart"
+EXAMPLE_CATALOG = (
+    ("quickstart", "examples/quickstart.py", "Smallest live connection check."),
+    ("webstack", "examples/webstack/", "Realistic Flask reference app."),
+    ("fastapi", "examples/fastapi/", "Minimal async FastAPI request dependency."),
+    ("litestar", "examples/litestar/", "Minimal async Litestar request dependency."),
+    ("typed-access", "examples/typed_access/", "Typed OOPs, queries, and codegen."),
+    ("lifetime", "examples/lifetime/", "Managed OOP/export-set lifetime examples."),
+    ("native-backend", "examples/native_backend/", "ctypes/native backend selection checks."),
+    ("cookbook", "examples/cookbook/", "Index of the broader example recipes."),
+)
 
 
 def run_hello() -> None:
@@ -69,6 +80,15 @@ def run_smalltalk_demo() -> None:
         print(f"  persistent_root['MiscDemo'] = {facade['MiscDemo']['status']!r}")
 
 
+def run_list_examples() -> None:
+    """Print the curated example map for new users."""
+    print("gemstone-py examples")
+    print("  Start with: python -m examples.quickstart")
+    print("")
+    for name, path, description in EXAMPLE_CATALOG:
+        print(f"  {name:<14} {path:<32} {description}")
+
+
 def hello_main(argv: Sequence[str] | None = None) -> int:
     """Entry point for the standalone hello demo."""
     if argv:
@@ -93,6 +113,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command")
     subparsers.required = True
+    subparsers.add_parser("list", help="List the curated example map.")
     subparsers.add_parser("hello", help="Print Python runtime information.")
     subparsers.add_parser(
         "quickstart",
@@ -107,6 +128,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run the packaged FastAPI example.",
     )
     add_runner_arguments(fastapi_parser)
+    litestar_parser = subparsers.add_parser(
+        "litestar",
+        help="Run the packaged Litestar example.",
+    )
+    add_runner_arguments(litestar_parser)
     return parser
 
 
@@ -118,6 +144,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "hello":
         run_hello()
         return 0
+    if args.command == "list":
+        run_list_examples()
+        return 0
     if args.command == "quickstart":
         run_quickstart()
         return 0
@@ -128,7 +157,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         fastapi_args = ["--host", args.host, "--port", str(args.port)]
         if args.reload:
             fastapi_args.append("--reload")
-        return run_fastapi_example(fastapi_args)
+        return int(run_fastapi_example(fastapi_args))
+    if args.command == "litestar":
+        litestar_args = ["--host", args.host, "--port", str(args.port)]
+        if args.reload:
+            litestar_args.append("--reload")
+        return int(run_litestar_example(litestar_args))
     raise AssertionError(f"Unhandled command: {args.command}")
 
 
