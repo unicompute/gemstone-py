@@ -7,12 +7,15 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import mock
 
+from gemstone_py import gemstone_class
+from gemstone_py.inspection import ClassDescription
 from gemstone_py.migrations import (
     DEFAULT_VERSION_ROOT,
     Migration,
     MigrationError,
     MigrationStep,
     current_version,
+    diff_class,
     downgrade,
     load_manifest,
     main,
@@ -232,6 +235,36 @@ class ModuleMigrationTests(unittest.TestCase):
         with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value=root):
             self.assertEqual(current_version(mock.Mock()), "002_add_total")
 
+    def test_diff_class_compares_local_annotations_to_gemstone_instvars(self):
+        @gemstone_class("MigrationDiffBooking")
+        class BookingProto:
+            status: str
+            amount: int
+
+            @property
+            def customer(self):
+                return None
+
+        session = mock.Mock()
+        session.describe_class.return_value = ClassDescription(
+            name="MigrationDiffBooking",
+            superclasses=["Object"],
+            instvars=["status", "legacyField"],
+            class_instvars=[],
+            instance_count=1,
+        )
+
+        class_diff = diff_class(session, local_class=BookingProto)
+
+        self.assertFalse(class_diff.is_current)
+        self.assertEqual(class_diff.remote_instvars, ("status", "legacyField"))
+        self.assertEqual(class_diff.local_instvars, ("status", "amount", "customer"))
+        self.assertEqual(class_diff.missing_instvars, ("amount", "customer"))
+        self.assertEqual(class_diff.extra_instvars, ("legacyField",))
+        self.assertIn("addInstVarName", class_diff.suggested_upgrade[0])
+        self.assertIn("removeInstVarName", class_diff.suggested_downgrade[0])
+        session.describe_class.assert_called_once_with("MigrationDiffBooking")
+
     def test_migration_status_reports_applied_and_pending(self):
         root = {
             DEFAULT_VERSION_ROOT: {
@@ -303,6 +336,37 @@ class ModuleMigrationTests(unittest.TestCase):
         self.assertIn("upgrade: 1 step(s)", stream.getvalue())
         self.assertIn("001_initial - Create shape.", stream.getvalue())
 
+    def test_status_cli_prints_applied_and_pending_steps(self):
+        stream = io.StringIO()
+        first = MigrationStep("001_initial", lambda current: None)
+        second = MigrationStep(
+            "002_add_total",
+            lambda current: None,
+            dependencies=("001_initial",),
+        )
+        root = {
+            DEFAULT_VERSION_ROOT: {
+                "001_initial": {"id": "001_initial", "applied_at": "2026-01-01T00:00:00Z"}
+            }
+        }
+        session = mock.Mock()
+        session_cm = mock.Mock()
+        session_cm.__enter__ = mock.Mock(return_value=session)
+        session_cm.__exit__ = mock.Mock(return_value=False)
+
+        with mock.patch("gemstone_py.migrations.load_manifest", return_value=(first, second)):
+            with mock.patch("gemstone_py.migrations._session_from_env", return_value=session_cm):
+                with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value=root):
+                    with redirect_stdout(stream):
+                        result = main(["status", "--manifest", "app.migrations.manifest"])
+
+        self.assertEqual(result, 0)
+        output = stream.getvalue()
+        self.assertIn("current: 001_initial", output)
+        self.assertIn("applied: 1", output)
+        self.assertIn("pending: 1", output)
+        self.assertIn("002_add_total", output)
+
     def test_upgrade_cli_supports_dry_run(self):
         stream = io.StringIO()
         step = MigrationStep("001_initial", lambda current: None)
@@ -338,6 +402,46 @@ class ModuleMigrationTests(unittest.TestCase):
 
         self.assertEqual(result, 0)
         self.assertEqual(stream.getvalue(), "base\n")
+
+    def test_diff_class_cli_prints_suggestions(self):
+        class BookingProto:
+            status: str
+            amount: int
+
+        module = types.ModuleType("temp_local_model")
+        module.BookingProto = BookingProto
+        sys.modules["temp_local_model"] = module
+        stream = io.StringIO()
+        session = mock.Mock()
+        session.describe_class.return_value = ClassDescription(
+            name="OkzBooking",
+            superclasses=["Object"],
+            instvars=["status"],
+            class_instvars=[],
+            instance_count=1,
+        )
+        session_cm = mock.Mock()
+        session_cm.__enter__ = mock.Mock(return_value=session)
+        session_cm.__exit__ = mock.Mock(return_value=False)
+        try:
+            with mock.patch("gemstone_py.migrations._session_from_env", return_value=session_cm):
+                with redirect_stdout(stream):
+                    result = main(
+                        [
+                            "diff-class",
+                            "OkzBooking",
+                            "--local-class",
+                            "temp_local_model:BookingProto",
+                        ]
+                    )
+        finally:
+            sys.modules.pop("temp_local_model", None)
+
+        self.assertEqual(result, 0)
+        output = stream.getvalue()
+        self.assertIn("class: OkzBooking", output)
+        self.assertIn("missing instvars: amount", output)
+        self.assertIn("suggested upgrade:", output)
 
     def test_manifest_can_import_migration_module_by_name(self):
         migration_module = types.ModuleType("temp_migration_001")

@@ -400,11 +400,23 @@ The same operations are available from the command line:
 
 ```bash
 gemstone-migrations current
+gemstone-migrations status --manifest my_app.migrations.manifest
 gemstone-migrations plan --manifest my_app.migrations.manifest
 gemstone-migrations upgrade --manifest my_app.migrations.manifest --dry-run
 gemstone-migrations upgrade --manifest my_app.migrations.manifest
 gemstone-migrations downgrade --manifest my_app.migrations.manifest --target 001_initial
 ```
+
+To compare a local Protocol or type witness with the live GemStone class before
+writing the next migration:
+
+```bash
+gemstone-migrations diff-class OkzBooking \
+  --local-class my_app.models:OkzBookingProto
+```
+
+The output lists missing and extra instance variables and prints advisory
+`session.eval(...)` lines for a reviewed migration.
 
 ## Recipe 26: Run the Live Test Lane
 

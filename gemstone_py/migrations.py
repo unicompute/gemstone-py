@@ -50,7 +50,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from types import ModuleType
-from typing import Optional, TypeAlias
+from typing import Any, Optional, TypeAlias
 
 import gemstone_py as gemstone
 
@@ -104,6 +104,25 @@ class MigrationStatus:
     current: str | None
     applied: tuple[str, ...]
     pending: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ClassDiff:
+    """Difference between a GemStone class and a local Python type witness."""
+
+    class_name: str
+    local_class_name: str
+    remote_instvars: tuple[str, ...]
+    local_instvars: tuple[str, ...]
+    missing_instvars: tuple[str, ...]
+    extra_instvars: tuple[str, ...]
+    suggested_upgrade: tuple[str, ...]
+    suggested_downgrade: tuple[str, ...]
+
+    @property
+    def is_current(self) -> bool:
+        """Return ``True`` when local and remote instance variables match."""
+        return not self.missing_instvars and not self.extra_instvars
 
 
 MigrationInput: TypeAlias = MigrationStep | ModuleType | str
@@ -267,6 +286,51 @@ def migration_status(
     )
 
 
+def diff_class(
+    session: gemstone.GemStoneSession,
+    class_name: str | None = None,
+    *,
+    local_class: type[Any],
+) -> ClassDiff:
+    """
+    Compare a GemStone class description with a local Python type witness.
+
+    Local instance variables are inferred from annotations and ``@property``
+    methods. The result is advisory: review the suggested Smalltalk before
+    placing it in a real migration, especially for classes with existing data.
+    """
+    from gemstone_py.oop import gemstone_class_name
+
+    remote_class_name = class_name or gemstone_class_name(local_class)
+    if remote_class_name is None:
+        raise MigrationError(
+            "class_name is required when local_class is not decorated with @gemstone_class"
+        )
+    description = session.describe_class(remote_class_name)
+    remote_instvars = tuple(description.instvars)
+    local_instvars = _local_instvars(local_class)
+    remote_set = set(remote_instvars)
+    local_set = set(local_instvars)
+    missing = tuple(name for name in local_instvars if name not in remote_set)
+    extra = tuple(name for name in remote_instvars if name not in local_set)
+    return ClassDiff(
+        class_name=description.name,
+        local_class_name=f"{local_class.__module__}.{local_class.__qualname__}",
+        remote_instvars=remote_instvars,
+        local_instvars=local_instvars,
+        missing_instvars=missing,
+        extra_instvars=extra,
+        suggested_upgrade=tuple(
+            f"session.eval({_class_instvar_source(description.name, name, add=True)!r})"
+            for name in missing
+        ),
+        suggested_downgrade=tuple(
+            f"session.eval({_class_instvar_source(description.name, name, add=False)!r})"
+            for name in reversed(missing)
+        ),
+    )
+
+
 def upgrade(
     session: gemstone.GemStoneSession,
     steps: Sequence[MigrationInput],
@@ -387,6 +451,8 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_VERSION_ROOT,
         help="UserGlobals key that stores applied migration metadata.",
     )
+    status_parser = subcommands.add_parser("status", help="Print applied and pending migrations.")
+    _add_online_arguments(status_parser)
 
     upgrade_parser = subcommands.add_parser("upgrade", help="Apply pending migrations.")
     _add_online_arguments(upgrade_parser)
@@ -409,6 +475,16 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print the rollback steps without applying them.",
     )
+    diff_parser = subcommands.add_parser(
+        "diff-class",
+        help="Compare a GemStone class with a local Python type witness.",
+    )
+    diff_parser.add_argument("class_name", help="GemStone class name to inspect.")
+    diff_parser.add_argument(
+        "--local-class",
+        required=True,
+        help="Python class reference as module:qualname.",
+    )
     return parser
 
 
@@ -428,6 +504,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "current":
         with _session_from_env() as session:
             print(current_version(session, root_key=args.root_key) or "base")
+        return 0
+    if args.command == "status":
+        steps = load_manifest(args.manifest)
+        with _session_from_env() as session:
+            status = migration_status(session, steps, root_key=args.root_key)
+        _print_status(status)
         return 0
     if args.command == "plan":
         steps = load_manifest(args.manifest)
@@ -463,6 +545,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 root_key=args.root_key,
             )
         _print_result(result)
+        return 0
+    if args.command == "diff-class":
+        local_class = _load_class(args.local_class)
+        with _session_from_env() as session:
+            class_diff = diff_class(session, args.class_name, local_class=local_class)
+        _print_class_diff(class_diff)
         return 0
     parser.error(f"unknown command {args.command!r}")
     return 2
@@ -504,6 +592,33 @@ def _print_result(result: MigrationResult) -> None:
         print(f"  {migration_id}")
 
 
+def _print_status(status: MigrationStatus) -> None:
+    print(f"current: {status.current or 'base'}")
+    print(f"applied: {len(status.applied)}")
+    for migration_id in status.applied:
+        print(f"  {migration_id}")
+    print(f"pending: {len(status.pending)}")
+    for migration_id in status.pending:
+        print(f"  {migration_id}")
+
+
+def _print_class_diff(class_diff: ClassDiff) -> None:
+    print(f"class: {class_diff.class_name}")
+    print(f"local: {class_diff.local_class_name}")
+    print(f"remote instvars: {', '.join(class_diff.remote_instvars) or '(none)'}")
+    print(f"local instvars: {', '.join(class_diff.local_instvars) or '(none)'}")
+    print(f"missing instvars: {', '.join(class_diff.missing_instvars) or '(none)'}")
+    print(f"extra instvars: {', '.join(class_diff.extra_instvars) or '(none)'}")
+    if class_diff.suggested_upgrade:
+        print("suggested upgrade:")
+        for line in class_diff.suggested_upgrade:
+            print(f"  {line}")
+    if class_diff.suggested_downgrade:
+        print("suggested downgrade:")
+        for line in class_diff.suggested_downgrade:
+            print(f"  {line}")
+
+
 def _coerce_steps(entries: Iterable[MigrationInput]) -> tuple[MigrationStep, ...]:
     steps: list[MigrationStep] = []
     for entry in entries:
@@ -512,6 +627,40 @@ def _coerce_steps(entries: Iterable[MigrationInput]) -> tuple[MigrationStep, ...
         else:
             steps.append(migration_from_module(entry))
     return tuple(steps)
+
+
+def _load_class(spec: str) -> type[Any]:
+    if ":" not in spec:
+        raise MigrationError("--local-class must be formatted as module:ClassName")
+    module_name, qualname = spec.split(":", 1)
+    obj: object = importlib.import_module(module_name)
+    for part in qualname.split("."):
+        obj = getattr(obj, part)
+    if not isinstance(obj, type):
+        raise MigrationError(f"{spec!r} does not refer to a Python class")
+    return obj
+
+
+def _local_instvars(local_class: type[Any]) -> tuple[str, ...]:
+    names: list[str] = []
+    annotations = getattr(local_class, "__annotations__", {})
+    if isinstance(annotations, Mapping):
+        for name in annotations:
+            if not name.startswith("_"):
+                names.append(str(name))
+    for name, member in local_class.__dict__.items():
+        if not name.startswith("_") and isinstance(member, property):
+            names.append(name)
+    return tuple(dict.fromkeys(names))
+
+
+def _class_instvar_source(class_name: str, instvar_name: str, *, add: bool) -> str:
+    selector = "addInstVarName:" if add else "removeInstVarName:"
+    return f"{class_name} {selector} '{_escape_smalltalk_string(instvar_name)}'"
+
+
+def _escape_smalltalk_string(value: str) -> str:
+    return value.replace("'", "''")
 
 
 def _ordered_steps(steps: Sequence[MigrationStep]) -> tuple[MigrationStep, ...]:

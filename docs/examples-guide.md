@@ -639,6 +639,7 @@ The same workflow is available from the command line:
 
 ```bash
 gemstone-migrations current
+gemstone-migrations status --manifest my_app.migrations.manifest
 gemstone-migrations plan --manifest my_app.migrations.manifest
 gemstone-migrations upgrade --manifest my_app.migrations.manifest --dry-run
 gemstone-migrations upgrade --manifest my_app.migrations.manifest
@@ -648,6 +649,17 @@ gemstone-migrations downgrade --manifest my_app.migrations.manifest --target 001
 Before applying a new step, the runner checks that every GemStone-applied
 migration id still exists in the local manifest and that stored checksums still
 match local migration files when checksums are available.
+
+When a local Protocol or type witness has drifted from a GemStone class, compare
+the two before writing a migration:
+
+```bash
+gemstone-migrations diff-class OkzBooking \
+  --local-class my_app.models:OkzBookingProto
+```
+
+The command prints missing and extra instance variables plus advisory
+`session.eval(...)` lines that can be copied into a reviewed migration.
 
 The key habit is to keep migration units explicit:
 

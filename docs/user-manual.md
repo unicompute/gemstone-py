@@ -460,6 +460,34 @@ gemstone-inspect --class OkzBooking --json
 `InspectedReference` objects with OOP, class name, and summary. `dump()` follows
 those references recursively and marks cycles.
 
+## Migrations
+
+Use module-style migrations when repository objects or GemStone-side classes
+need to evolve in a controlled order. A manifest lists migration modules, and
+each module exposes `upgrade(session)` plus optional `downgrade(session)`.
+
+```bash
+gemstone-migrations scaffold add_amount_to_booking --directory migrations
+gemstone-migrations status --manifest my_app.migrations.manifest
+gemstone-migrations upgrade --manifest my_app.migrations.manifest --dry-run
+gemstone-migrations upgrade --manifest my_app.migrations.manifest
+```
+
+Applied versions are tracked under `GemstonePyMigrations` in `UserGlobals`.
+Before applying new steps, the runner checks that the live version table still
+matches the local manifest and stored migration checksums.
+
+For class-shape changes, compare a live GemStone class with a local Protocol or
+type witness:
+
+```bash
+gemstone-migrations diff-class OkzBooking \
+  --local-class my_app.models:OkzBookingProto
+```
+
+The output is advisory: review the suggested instance-variable changes before
+copying them into a migration.
+
 ### Commit Conflicts
 
 When two sessions modify the same object and both try to commit, GemStone raises
