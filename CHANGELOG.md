@@ -4,6 +4,15 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+## 0.2.12 - 2026-05-11
+
+- Added VS Code workbench Codegen commands for checking generated wrappers,
+  regenerating wrappers, running the generated-wrapper FastAPI demo, and
+  opening the Codegen docs from the Command Palette and Examples/Docs sidebar
+  views.
+- Updated VS Code workbench documentation and smoke coverage so the Codegen
+  workflow remains wired to the repository examples.
+
 ## 0.2.11 - 2026-05-11
 
 - Added `gemstone-bootstrap`, an idempotent GemStone-side bootstrap/audit

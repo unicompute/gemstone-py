@@ -166,7 +166,7 @@ gemstone-examples fastapi --reload
 gemstone-examples litestar --reload
 gemstone-fastapi-example --reload
 gemstone-litestar-example --reload
-gemstone-publish-verify --gemstone-version 0.2.11 --native-version 0.1.2 --skip-install
+gemstone-publish-verify --gemstone-version 0.2.12 --native-version 0.1.2 --skip-install
 ```
 
 Feature examples from the repository checkout:
@@ -224,6 +224,8 @@ first-run setup. After configuration, run `gemstone-py: Verify Workbench Setup`
 to check Python paths, `GS_STONE`/`GS_STONE_NAME`, credentials, native backend
 state, and live GemStone connectivity from one output report.
 The report can open settings, copy itself, or copy an environment export script.
+The workbench also exposes Codegen commands for wrapper drift checks, wrapper
+regeneration, the generated-wrapper FastAPI demo, and the Codegen docs.
 
 Operational helper scripts:
 
@@ -894,7 +896,7 @@ packaged verifier. It checks project JSON, version-specific JSON, the simple
 index, and temporary-virtualenv installs:
 
 ```bash
-gemstone-publish-verify --gemstone-version 0.2.11 --native-version 0.1.2
+gemstone-publish-verify --gemstone-version 0.2.12 --native-version 0.1.2
 ```
 
 Use `--skip-install` when you only want the metadata/index checks, or

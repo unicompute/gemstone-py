@@ -97,6 +97,30 @@ export function createExamplesProvider(): WorkbenchTreeProvider {
       "play",
     ),
     commandItem(
+      "Run Codegen Check",
+      "gemstonePy.runCodegenCheck",
+      "gemstone-codegen --check",
+      "checklist",
+    ),
+    commandItem(
+      "Generate Codegen Wrappers",
+      "gemstonePy.generateCodegenWrappers",
+      "gemstone-codegen --clean",
+      "symbol-class",
+    ),
+    commandItem(
+      "Run Codegen FastAPI Demo",
+      "gemstonePy.runCodegenFastApiDemo",
+      "examples.typed_access.codegen_demo.run --reload",
+      "server-process",
+    ),
+    commandItem(
+      "Open Codegen Docs",
+      "gemstonePy.openCodegenDocs",
+      "docs/codegen.md",
+      "book",
+    ),
+    commandItem(
       "Managed lifetime handles",
       "gemstonePy.runLifetimeExample",
       "examples.lifetime.managed_oop_handles",
@@ -187,6 +211,7 @@ export function createDocsProvider(): WorkbenchTreeProvider {
     commandItem("README", "gemstonePy.openReadme", "README.md", "book"),
     commandItem("Setup guide", "gemstonePy.openSetupGuide", "docs/setup-guide.md", "book"),
     commandItem("User manual", "gemstonePy.openUserManual", "docs/user-manual.md", "book"),
+    commandItem("Codegen docs", "gemstonePy.openCodegenDocs", "docs/codegen.md", "book"),
     commandItem(
       "Examples guide",
       "gemstonePy.openExamplesGuide",

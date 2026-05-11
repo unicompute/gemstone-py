@@ -2,7 +2,7 @@
   "name": "gemstone-py-workbench",
   "displayName": "gemstone-py Workbench",
   "description": "Run gemstone-py examples, check GemStone environment state, open docs, and launch the Python GemStone database explorer.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "publisher": "unicompute",
   "icon": "media/emerald-logo.png",
   "license": "MIT",
@@ -46,6 +46,10 @@
     "onCommand:gemstonePy.checkNativeBackend",
     "onCommand:gemstonePy.runFastApiExample",
     "onCommand:gemstonePy.runLitestarExample",
+    "onCommand:gemstonePy.runCodegenCheck",
+    "onCommand:gemstonePy.generateCodegenWrappers",
+    "onCommand:gemstonePy.runCodegenFastApiDemo",
+    "onCommand:gemstonePy.openCodegenDocs",
     "onCommand:gemstonePy.showPlan3FeatureMap",
     "onCommand:gemstonePy.showEnvironment",
     "onCommand:gemstonePy.configureWorkbench",
@@ -183,6 +187,22 @@
       {
         "command": "gemstonePy.runLitestarExample",
         "title": "gemstone-py: Run Litestar Example"
+      },
+      {
+        "command": "gemstonePy.runCodegenCheck",
+        "title": "GemStone: Run Codegen Check"
+      },
+      {
+        "command": "gemstonePy.generateCodegenWrappers",
+        "title": "GemStone: Generate Codegen Wrappers"
+      },
+      {
+        "command": "gemstonePy.runCodegenFastApiDemo",
+        "title": "GemStone: Run Codegen FastAPI Demo"
+      },
+      {
+        "command": "gemstonePy.openCodegenDocs",
+        "title": "GemStone: Open Codegen Docs"
       },
       {
         "command": "gemstonePy.showPlan3FeatureMap",

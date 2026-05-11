@@ -82,6 +82,18 @@ export function registerCommands(
     ),
     vscode.commands.registerCommand("gemstonePy.runFastApiExample", runFastApiExample),
     vscode.commands.registerCommand("gemstonePy.runLitestarExample", runLitestarExample),
+    vscode.commands.registerCommand("gemstonePy.runCodegenCheck", runCodegenCheck),
+    vscode.commands.registerCommand(
+      "gemstonePy.generateCodegenWrappers",
+      generateCodegenWrappers,
+    ),
+    vscode.commands.registerCommand(
+      "gemstonePy.runCodegenFastApiDemo",
+      runCodegenFastApiDemo,
+    ),
+    vscode.commands.registerCommand("gemstonePy.openCodegenDocs", () =>
+      openRepoFile("docs/codegen.md"),
+    ),
     vscode.commands.registerCommand("gemstonePy.showPlan3FeatureMap", showPlan3FeatureMap),
     vscode.commands.registerCommand("gemstonePy.showEnvironment", showEnvironment),
     vscode.commands.registerCommand("gemstonePy.configureWorkbench", () =>
@@ -188,6 +200,32 @@ function runFastApiExample(): void {
 
 function runLitestarExample(): void {
   runRepoPythonModule("Litestar example", "examples.litestar.run", ["--reload"]);
+}
+
+function runCodegenCheck(): void {
+  runRepoPythonModule("Codegen check", "gemstone_py.codegen", [
+    "--module",
+    "examples.typed_access.codegen_demo.models",
+    "--output",
+    "examples/typed_access/codegen_demo/generated",
+    "--check",
+  ]);
+}
+
+function generateCodegenWrappers(): void {
+  runRepoPythonModule("Generate codegen wrappers", "gemstone_py.codegen", [
+    "--module",
+    "examples.typed_access.codegen_demo.models",
+    "--output",
+    "examples/typed_access/codegen_demo/generated",
+    "--clean",
+  ]);
+}
+
+function runCodegenFastApiDemo(): void {
+  runRepoPythonModule("Codegen FastAPI demo", "examples.typed_access.codegen_demo.run", [
+    "--reload",
+  ]);
 }
 
 function showPlan3FeatureMap(): void {

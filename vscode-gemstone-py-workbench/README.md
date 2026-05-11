@@ -12,6 +12,7 @@ SUnit, and server-management workflows.
 This extension focuses on the `gemstone-py` repository:
 
 - run the maintained Python examples from a sidebar
+- run the typed-wrapper Codegen check, wrapper generation, and Codegen FastAPI demo
 - pass configured `GS_*` variables into every example terminal
 - check the active `gemstone_py._gci` backend
 - verify Python paths, GemStone settings, native backend state, and live
@@ -139,6 +140,9 @@ python3 -m examples.quickstart
 python3 -m examples.misc.smalltalk_demo
 python3 -m examples.async_features.session_root_and_collection
 python3 -m examples.typed_access.typed_oops_and_queries
+python3 -m gemstone_py.codegen --module examples.typed_access.codegen_demo.models --output examples/typed_access/codegen_demo/generated --check
+python3 -m gemstone_py.codegen --module examples.typed_access.codegen_demo.models --output examples/typed_access/codegen_demo/generated --clean
+python3 -m examples.typed_access.codegen_demo.run --reload
 python3 -m examples.lifetime.managed_oop_handles
 python3 -m examples.native_backend.check_backend
 python3 -m examples.fastapi.run --reload
@@ -155,6 +159,10 @@ python -m pip install -e ".[examples]"
 The Docs view also opens the new Plan3 feature map and framework-adapter docs,
 including generated PDFs, so the runnable examples and their design notes are
 available from the same sidebar.
+
+The Codegen commands mirror the repository workflow: check committed generated
+wrappers, regenerate them with stale-file cleanup, run the generated-wrapper
+FastAPI demo, and open `docs/codegen.md`.
 
 ## Database Explorer
 

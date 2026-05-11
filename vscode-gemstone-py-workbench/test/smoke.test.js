@@ -369,6 +369,42 @@ test("new example commands use repository runners", () => {
   );
 });
 
+test("codegen commands use repository workflows", async () => {
+  const repoPath = fs.mkdtempSync(path.join(os.tmpdir(), "gemstone-py-"));
+  const docsPath = path.join(repoPath, "docs");
+  fs.mkdirSync(docsPath, { recursive: true });
+  fs.writeFileSync(path.join(docsPath, "codegen.md"), "# Codegen\n");
+  configurationValues.repoPath = repoPath;
+
+  registeredCommand("gemstonePy.runCodegenCheck")();
+  registeredCommand("gemstonePy.generateCodegenWrappers")();
+  registeredCommand("gemstonePy.runCodegenFastApiDemo")();
+  await registeredCommand("gemstonePy.openCodegenDocs")();
+
+  assert.deepEqual(
+    terminals.map((terminal) => terminal.options.name),
+    [
+      "GemStone: Codegen check",
+      "GemStone: Generate codegen wrappers",
+      "GemStone: Codegen FastAPI demo",
+    ],
+  );
+  assert.deepEqual(
+    terminals.map((terminal) => terminal.sentText[0]),
+    [
+      "python3 -m gemstone_py.codegen --module examples.typed_access.codegen_demo.models --output examples/typed_access/codegen_demo/generated --check",
+      "python3 -m gemstone_py.codegen --module examples.typed_access.codegen_demo.models --output examples/typed_access/codegen_demo/generated --clean",
+      "python3 -m examples.typed_access.codegen_demo.run --reload",
+    ],
+  );
+  assert.deepEqual(executedCommands, [
+    {
+      command: "vscode.open",
+      args: [{ fsPath: path.join(repoPath, "docs", "codegen.md") }],
+    },
+  ]);
+});
+
 test("tree providers expose expected commands and mask environment secrets", () => {
   const examples = providers.createExamplesProvider().getChildren();
   assert.deepEqual(
@@ -381,6 +417,10 @@ test("tree providers expose expected commands and mask environment secrets", () 
       "gemstonePy.runSmalltalkDemo",
       "gemstonePy.runAsyncExample",
       "gemstonePy.runTypedExample",
+      "gemstonePy.runCodegenCheck",
+      "gemstonePy.generateCodegenWrappers",
+      "gemstonePy.runCodegenFastApiDemo",
+      "gemstonePy.openCodegenDocs",
       "gemstonePy.runLifetimeExample",
       "gemstonePy.checkNativeBackend",
       "gemstonePy.runFastApiExample",
@@ -395,6 +435,9 @@ test("tree providers expose expected commands and mask environment secrets", () 
   );
   assert.ok(
     docs.find((item) => item.options.command === "gemstonePy.openPlan3FeatureMap"),
+  );
+  assert.ok(
+    docs.find((item) => item.options.command === "gemstonePy.openCodegenDocs"),
   );
 
   const environment = providers.createEnvironmentProvider().getChildren();
@@ -460,6 +503,42 @@ test("registered commands match package contributions", () => {
   );
   assert.deepEqual(new Set(registeredCommands.keys()), contributedCommands);
   assert.equal(context.subscriptions.length, contributedCommands.size + 1);
+});
+
+test("package contributes command palette titles for Codegen commands", () => {
+  const titlesByCommand = new Map(
+    packageJson.contributes.commands.map((entry) => [entry.command, entry.title]),
+  );
+
+  assert.equal(
+    titlesByCommand.get("gemstonePy.runCodegenCheck"),
+    "GemStone: Run Codegen Check",
+  );
+  assert.equal(
+    titlesByCommand.get("gemstonePy.generateCodegenWrappers"),
+    "GemStone: Generate Codegen Wrappers",
+  );
+  assert.equal(
+    titlesByCommand.get("gemstonePy.runCodegenFastApiDemo"),
+    "GemStone: Run Codegen FastAPI Demo",
+  );
+  assert.equal(
+    titlesByCommand.get("gemstonePy.openCodegenDocs"),
+    "GemStone: Open Codegen Docs",
+  );
+});
+
+test("package activation events include Codegen commands", () => {
+  assert.ok(packageJson.activationEvents.includes("onCommand:gemstonePy.runCodegenCheck"));
+  assert.ok(
+    packageJson.activationEvents.includes(
+      "onCommand:gemstonePy.generateCodegenWrappers",
+    ),
+  );
+  assert.ok(
+    packageJson.activationEvents.includes("onCommand:gemstonePy.runCodegenFastApiDemo"),
+  );
+  assert.ok(packageJson.activationEvents.includes("onCommand:gemstonePy.openCodegenDocs"));
 });
 
 test("openJasper activates installed Jasper and opens the GemStone sidebar", async () => {

@@ -786,7 +786,7 @@ working directory with ambition.
 After publishing, verify both public indexes from a clean shell:
 
 ```bash
-gemstone-publish-verify --gemstone-version 0.2.11 --native-version 0.1.2
+gemstone-publish-verify --gemstone-version 0.2.12 --native-version 0.1.2
 ```
 
 The command checks project JSON, version-specific JSON, the simple index, and

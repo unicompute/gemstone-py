@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+- Added Codegen workbench commands for checking generated wrappers,
+  regenerating wrappers, running the Codegen FastAPI demo, and opening the
+  Codegen docs.
+
 ## 0.2.1
 
 - Added Workbench commands and Examples view rows for the new example catalog,

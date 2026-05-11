@@ -405,7 +405,7 @@ feel your package metadata may have become sentient.
 For a full PyPI/TestPyPI release check:
 
 ```bash
-gemstone-publish-verify --gemstone-version 0.2.11 --native-version 0.1.2
+gemstone-publish-verify --gemstone-version 0.2.12 --native-version 0.1.2
 ```
 
 That command checks project JSON, version-specific JSON, the simple index, and

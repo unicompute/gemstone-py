@@ -1,6 +1,6 @@
 # gemstone-py Next Release Draft
 
-This draft is for work after `0.2.11`. Move concrete entries here as the next
+This draft is for work after `0.2.12`. Move concrete entries here as the next
 release starts to take shape.
 
 ## Suggested Version
@@ -8,7 +8,7 @@ release starts to take shape.
 Use a patch release for small follow-up fixes:
 
 ```bash
-0.2.12
+0.2.13
 ```
 
 Use a minor release for the next larger feature milestone:
