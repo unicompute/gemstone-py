@@ -34,6 +34,8 @@ All notable changes to `gemstone-py` should be recorded here.
 - Added generated `.pyi` stubs for wrapper packages so IDEs and type checkers
   can consume the checked-in codegen output without inspecting implementation
   details.
+- Added a runnable generated-wrapper FastAPI demo entry point with smoke
+  coverage for the index, docs, and generated booking route.
 - Added `gemstone-publish-verify`, an end-to-end PyPI/TestPyPI verifier for
   project JSON, version-specific JSON, simple index pages, and temporary
   virtualenv install smoke checks.

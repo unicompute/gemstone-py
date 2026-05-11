@@ -28,6 +28,23 @@ gemstone-codegen \
 The generated package includes runtime `.py` modules, matching `.pyi` stubs,
 and `py.typed` so editors and type checkers can read the wrapper contract.
 
+Run the generated-wrapper FastAPI demo:
+
+```bash
+python -m examples.typed_access.codegen_demo.run --reload
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8000/
+http://127.0.0.1:8000/docs
+http://127.0.0.1:8000/bookings/B-1001
+```
+
+The booking endpoint needs GemStone credentials and a reachable stone because
+it calls `OkzBooking findById:` through the generated async wrapper.
+
 Use the generated sync wrapper:
 
 ```python

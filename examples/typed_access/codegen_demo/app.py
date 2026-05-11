@@ -8,6 +8,8 @@ Run code generation first:
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import Depends, FastAPI
 
 from gemstone_py import GemStoneConfig
@@ -18,6 +20,19 @@ from .generated import AsyncOkzBooking
 
 app = FastAPI(title="gemstone-py codegen demo")
 get_gemstone = session_dependency(config=GemStoneConfig.from_env(require_credentials=False))
+
+
+@app.get("/")
+async def index() -> dict[str, Any]:
+    """Return the available codegen demo routes."""
+    return {
+        "name": "gemstone-py codegen demo",
+        "endpoints": {
+            "booking": "/bookings/{booking_id}",
+            "docs": "/docs",
+            "openapi": "/openapi.json",
+        },
+    }
 
 
 @app.get("/bookings/{booking_id}")

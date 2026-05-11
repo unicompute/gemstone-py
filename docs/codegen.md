@@ -210,6 +210,24 @@ async def booking_status(
     return {"status": str(await booking.status())}
 ```
 
+The repository includes a runnable version of that handler:
+
+```bash
+python -m examples.typed_access.codegen_demo.run --reload
+```
+
+With the server running, open:
+
+```text
+http://127.0.0.1:8000/
+http://127.0.0.1:8000/docs
+http://127.0.0.1:8000/bookings/B-1001
+```
+
+The root and docs routes are local FastAPI checks. The booking route requires
+GemStone credentials and a reachable stone because it evaluates
+`OkzBooking findById:`.
+
 ## Current Scope
 
 The first generator pass handles:
@@ -224,6 +242,7 @@ The first generator pass handles:
 - explicit selector overrides with `@gemstone_selector(...)`
 - checked-in sync and async generated modules with `.pyi` stubs, `py.typed`,
   stale-file cleanup, and CI/pre-commit drift checks
+- a runnable FastAPI demo route backed by the generated async wrapper
 - an opt-in live smoke test for generated wrappers against GemStone `Date`
 
 It does not marshal arbitrary Python objects into class-side source literals or

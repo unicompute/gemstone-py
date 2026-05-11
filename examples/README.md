@@ -136,11 +136,13 @@ gemstone-codegen \
   --module examples.typed_access.codegen_demo.models \
   --output examples/typed_access/codegen_demo/generated \
   --check
+python -m examples.typed_access.codegen_demo.run --reload
 ```
 
 `simple_blog_queries.py` also contains importable helper functions for the
 existing simple-blog data shape. `codegen_demo/` contains a Protocol module,
-checked-in generated wrappers, and a small FastAPI-style usage example.
+checked-in generated wrappers, and a runnable FastAPI route that calls the
+generated async wrapper.
 
 ---
 
