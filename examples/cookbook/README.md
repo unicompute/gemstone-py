@@ -7,6 +7,7 @@ tests, and user imports keep working.
 | Topic | Path | Run |
 | --- | --- | --- |
 | Quickstart | `examples/quickstart.py` | `python -m examples.quickstart` |
+| Plan3 feature map | `examples/cookbook/plan3_feature_map.py` | `python -m examples.cookbook.plan3_feature_map` |
 | Realistic web app | `examples/webstack/` | `python -m examples.webstack.magtag_app` |
 | Async session basics | `examples/async_features/` | `python -m examples.async_features.session_root_and_collection` |
 | FastAPI request dependency | `examples/fastapi/` | `python -m examples.fastapi.run --reload` |
@@ -23,6 +24,7 @@ From an installed package, use:
 
 ```bash
 gemstone-examples list
+gemstone-examples plan3-map
 gemstone-examples quickstart
 gemstone-examples fastapi --reload
 gemstone-examples litestar --reload

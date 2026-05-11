@@ -13,11 +13,12 @@ If you are new to the project, use this order:
 2. [User Manual](user-manual.md)
 3. [Examples Guide](examples-guide.md)
 4. [Cookbook](cookbook.md)
-5. [Type-Safe Smalltalk Codegen](codegen.md)
-6. [Framework Adapters](framework-adapters.md)
-7. [Observability](observability.md)
-8. [Performance](performance.md)
-9. [Funny Introduction](funny-introduction/README.md)
+5. [Plan3 Feature Map](plan3-feature-map.md)
+6. [Type-Safe Smalltalk Codegen](codegen.md)
+7. [Framework Adapters](framework-adapters.md)
+8. [Observability](observability.md)
+9. [Performance](performance.md)
+10. [Funny Introduction](funny-introduction/README.md)
 
 If you want a narrative overview before diving in:
 
@@ -32,6 +33,7 @@ If you are already productive and only need answers:
 - "Why is my login failing?" → [Setup Guide](setup-guide.md)
 - "Which transaction policy should I use?" → [User Manual](user-manual.md)
 - "Which example should I run first?" → [Examples Guide](examples-guide.md)
+- "Which plan3 stream maps to which code?" → [Plan3 Feature Map](plan3-feature-map.md)
 - "How do I do X quickly?" → [Cookbook](cookbook.md)
 - "How do I generate typed wrappers from Protocols?" → [Type-Safe Smalltalk Codegen](codegen.md)
 - "How do I add another web framework?" → [Framework Adapters](framework-adapters.md)
@@ -61,6 +63,7 @@ If you are already productive and only need answers:
 - Flask, Django, FastAPI, and Litestar request-session integration
 - tracing, metrics, and slow-operation logs for session calls
 - benchmark numbers, release workflows, and the current examples directory
+- a plan3 feature map that links major features to modules, examples, and docs
 - the companion VS Code workbench for running examples, opening docs, checking
   backends, launching the Python database explorer, and handing Smalltalk IDE
   work to Jasper

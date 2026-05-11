@@ -31,6 +31,85 @@ EXAMPLE_CATALOG = (
     ("native-backend", "examples/native_backend/", "ctypes/native backend selection checks."),
     ("cookbook", "examples/cookbook/", "Index of the broader example recipes."),
 )
+PLAN3_FEATURE_MAP = (
+    (
+        "1",
+        "Pool + health",
+        "gemstone_py.session_providers, gemstone_py.aio.pool",
+        "examples/fastapi/, examples/litestar/",
+        "docs/user-manual.md, docs/cookbook.md",
+    ),
+    (
+        "2",
+        "Streaming results",
+        "gemstone_py.gsquery, gemstone_py.aio.gsquery",
+        "examples/async_features/",
+        "docs/examples-guide.md, docs/performance.md",
+    ),
+    (
+        "3",
+        "Typed codegen",
+        "gemstone_py.codegen",
+        "examples/typed_access/codegen_demo/",
+        "docs/codegen.md",
+    ),
+    (
+        "4",
+        "Observability",
+        "gemstone_py.observability",
+        "examples/fastapi/, examples/litestar/",
+        "docs/observability.md",
+    ),
+    (
+        "5",
+        "Migrations",
+        "gemstone_py.migrations",
+        "examples/persistence/migrations/",
+        "docs/cookbook.md, docs/user-manual.md",
+    ),
+    (
+        "6",
+        "Inspect/debug",
+        "gemstone_py.inspection, GemStoneSession.inspect/dump/describe_class",
+        "examples/cookbook/",
+        "docs/user-manual.md",
+    ),
+    (
+        "7",
+        "Framework adapters",
+        "gemstone_py.web_core, gemstone_py.frameworks, gemstone_py.aio.fastapi/litestar",
+        "examples/fastapi/, examples/litestar/, examples/django/",
+        "docs/framework-adapters.md",
+    ),
+    (
+        "8",
+        "Examples",
+        "gemstone_py.cli",
+        "examples/quickstart.py, examples/webstack/, examples/cookbook/",
+        "examples/README.md, docs/examples-guide.md",
+    ),
+    (
+        "9",
+        "Performance docs",
+        "gemstone_py.benchmarks, gemstone_py.benchmark_compare",
+        "examples/native_backend/",
+        "docs/performance.md",
+    ),
+    (
+        "10",
+        "Native wheels",
+        "gemstone_py.native, gemstone-py-native/",
+        "examples/native_backend/",
+        "README.md, RELEASE_CHECKLIST.md",
+    ),
+    (
+        "11",
+        "Bootstrap",
+        "gemstone_py.bootstrap, gemstone_py/_gemstone_side/",
+        "examples/quickstart.py, examples/cookbook/",
+        "docs/setup-guide.md",
+    ),
+)
 
 
 def run_hello() -> None:
@@ -89,6 +168,19 @@ def run_list_examples() -> None:
         print(f"  {name:<14} {path:<32} {description}")
 
 
+def run_plan3_map() -> None:
+    """Print the plan3 feature map across modules, examples, and docs."""
+    print("gemstone-py plan3 feature map")
+    print("  See also: docs/plan3-feature-map.md")
+    print("")
+    for stream, title, modules, examples, docs in PLAN3_FEATURE_MAP:
+        print(f"Stream {stream}: {title}")
+        print(f"  Modules:  {modules}")
+        print(f"  Examples: {examples}")
+        print(f"  Docs:     {docs}")
+        print("")
+
+
 def hello_main(argv: Sequence[str] | None = None) -> int:
     """Entry point for the standalone hello demo."""
     if argv:
@@ -114,6 +206,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command")
     subparsers.required = True
     subparsers.add_parser("list", help="List the curated example map.")
+    subparsers.add_parser("plan3-map", help="List plan3 features by module, example, and doc.")
     subparsers.add_parser("hello", help="Print Python runtime information.")
     subparsers.add_parser(
         "quickstart",
@@ -146,6 +239,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "list":
         run_list_examples()
+        return 0
+    if args.command == "plan3-map":
+        run_plan3_map()
         return 0
     if args.command == "quickstart":
         run_quickstart()

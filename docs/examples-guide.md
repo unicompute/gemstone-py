@@ -122,6 +122,7 @@ For a compact map of the broader example set:
 
 ```bash
 gemstone-examples list
+gemstone-examples plan3-map
 ```
 
 ## Running Examples From VS Code
@@ -183,6 +184,7 @@ right script, package, or installed command.
 
 ```bash
 gemstone-examples list
+gemstone-examples plan3-map
 ```
 
 Use it when you know the kind of task you want but do not yet know which example

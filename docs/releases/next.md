@@ -30,7 +30,10 @@ feature milestone:
   `gemstone-litestar-example`.
 - Added `examples/litestar/` and `examples/cookbook/` so new users can find
   the async web and cookbook paths quickly.
-- Added `gemstone-examples list` and `gemstone-examples litestar`.
+- Added `gemstone-examples list`, `gemstone-examples plan3-map`, and
+  `gemstone-examples litestar`.
+- Added `docs/plan3-feature-map.md` to map each plan3 stream to the current
+  modules, examples, and docs.
 - Added `docs/framework-adapters.md` with the sync and async adapter recipe.
 - Reworked the README first screen around a two-minute start path and clearer
   production/cookbook links.
@@ -61,6 +64,7 @@ For a source checkout:
 ```bash
 python -m pip install -e ".[examples]"
 gemstone-examples list
+gemstone-examples plan3-map
 python -m examples.quickstart
 python -m examples.fastapi.run --reload
 python -m examples.litestar.run --reload
@@ -97,6 +101,7 @@ Run the full release wrapper when public artifacts are expected to exist:
   `gemstone-examples litestar`, and `gemstone-examples list`.
 - Added `examples/cookbook/` as the stable table of contents for example
   selection.
+- Added a plan3 feature map for users navigating by stream.
 - Polished the README around a two-minute start path.
 
 ## Install
@@ -110,6 +115,7 @@ python -m pip install "gemstone-py[fast]"
 
 ```bash
 gemstone-examples list
+gemstone-examples plan3-map
 gemstone-examples quickstart
 gemstone-fastapi-example --reload
 gemstone-litestar-example --reload

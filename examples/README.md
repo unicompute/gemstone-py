@@ -32,6 +32,7 @@ The command creates missing `GStoreRoot` and `GSQueryRoot` entries under
 | Role | Path | Use it when |
 | --- | --- | --- |
 | Quickstart | `examples/quickstart.py` | You want the smallest live connection example. |
+| Plan3 feature map | `examples/cookbook/plan3_feature_map.py` | You want to map feature streams to modules, examples, and docs. |
 | Grand tour | `examples/example.py` | You want one script that touches most persistence helpers. |
 | Realistic reference app | `examples/webstack/` | You want a web app with users, follows, and persisted posts. |
 | Async web cookbook | `examples/async_features/`, `examples/fastapi/`, `examples/litestar/` | You need async sessions or request dependencies. |
@@ -94,6 +95,7 @@ packaged demos:
 python -m examples.misc.smalltalk_demo
 gemstone-smalltalk-demo
 gemstone-examples list
+gemstone-examples plan3-map
 ```
 
 For Flask examples that install request-session handling, use

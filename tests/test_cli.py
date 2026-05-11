@@ -46,6 +46,19 @@ class AggregateCliTests(unittest.TestCase):
         self.assertIn("examples/quickstart.py", output)
         self.assertIn("examples/cookbook/", output)
 
+    def test_main_lists_plan3_feature_map(self):
+        stream = io.StringIO()
+
+        with redirect_stdout(stream):
+            result = cli.main(["plan3-map"])
+
+        output = stream.getvalue()
+        self.assertEqual(result, 0)
+        self.assertIn("gemstone-py plan3 feature map", output)
+        self.assertIn("Stream 1: Pool + health", output)
+        self.assertIn("Stream 11: Bootstrap", output)
+        self.assertIn("docs/plan3-feature-map.md", output)
+
     def test_main_dispatches_smalltalk_demo(self):
         with mock.patch("gemstone_py.cli.run_smalltalk_demo") as run_demo:
             result = cli.main(["smalltalk-demo"])

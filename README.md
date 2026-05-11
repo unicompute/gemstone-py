@@ -158,6 +158,7 @@ gemstone-codegen --help
 gemstone-hello
 gemstone-smalltalk-demo
 gemstone-examples list
+gemstone-examples plan3-map
 gemstone-examples hello
 gemstone-examples quickstart
 gemstone-examples smalltalk-demo
@@ -182,7 +183,9 @@ python -m examples.litestar.run --reload
 ```
 
 See [`examples/cookbook/`](examples/cookbook/) for the compact example map
-without changing the historical runnable module paths.
+without changing the historical runnable module paths. See
+[`docs/plan3-feature-map.md`](docs/plan3-feature-map.md) when you want to map a
+plan3 stream to the matching modules, examples, and docs.
 
 If you want to initialize the GemStone-side roots used by the higher-level
 helpers before running examples, use the packaged bootstrap command:
