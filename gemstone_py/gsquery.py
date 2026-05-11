@@ -81,9 +81,10 @@ This is the standard GemStone equality-index operation.
 """
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from typing import Any, ContextManager, Generic, Iterable, List, TypeVar, cast, overload
+from types import TracebackType
+from typing import Any, ContextManager, Generic, Iterable, List, Literal, TypeVar, cast, overload
 
 import gemstone_py as gemstone
 from gemstone_py.persistent_root import _from_oop, _to_oop
@@ -456,6 +457,76 @@ class GSCollection:
         )
         return [cast(Record, json.loads(line)) for line in raw.splitlines() if line.strip()]
 
+    @staticmethod
+    def _records_from_array_range_oop(
+        s: gemstone.GemStoneSession,
+        array_oop: int,
+        start: int,
+        stop: int,
+    ) -> List[Record]:
+        """
+        Materialize one 1-based inclusive slice from a GemStone Array of records.
+
+        This keeps large result iteration bounded by ``chunk_size`` on the
+        Python side while reusing the same JSON representation as ``search()``.
+        """
+        raw = s.eval(
+            f"| array encodeString encodeValue encodeMap encodeSequence stream |\n"
+            f"array := {object_for_oop_expr(array_oop)}.\n"
+            f"{json_string_encoder_source('encodeString')}"
+            "encodeValue := nil.\n"
+            "encodeMap := nil.\n"
+            "encodeSequence := nil.\n"
+            "encodeSequence := [:seq | | out first |\n"
+            "  out := '['.\n"
+            "  first := true.\n"
+            "  seq do: [:each |\n"
+            "    first ifFalse: [ out := out, ',' ].\n"
+            "    out := out, (encodeValue value: each).\n"
+            "    first := false\n"
+            "  ].\n"
+            "  out, ']'\n"
+            "].\n"
+            "encodeMap := [:map | | out first |\n"
+            "  out := '{'.\n"
+            "  first := true.\n"
+            "  map keysAndValuesDo: [:key :value |\n"
+            "    first ifFalse: [ out := out, ',' ].\n"
+            "    out := out,\n"
+            "      '\"', (encodeString value: key), '\":', (encodeValue value: value).\n"
+            "    first := false\n"
+            "  ].\n"
+            "  out, '}'\n"
+            "].\n"
+            "encodeValue := [:value |\n"
+            "  value isNil ifTrue: [ 'null' ] ifFalse: [\n"
+            "    value == true ifTrue: [ 'true' ] ifFalse: [\n"
+            "      value == false ifTrue: [ 'false' ] ifFalse: [\n"
+            "        ((value isKindOf: String) or: [ value class == Symbol ]) ifTrue: [\n"
+            "          '\"', (encodeString value: value), '\"'\n"
+            "        ] ifFalse: [\n"
+            "          (value respondsTo: #keysAndValuesDo:) ifTrue: [\n"
+            "            encodeMap value: value\n"
+            "          ] ifFalse: [\n"
+            "            ((value isKindOf: SequenceableCollection)\n"
+            "              and: [(value isKindOf: String) not])\n"
+            "              ifTrue: [ encodeSequence value: value ]\n"
+            "              ifFalse: [ value printString ]\n"
+            "          ]\n"
+            "        ]\n"
+            "      ]\n"
+            "    ]\n"
+            "  ]\n"
+            "].\n"
+            "stream := ''.\n"
+            f"{start} to: {stop} do: [:index | | record |\n"
+            "  record := array at: index.\n"
+            "  stream := stream, (encodeMap value: record), String lf asString\n"
+            "].\n"
+            "stream"
+        )
+        return [cast(Record, json.loads(line)) for line in raw.splitlines() if line.strip()]
+
     def _record_oop(self, s: gemstone.GemStoneSession, element: Record) -> int:
         dict_oop = s.perform_oop(s.resolve('Dictionary'), 'new')
         for k, v in element.items():
@@ -695,10 +766,52 @@ class GSCollection:
                 return []
             return self._records_from_collection_oop(s, result_oop)
 
+    def search_iter(
+        self,
+        ivar_path: str,
+        op: str,
+        value: Any,
+        *,
+        chunk_size: int = 256,
+        session: gemstone.GemStoneSession | None = None,
+    ) -> "GSCollectionIterator":
+        """
+        Iterate over matching records in chunks.
+
+        Use this for large result sets when materialising the full list returned
+        by ``search()`` would be wasteful. If no session is supplied, the
+        iterator owns a session until exhausted or closed.
+        """
+        return GSCollectionIterator(
+            self,
+            lambda s: self._search_result_oop(s, ivar_path, op, value),
+            chunk_size=chunk_size,
+            session=session,
+        )
+
     def all(self, session: gemstone.GemStoneSession | None = None) -> List[Record]:
         """Return every element in the collection."""
         with _session(session, self._config) as s:
             return self._all_records(s)
+
+    def iter(
+        self,
+        *,
+        chunk_size: int = 256,
+        session: gemstone.GemStoneSession | None = None,
+    ) -> "GSCollectionIterator":
+        """
+        Iterate over all records in chunks.
+
+        The iterator is also a context manager. Prefer ``with`` when you may
+        break early so any owned GemStone session is closed promptly.
+        """
+        return GSCollectionIterator(
+            self,
+            lambda s: self._set_oop(s),
+            chunk_size=chunk_size,
+            session=session,
+        )
 
     def size(self, session: gemstone.GemStoneSession | None = None) -> int:
         """Return the number of elements in the collection."""
@@ -865,6 +978,105 @@ class GSCollection:
             return cls._keys_from_dict_oop(s, root_oop)
 
 
+class GSCollectionIterator(Iterator[Record]):
+    """Chunked iterator over a GemStone collection of record dictionaries."""
+
+    def __init__(
+        self,
+        collection: GSCollection,
+        collection_oop_factory: Callable[[gemstone.GemStoneSession], int],
+        *,
+        chunk_size: int = 256,
+        session: gemstone.GemStoneSession | None = None,
+    ):
+        if chunk_size < 1:
+            raise ValueError("chunk_size must be at least 1")
+        self._collection = collection
+        self._collection_oop_factory = collection_oop_factory
+        self._chunk_size = chunk_size
+        self._provided_session = session
+        self._session_cm: ContextManager[gemstone.GemStoneSession] | None = None
+        self._session: gemstone.GemStoneSession | None = None
+        self._array_oop: int | None = None
+        self._size = 0
+        self._next_index = 1
+        self._buffer: list[Record] = []
+        self._closed = False
+
+    def __iter__(self) -> "GSCollectionIterator":
+        return self
+
+    def __next__(self) -> Record:
+        if not self._buffer:
+            self._fill_buffer()
+        if not self._buffer:
+            self.close()
+            raise StopIteration
+        return self._buffer.pop(0)
+
+    def __enter__(self) -> "GSCollectionIterator":
+        self._open()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> Literal[False]:
+        del exc_type, exc_val, exc_tb
+        self.close()
+        return False
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        session_cm = self._session_cm
+        self._session_cm = None
+        self._session = None
+        if session_cm is not None:
+            session_cm.__exit__(None, None, None)
+
+    def _open(self) -> None:
+        if self._closed:
+            raise RuntimeError("GSCollectionIterator is closed")
+        if self._session is not None:
+            return
+        if self._provided_session is not None:
+            session = self._provided_session
+        else:
+            self._session_cm = _session(None, self._collection._config)
+            session = self._session_cm.__enter__()
+        collection_oop = self._collection_oop_factory(session)
+        self._array_oop = session.perform_oop(collection_oop, 'asArray')
+        self._size = cast(int, session.perform_value(self._array_oop, 'size'))
+        self._session = session
+
+    def _fill_buffer(self) -> None:
+        self._open()
+        if self._next_index > self._size:
+            return
+        session = self._session
+        array_oop = self._array_oop
+        if session is None or array_oop is None:
+            raise RuntimeError("GSCollectionIterator is not open")
+        stop = min(self._next_index + self._chunk_size - 1, self._size)
+        self._buffer = self._collection._records_from_array_range_oop(
+            session,
+            array_oop,
+            self._next_index,
+            stop,
+        )
+        self._next_index = stop + 1
+
+    def __del__(self) -> None:
+        try:
+            self.close()
+        except Exception:
+            pass
+
+
 class Query(Generic[RecordT]):
     """Typed query facade for ``GSCollection`` records."""
 
@@ -940,15 +1152,49 @@ class Query(Generic[RecordT]):
             result = current if result is None else self._collection.intersect(result, current)
         return self._coerce_records(result or [])
 
+    def iter(self, *, chunk_size: int = 256) -> Iterator[RecordT]:
+        """
+        Iterate over matching records in chunks.
+
+        With zero or one predicate this streams directly from GemStone in
+        ``chunk_size`` batches. Additional predicates are applied Python-side to
+        the streamed first-predicate result to avoid materialising every match.
+        """
+        if not self._filters:
+            records: Iterator[Record] = self._collection.iter(
+                chunk_size=chunk_size,
+                session=self._session,
+            )
+        else:
+            first, *remaining = self._filters
+            records = self._collection.search_iter(
+                first.ivar_path,
+                first.op,
+                first.value,
+                chunk_size=chunk_size,
+                session=self._session,
+            )
+            if remaining:
+                records = (
+                    record
+                    for record in records
+                    if all(_record_matches_predicate(record, predicate) for predicate in remaining)
+                )
+        for record in records:
+            yield self._coerce_record(record)
+
     def first(self, default: RecordT | None = None) -> RecordT | None:
         """Return the first matching record, or ``default`` when empty."""
         records = self.all()
         return records[0] if records else default
 
     def _coerce_records(self, records: list[Record]) -> list[RecordT]:
+        return [self._coerce_record(record) for record in records]
+
+    def _coerce_record(self, record: Record) -> RecordT:
         if self._record_type is None or self._record_type is dict:
-            return cast(list[RecordT], records)
-        return [cast(RecordT, _RecordProxy(record)) for record in records]
+            return cast(RecordT, record)
+        return cast(RecordT, _RecordProxy(record))
 
 
 # ------------------------------------------------------------------
@@ -975,3 +1221,40 @@ def _parse_rows(raw: str) -> list[Record]:
         if row:
             results.append(row)
     return results
+
+
+def _record_matches_predicate(record: Record, predicate: QueryPredicate) -> bool:
+    value = _record_path_value(record, predicate.ivar_path)
+    if value is _MISSING:
+        return False
+    target = predicate.value
+    if predicate.op == "lt":
+        return bool(value < target)
+    if predicate.op == "lte":
+        return bool(value <= target)
+    if predicate.op == "gt":
+        return bool(value > target)
+    if predicate.op == "gte":
+        return bool(value >= target)
+    if predicate.op == "eql":
+        return bool(value == target)
+    if predicate.op == "neq":
+        return bool(value != target)
+    raise ValueError(f"Unknown operator {predicate.op!r}. Use one of: {list(_OPS)}")
+
+
+def _record_path_value(record: Record, ivar_path: str) -> Any:
+    if ivar_path in record:
+        return record[ivar_path]
+    current: Any = record
+    for segment in ivar_path.split("."):
+        if isinstance(current, dict):
+            if segment in current:
+                current = current[segment]
+                continue
+            plain_segment = segment[1:] if segment.startswith("@") else segment
+            if plain_segment in current:
+                current = current[plain_segment]
+                continue
+        return _MISSING
+    return current

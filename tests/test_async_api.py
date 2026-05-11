@@ -297,6 +297,17 @@ class AsyncCollectionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, [{"@name": "Alice"}])
         collection.search.assert_called_once_with("@name", "eql", "Alice")
 
+    async def test_async_collection_iter_yields_sync_chunks(self):
+        collection = mock.Mock()
+        collection.iter.return_value = iter([{"@name": "Alice"}, {"@name": "Bob"}])
+        async_collection = AsyncGSCollection("People", collection=collection)
+
+        result = [record async for record in async_collection.iter(chunk_size=2)]
+
+        async_collection.close()
+        self.assertEqual(result, [{"@name": "Alice"}, {"@name": "Bob"}])
+        collection.iter.assert_called_once_with(chunk_size=2)
+
 
 class FastAPIDependencyTests(unittest.IsolatedAsyncioTestCase):
     async def test_session_dependency_commits_after_successful_yield(self):

@@ -12,6 +12,8 @@ All notable changes to `gemstone-py` should be recorded here.
   sweeping that never evicts checked-out sessions.
 - Added `AsyncSessionPool` and FastAPI `pool_session_dependency(...)` for
   pool-backed async request handling.
+- Added chunked `GSCollection.iter(...)`, `search_iter(...)`, typed
+  `Query.iter(...)`, and async iterator equivalents for large result sets.
 - Added `gemstone-publish-verify`, an end-to-end PyPI/TestPyPI verifier for
   project JSON, version-specific JSON, simple index pages, and temporary
   virtualenv install smoke checks.

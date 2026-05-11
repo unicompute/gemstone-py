@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncIterator, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Iterable
 
@@ -105,8 +106,111 @@ class AsyncGSCollection:
     ) -> list[Record]:
         return list(await self._run("search", ivar_path, op, value, session=session))
 
+    async def search_iter(
+        self,
+        ivar_path: str,
+        op: str,
+        value: Any,
+        *,
+        chunk_size: int = 256,
+        session: AsyncSession | None = None,
+    ) -> AsyncIterator[Record]:
+        if self._closed:
+            raise RuntimeError("AsyncGSCollection is closed")
+        if session is not None:
+            iterator = await session.run_sync(
+                lambda sync_session: self._collection.search_iter(
+                    ivar_path,
+                    op,
+                    value,
+                    chunk_size=chunk_size,
+                    session=sync_session,
+                )
+            )
+            try:
+                while True:
+                    done, item = await session.run_sync(
+                        lambda _sync_session: _next_or_end(iterator)
+                    )
+                    if done:
+                        break
+                    assert item is not None
+                    yield item
+            finally:
+                await session.run_sync(lambda _sync_session: _close_iterator(iterator))
+            return
+
+        loop = asyncio.get_running_loop()
+        iterator = await loop.run_in_executor(
+            self._executor,
+            lambda: self._collection.search_iter(
+                ivar_path,
+                op,
+                value,
+                chunk_size=chunk_size,
+            ),
+        )
+        try:
+            while True:
+                done, item = await loop.run_in_executor(
+                    self._executor,
+                    lambda: _next_or_end(iterator),
+                )
+                if done:
+                    break
+                assert item is not None
+                yield item
+        finally:
+            await loop.run_in_executor(self._executor, lambda: _close_iterator(iterator))
+
     async def all(self, session: AsyncSession | None = None) -> list[Record]:
         return list(await self._run("all", session=session))
+
+    async def iter(
+        self,
+        *,
+        chunk_size: int = 256,
+        session: AsyncSession | None = None,
+    ) -> AsyncIterator[Record]:
+        if self._closed:
+            raise RuntimeError("AsyncGSCollection is closed")
+        if session is not None:
+            iterator = await session.run_sync(
+                lambda sync_session: self._collection.iter(
+                    chunk_size=chunk_size,
+                    session=sync_session,
+                )
+            )
+            try:
+                while True:
+                    done, item = await session.run_sync(
+                        lambda _sync_session: _next_or_end(iterator)
+                    )
+                    if done:
+                        break
+                    assert item is not None
+                    yield item
+            finally:
+                await session.run_sync(lambda _sync_session: _close_iterator(iterator))
+            return
+
+        loop = asyncio.get_running_loop()
+        iterator = await loop.run_in_executor(
+            self._executor,
+            lambda: self._collection.iter(chunk_size=chunk_size),
+        )
+        try:
+            while True:
+                done, item = await loop.run_in_executor(
+                    self._executor,
+                    lambda: _next_or_end(iterator),
+                )
+                if done:
+                    break
+                assert item is not None
+                yield item
+        finally:
+            await loop.run_in_executor(self._executor, lambda: _close_iterator(iterator))
 
     async def size(self, session: AsyncSession | None = None) -> int:
         return int(await self._run("size", session=session))
@@ -179,6 +283,19 @@ class AsyncGSCollection:
             return await session.run_sync(lambda sync_session: GSCollection.list(sync_session))
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, lambda: GSCollection.list(config=config))
+
+
+def _next_or_end(iterator: Iterator[Record]) -> tuple[bool, Record | None]:
+    try:
+        return False, next(iterator)
+    except StopIteration:
+        return True, None
+
+
+def _close_iterator(iterator: Iterator[Record]) -> None:
+    close = getattr(iterator, "close", None)
+    if callable(close):
+        close()
 
 
 __all__ = ["AsyncGSCollection"]

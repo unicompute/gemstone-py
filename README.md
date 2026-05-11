@@ -404,6 +404,18 @@ recent = posts.where(lambda post: post.status == "published").where(
 ).all()
 ```
 
+For large `GSCollection` result sets, iterate in chunks instead of materializing
+the full list:
+
+```python
+people = GSCollection("People", config=config)
+for row in people.search_iter("@status", "eql", "active", chunk_size=500):
+    process(row)
+
+for post in posts.where(lambda post: post.status == "published").iter(chunk_size=500):
+    process(post)
+```
+
 For long-lived raw OOPs, use managed or explicitly scoped handles:
 
 ```python

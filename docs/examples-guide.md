@@ -295,6 +295,13 @@ active = await collection.search("@status", "eql", "active")
 collection.close()
 ```
 
+For larger async result sets, use the async iterator:
+
+```python
+async for record in collection.search_iter("@status", "eql", "active", chunk_size=500):
+    print(record["@name"])
+```
+
 Use a generated or test-specific collection name in real scripts, and call
 `AsyncGSCollection.drop(...)` during cleanup.
 
@@ -308,6 +315,7 @@ Use it when you want to understand:
 - `TypedOop[T]`
 - `typed_oop(...)`
 - typed `GSCollection.query(Protocol)` predicates
+- chunked `Query.iter(...)` result handling
 
 `simple_blog_queries.py` contains importable helper functions for the blog data
 shape. `typed_oops_and_queries.py` is the runnable live example.

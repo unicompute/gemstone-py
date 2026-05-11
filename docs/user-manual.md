@@ -251,6 +251,14 @@ for post in published:
     print(post.title)
 ```
 
+For large result sets, use `iter(chunk_size=...)` to fetch records in bounded
+batches:
+
+```python
+for post in posts.where(lambda post: post.status == "published").iter(chunk_size=500):
+    print(post.title)
+```
+
 The lambda is a query builder expression, not a live object callback.
 `post.status` becomes the GemStone ivar path `@status`.
 

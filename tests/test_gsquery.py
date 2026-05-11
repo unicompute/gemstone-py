@@ -267,6 +267,91 @@ class GSCollectionQueryTests(unittest.TestCase):
         search_result.assert_called_once_with(col, session, '@age', 'lt', 25)
         records.assert_called_once_with(session, 777)
 
+    def test_iter_reads_records_in_chunks(self):
+        col = GSCollection('People')
+        session = mock.Mock()
+        session.perform_oop.return_value = 222
+        session.perform_value.return_value = 3
+
+        with mock.patch.object(
+            GSCollection,
+            '_set_oop',
+            autospec=True,
+            return_value=111,
+        ) as set_oop:
+            with mock.patch.object(
+                GSCollection,
+                '_records_from_array_range_oop',
+                autospec=True,
+                side_effect=[
+                    [{'@name': 'Alice'}, {'@name': 'Bob'}],
+                    [{'@name': 'Carol'}],
+                ],
+            ) as chunk:
+                result = list(col.iter(chunk_size=2, session=session))
+
+        self.assertEqual(result, [{'@name': 'Alice'}, {'@name': 'Bob'}, {'@name': 'Carol'}])
+        set_oop.assert_called_once_with(col, session)
+        session.perform_oop.assert_called_once_with(111, 'asArray')
+        session.perform_value.assert_called_once_with(222, 'size')
+        self.assertEqual(
+            chunk.call_args_list,
+            [
+                mock.call(session, 222, 1, 2),
+                mock.call(session, 222, 3, 3),
+            ],
+        )
+
+    def test_search_iter_streams_from_search_result_oop(self):
+        col = GSCollection('People')
+        session = mock.Mock()
+        session.perform_oop.return_value = 222
+        session.perform_value.return_value = 1
+
+        with mock.patch.object(
+            GSCollection,
+            '_search_result_oop',
+            autospec=True,
+            return_value=777,
+        ) as search_result:
+            with mock.patch.object(
+                GSCollection,
+                '_records_from_array_range_oop',
+                autospec=True,
+                return_value=[{'@name': 'Bob'}],
+            ):
+                result = list(col.search_iter('@age', 'lt', 25, session=session))
+
+        self.assertEqual(result, [{'@name': 'Bob'}])
+        search_result.assert_called_once_with(col, session, '@age', 'lt', 25)
+        session.perform_oop.assert_called_once_with(777, 'asArray')
+
+    def test_query_iter_streams_and_applies_remaining_predicates(self):
+        col = GSCollection('Bookings')
+        query = col.query(BookingRecord).where(lambda booking: booking.status == "booked").where(
+            lambda booking: booking.age >= 21
+        )
+
+        with mock.patch.object(
+            col,
+            'search_iter',
+            return_value=iter([
+                {'@status': 'booked', '@age': 19},
+                {'@status': 'booked', '@age': 30},
+            ]),
+        ) as search_iter:
+            result = list(query.iter(chunk_size=32))
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].age, 30)
+        search_iter.assert_called_once_with(
+            '@status',
+            'eql',
+            'booked',
+            chunk_size=32,
+            session=None,
+        )
+
     def test_list_reads_root_keys_without_pipe_serialization(self):
         session = mock.Mock()
         session.eval.return_value = True
