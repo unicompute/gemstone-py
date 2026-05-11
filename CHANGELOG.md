@@ -4,6 +4,19 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+## 0.2.13 - 2026-05-11
+
+- Published the VS Code workbench `0.3.0` Codegen Explorer feature release,
+  including live class browsing, wrapper target selection, generated-wrapper
+  preview, repository diffing, mapping persistence, and live target probes.
+- Documented the visual Codegen Explorer in the README, examples guide,
+  Codegen guide, Medium article draft, and workbench README.
+- Clarified source-checkout example commands versus installed package commands,
+  including `examples.*` module entry points and packaged console scripts.
+- Made the Litestar example index route expose its framework adapter and
+  dependency-injection path, matching the FastAPI example's discoverable root
+  route behavior.
+
 ## 0.2.12 - 2026-05-11
 
 - Added VS Code workbench Codegen commands for checking generated wrappers,
