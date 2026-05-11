@@ -432,7 +432,9 @@ install_flask_request_session(
     app,
     config=GemStoneConfig.from_env(),
     pool_size=4,
+    pool_minsize=1,
     idle_timeout_seconds=900,
+    idle_sweep_interval_seconds=60,
     validation_query="1 + 1",
     validation_interval_seconds=60,
     max_session_age=1800,
@@ -450,6 +452,8 @@ session across threads.
 For operations dashboards, call `pool.stats()` to get stable counters for
 current capacity, idle/in-use sessions, total created sessions, evictions,
 validation failures, and acquire wait time.
+The idle sweeper runs only against sessions sitting in the pool; checked-out
+sessions are never evicted by background maintenance.
 
 For worker models that prefer one session per thread instead of a shared pool:
 

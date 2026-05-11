@@ -45,6 +45,7 @@ class GemStoneSessionProviderSnapshot:
     name: str
     provider_type: str
     maxsize: Optional[int]
+    minsize: Optional[int]
     max_session_age: Optional[float]
     max_session_uses: Optional[int]
     created: int
@@ -377,12 +378,14 @@ class GemStoneSessionProvider:
         created: int,
         available: int,
         closed: bool,
+        minsize: Optional[int] = None,
     ) -> GemStoneSessionProviderSnapshot:
         with self._stats_lock:
             return GemStoneSessionProviderSnapshot(
                 name=self._name,
                 provider_type=type(self).__name__,
                 maxsize=maxsize,
+                minsize=minsize,
                 max_session_age=self._max_session_age,
                 max_session_uses=self._max_session_uses,
                 created=created,
@@ -420,12 +423,14 @@ class GemStoneSessionPool(GemStoneSessionProvider):
         self,
         *,
         maxsize: int = 4,
+        minsize: int = 0,
         session_factory: Callable[..., GemStoneSession] = GemStoneSession,
         session_healthcheck: Optional[Callable[[GemStoneSession], bool]] = None,
         acquire_timeout: Optional[float] = None,
         max_session_age: Optional[float] = None,
         max_session_uses: Optional[int] = None,
         idle_timeout_seconds: Optional[float] = None,
+        idle_sweep_interval_seconds: Optional[float] = None,
         validation_query: Optional[str] = None,
         validation_interval_seconds: Optional[float] = None,
         metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
@@ -436,7 +441,15 @@ class GemStoneSessionPool(GemStoneSessionProvider):
     ) -> None:
         if maxsize < 1:
             raise ValueError("GemStoneSessionPool maxsize must be at least 1.")
+        if minsize < 0:
+            raise ValueError("GemStoneSessionPool minsize must be at least 0.")
+        if minsize > maxsize:
+            raise ValueError("GemStoneSessionPool minsize cannot exceed maxsize.")
+        if idle_sweep_interval_seconds is not None and idle_sweep_interval_seconds <= 0:
+            raise ValueError("GemStone idle_sweep_interval_seconds must be > 0.")
         self._maxsize = maxsize
+        self._minsize = minsize
+        self._idle_sweep_interval_seconds = idle_sweep_interval_seconds
         self._initialize_provider(
             name=name,
             session_factory=session_factory,
@@ -456,10 +469,17 @@ class GemStoneSessionPool(GemStoneSessionProvider):
         self._lock = threading.Lock()
         self._created = 0
         self._closed = False
+        self._idle_sweeper_stop = threading.Event()
+        self._idle_sweeper_thread: Optional[threading.Thread] = None
+        self._start_idle_sweeper_if_configured()
 
     @property
     def maxsize(self) -> int:
         return self._maxsize
+
+    @property
+    def minsize(self) -> int:
+        return self._minsize
 
     @property
     def created(self) -> int:
@@ -576,6 +596,10 @@ class GemStoneSessionPool(GemStoneSessionProvider):
         self._record_stat("_close_calls")
         with self._lock:
             self._closed = True
+        self._idle_sweeper_stop.set()
+        sweeper_thread = self._idle_sweeper_thread
+        if sweeper_thread is not None and sweeper_thread is not threading.current_thread():
+            sweeper_thread.join(timeout=1.0)
         drained = []
         while True:
             try:
@@ -615,6 +639,48 @@ class GemStoneSessionPool(GemStoneSessionProvider):
             self._record_stat("_warmed_sessions")
             self._emit_observation("session_warmed", session=session)
         return warmed
+
+    def sweep_idle(self) -> int:
+        """
+        Evict idle available sessions without touching checked-out sessions.
+
+        The pool never sweeps below `minsize`; use `minsize=0` when every idle
+        session may be discarded after `idle_timeout_seconds`.
+        """
+        if self._idle_timeout_seconds is None:
+            return 0
+
+        drained: list[GemStoneSession] = []
+        while True:
+            try:
+                drained.append(self._available.get_nowait())
+            except queue.Empty:
+                break
+
+        swept = 0
+        keep: list[GemStoneSession] = []
+        for session in drained:
+            with self._lock:
+                closed = self._closed
+                can_evict = self._created > self._minsize
+            if closed:
+                self._discard_session(session, reason="provider_closed")
+                swept += 1
+            elif can_evict and self._session_idle_timeout_reason(session) == "idle_timeout":
+                self._discard_session(session, reason="idle_timeout")
+                swept += 1
+            else:
+                keep.append(session)
+
+        for session in keep:
+            try:
+                self._available.put_nowait(session)
+            except queue.Full:
+                self._discard_session(session, reason="queue_full")
+                swept += 1
+        if swept:
+            self._emit_observation("idle_sweep", reason="idle_timeout")
+        return swept
 
     @contextmanager
     def lease(self) -> Iterator[GemStoneSession]:
@@ -660,6 +726,7 @@ class GemStoneSessionPool(GemStoneSessionProvider):
             closed = self._closed
         return self._provider_snapshot(
             maxsize=self._maxsize,
+            minsize=self._minsize,
             created=created,
             available=self._available.qsize(),
             closed=closed,
@@ -678,6 +745,28 @@ class GemStoneSessionPool(GemStoneSessionProvider):
             acquire_wait_seconds_total=snapshot.acquire_wait_seconds,
             current_capacity=snapshot.created,
         )
+
+    def _start_idle_sweeper_if_configured(self) -> None:
+        if self._idle_timeout_seconds is None:
+            return
+        interval = self._idle_sweep_interval_seconds
+        if interval is None:
+            interval = min(max(self._idle_timeout_seconds / 2.0, 1.0), 60.0)
+        thread = threading.Thread(
+            target=self._idle_sweeper_loop,
+            name=f"{self._name}-idle-sweeper",
+            args=(interval,),
+            daemon=True,
+        )
+        self._idle_sweeper_thread = thread
+        thread.start()
+
+    def _idle_sweeper_loop(self, interval: float) -> None:
+        while not self._idle_sweeper_stop.wait(interval):
+            try:
+                self.sweep_idle()
+            except Exception:
+                pass
 
 
 class GemStoneThreadLocalSessionProvider(GemStoneSessionProvider):
@@ -921,6 +1010,7 @@ def _resolve_session_provider(
     session_provider: Optional[GemStoneSessionProvider] = None,
     session_pool: Optional[GemStoneSessionProvider] = None,
     pool_size: Optional[int] = None,
+    pool_minsize: int = 0,
     thread_local: bool = False,
     provider_name: Optional[str] = None,
     acquire_timeout: Optional[float] = None,
@@ -928,6 +1018,7 @@ def _resolve_session_provider(
     max_session_age: Optional[float] = None,
     max_session_uses: Optional[int] = None,
     idle_timeout_seconds: Optional[float] = None,
+    idle_sweep_interval_seconds: Optional[float] = None,
     validation_query: Optional[str] = None,
     validation_interval_seconds: Optional[float] = None,
     metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
@@ -938,9 +1029,10 @@ def _resolve_session_provider(
     if session_provider is not None and session_pool is not None:
         raise ValueError("Pass either session_provider or session_pool, not both.")
     provider = session_provider or session_pool
-    if provider is not None and (pool_size is not None or thread_local):
+    if provider is not None and (pool_size is not None or pool_minsize != 0 or thread_local):
         raise ValueError(
-            "Do not combine an explicit session provider with pool_size or thread_local."
+            "Do not combine an explicit session provider with pool_size, "
+            "pool_minsize, or thread_local."
         )
     if pool_size is not None and thread_local:
         raise ValueError("Pass either pool_size or thread_local, not both.")
@@ -949,12 +1041,14 @@ def _resolve_session_provider(
     if pool_size is not None:
         return GemStoneSessionPool(
             maxsize=pool_size,
+            minsize=pool_minsize,
             name=provider_name,
             acquire_timeout=acquire_timeout,
             session_healthcheck=session_healthcheck,
             max_session_age=max_session_age,
             max_session_uses=max_session_uses,
             idle_timeout_seconds=idle_timeout_seconds,
+            idle_sweep_interval_seconds=idle_sweep_interval_seconds,
             validation_query=validation_query,
             validation_interval_seconds=validation_interval_seconds,
             metrics_exporter=metrics_exporter,
@@ -1061,6 +1155,7 @@ def install_flask_request_session(
     session_provider: Optional[GemStoneSessionProvider] = None,
     session_pool: Optional[GemStoneSessionProvider] = None,
     pool_size: Optional[int] = None,
+    pool_minsize: int = 0,
     thread_local: bool = False,
     provider_name: Optional[str] = None,
     acquire_timeout: Optional[float] = None,
@@ -1068,6 +1163,7 @@ def install_flask_request_session(
     max_session_age: Optional[float] = None,
     max_session_uses: Optional[int] = None,
     idle_timeout_seconds: Optional[float] = None,
+    idle_sweep_interval_seconds: Optional[float] = None,
     validation_query: Optional[str] = None,
     validation_interval_seconds: Optional[float] = None,
     metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
@@ -1089,6 +1185,7 @@ def install_flask_request_session(
         session_provider=session_provider,
         session_pool=session_pool,
         pool_size=pool_size,
+        pool_minsize=pool_minsize,
         thread_local=thread_local,
         provider_name=provider_name,
         acquire_timeout=acquire_timeout,
@@ -1096,6 +1193,7 @@ def install_flask_request_session(
         max_session_age=max_session_age,
         max_session_uses=max_session_uses,
         idle_timeout_seconds=idle_timeout_seconds,
+        idle_sweep_interval_seconds=idle_sweep_interval_seconds,
         validation_query=validation_query,
         validation_interval_seconds=validation_interval_seconds,
         metrics_exporter=metrics_exporter,

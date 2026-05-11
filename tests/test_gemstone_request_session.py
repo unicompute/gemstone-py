@@ -417,6 +417,7 @@ class GemStoneSessionPoolTests(unittest.TestCase):
 
         self.assertEqual(during.name, "metrics-pool")
         self.assertEqual(during.maxsize, 1)
+        self.assertEqual(during.minsize, 0)
         self.assertEqual(during.in_use, 1)
         self.assertEqual(after_release.available, 1)
         self.assertEqual(after_release.created_total, 1)
@@ -495,6 +496,84 @@ class GemStoneSessionPoolTests(unittest.TestCase):
         self.assertIsNot(first, second)
         self.assertEqual(created, [first, second])
         self.assertEqual(pool.snapshot().idle_timeout_discards, 1)
+
+    def test_pool_sweep_idle_discards_available_sessions(self):
+        created = []
+
+        def factory(**kwargs):
+            session = _PoolSession(**kwargs)
+            created.append(session)
+            return session
+
+        pool = gemstone.GemStoneSessionPool(
+            maxsize=2,
+            session_factory=factory,
+            idle_timeout_seconds=999,
+            stone="demo",
+            username="alice",
+            password="secret",
+        )
+
+        pool.warm(2)
+        for session in created:
+            setattr(session, "_gemstone_provider_last_used_at", 0.0)
+        swept = pool.sweep_idle()
+        snapshot = pool.snapshot()
+        pool.close()
+
+        self.assertEqual(swept, 2)
+        self.assertEqual(snapshot.created, 0)
+        self.assertEqual(snapshot.available, 0)
+        self.assertEqual(snapshot.idle_timeout_discards, 2)
+        self.assertTrue(all(session.logout_calls == 1 for session in created))
+
+    def test_pool_sweep_idle_respects_minsize(self):
+        created = []
+
+        def factory(**kwargs):
+            session = _PoolSession(**kwargs)
+            created.append(session)
+            return session
+
+        pool = gemstone.GemStoneSessionPool(
+            maxsize=2,
+            minsize=1,
+            session_factory=factory,
+            idle_timeout_seconds=999,
+            stone="demo",
+            username="alice",
+            password="secret",
+        )
+
+        pool.warm(2)
+        for session in created:
+            setattr(session, "_gemstone_provider_last_used_at", 0.0)
+        swept = pool.sweep_idle()
+        snapshot = pool.snapshot()
+        pool.close()
+
+        self.assertEqual(swept, 1)
+        self.assertEqual(snapshot.minsize, 1)
+        self.assertEqual(snapshot.created, 1)
+        self.assertEqual(snapshot.available, 1)
+        self.assertEqual(snapshot.idle_timeout_discards, 1)
+
+    def test_pool_sweeper_thread_starts_when_idle_timeout_is_configured(self):
+        pool = gemstone.GemStoneSessionPool(
+            maxsize=1,
+            session_factory=_PoolSession,
+            idle_timeout_seconds=999,
+            idle_sweep_interval_seconds=999,
+            stone="demo",
+            username="alice",
+            password="secret",
+        )
+
+        thread = pool._idle_sweeper_thread
+        pool.close()
+
+        self.assertIsNotNone(thread)
+        self.assertFalse(thread.is_alive())
 
     def test_pool_timeout_raises_timeout_error(self):
         pool = gemstone.GemStoneSessionPool(

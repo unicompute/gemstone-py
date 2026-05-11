@@ -428,8 +428,10 @@ Use `GemStoneSessionPool` when:
 ```python
 provider = GemStoneSessionPool(
     maxsize=4,
+    minsize=1,
     config=GemStoneConfig.from_env(),
     idle_timeout_seconds=900,
+    idle_sweep_interval_seconds=60,
     validation_query="1 + 1",
     validation_interval_seconds=60,
 )
@@ -437,6 +439,10 @@ provider = GemStoneSessionPool(
 stats = provider.stats()
 print(stats.in_use, stats.idle, stats.created_total, stats.evicted_total)
 ```
+
+`minsize` is the idle-retention floor for maintenance: sweeps will not evict
+below that many live sessions. Use `warm(count)` or Flask's `warmup_sessions`
+when you want eager login at application startup.
 
 Use `GemStoneThreadLocalSessionProvider` when:
 
