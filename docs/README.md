@@ -23,6 +23,10 @@ If you want a narrative overview before diving in:
 
 - [Medium article](medium-article.md) — a complete end-to-end guide written in article style
 
+For release preparation:
+
+- [Next release draft](releases/next.md)
+
 If you are already productive and only need answers:
 
 - "Why is my login failing?" → [Setup Guide](setup-guide.md)

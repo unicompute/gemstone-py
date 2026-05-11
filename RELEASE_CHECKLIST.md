@@ -9,6 +9,9 @@ python3 -m pip install -e .[dev]
 
 Update `pyproject.toml` and add an entry to [CHANGELOG.md](https://github.com/unicompute/gemstone-py/blob/main/CHANGELOG.md)
 before cutting a new version.
+Use [docs/releases/next.md](https://github.com/unicompute/gemstone-py/blob/main/docs/releases/next.md)
+as the draft release-note source for the next package release, then copy it to
+a versioned `docs/releases/vX.Y.Z.md` file once the final version is chosen.
 
 The GitHub `Release` workflow now validates that the release tag matches
 `project.version` and that the same version is present in
