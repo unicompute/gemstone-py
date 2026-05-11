@@ -13,8 +13,9 @@ If you are new to the project, use this order:
 2. [User Manual](user-manual.md)
 3. [Examples Guide](examples-guide.md)
 4. [Cookbook](cookbook.md)
-5. [Performance](performance.md)
-6. [Funny Introduction](funny-introduction/README.md)
+5. [Observability](observability.md)
+6. [Performance](performance.md)
+7. [Funny Introduction](funny-introduction/README.md)
 
 If you want a narrative overview before diving in:
 
@@ -26,6 +27,7 @@ If you are already productive and only need answers:
 - "Which transaction policy should I use?" → [User Manual](user-manual.md)
 - "Which example should I run first?" → [Examples Guide](examples-guide.md)
 - "How do I do X quickly?" → [Cookbook](cookbook.md)
+- "How do I trace or measure GemStone calls?" → [Observability](observability.md)
 - "What are the current benchmark numbers?" → [Performance](performance.md)
 - "I want the whole story, plus jokes." → [Funny Introduction](funny-introduction/README.md)
 - "Can I run these from VS Code?" → [`vscode-gemstone-py-workbench`](../vscode-gemstone-py-workbench/)
@@ -46,6 +48,7 @@ If you are already productive and only need answers:
   - `ObjectLog`
   - concurrency helpers such as `RCCounter`, `RCHash`, and `RCQueue`
 - Flask request-session integration
+- tracing, metrics, and slow-operation logs for session calls
 - benchmark numbers, release workflows, and the current examples directory
 - the companion VS Code workbench for running examples, opening docs, checking
   backends, launching the Python database explorer, and handing Smalltalk IDE

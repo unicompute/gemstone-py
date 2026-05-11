@@ -524,6 +524,33 @@ Use `warm_flask_request_session_provider(app)` to pre-create pool sessions
 manually, and `close_flask_request_session_provider(app)` during server
 shutdown when you manage lifecycle explicitly.
 
+## Observability
+
+For GCI-level tracing, metrics, and slow-operation logs, configure the session
+directly:
+
+```bash
+python -m pip install "gemstone-py[observability]"
+```
+
+```python
+from opentelemetry import trace
+from gemstone_py import GemStoneConfig, GemStoneSession, OpenTelemetryTracer, PrometheusMetrics
+
+tracer = OpenTelemetryTracer(trace.get_tracer("my-app.gemstone"))
+metrics = PrometheusMetrics()
+
+with GemStoneSession(
+    config=GemStoneConfig.from_env(),
+    tracer=tracer,
+    metrics=metrics,
+    slow_query_threshold_ms=100.0,
+) as session:
+    session.execute("1 + 1")
+```
+
+See [`docs/observability.md`](docs/observability.md) for the full setup.
+
 ## Production Flask Guidance
 
 For production Flask usage:

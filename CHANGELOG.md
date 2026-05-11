@@ -17,6 +17,8 @@ All notable changes to `gemstone-py` should be recorded here.
 - Made `GSCollection.search()`, `GSCollection.all()`, and typed `Query.all()`
   materialize through the chunked iterator path, with benchmark coverage for
   `all()` versus streaming `iter()` memory use.
+- Added `gemstone_py.observability` with no-op defaults, OpenTelemetry and
+  Prometheus adapters, session operation metrics, and slow-operation logging.
 - Added `gemstone-publish-verify`, an end-to-end PyPI/TestPyPI verifier for
   project JSON, version-specific JSON, simple index pages, and temporary
   virtualenv install smoke checks.
