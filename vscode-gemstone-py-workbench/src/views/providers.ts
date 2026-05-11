@@ -121,6 +121,12 @@ export function createExamplesProvider(): WorkbenchTreeProvider {
       "book",
     ),
     commandItem(
+      "Open Codegen Explorer",
+      "gemstonePy.openCodegenExplorer",
+      "browse live classes and preview generated wrappers",
+      "symbol-class",
+    ),
+    commandItem(
       "Managed lifetime handles",
       "gemstonePy.runLifetimeExample",
       "examples.lifetime.managed_oop_handles",
@@ -307,6 +313,35 @@ export function createIdeProvider(): WorkbenchTreeProvider {
             "gemstonePy.openDatabaseExplorerRepository",
             "github.com/unicompute/python-gemstone-database-explorer",
             "link-external",
+          ),
+        ],
+      }),
+      new WorkbenchTreeItem("Codegen", {
+        icon: "symbol-class",
+        children: [
+          commandItem(
+            "Open Codegen Explorer",
+            "gemstonePy.openCodegenExplorer",
+            "visual wrapper selection, preview, diff, and live target checks",
+            "layout",
+          ),
+          commandItem(
+            "Run Codegen Check",
+            "gemstonePy.runCodegenCheck",
+            "gemstone-codegen --check",
+            "checklist",
+          ),
+          commandItem(
+            "Generate Codegen Wrappers",
+            "gemstonePy.generateCodegenWrappers",
+            "gemstone-codegen --clean",
+            "symbol-class",
+          ),
+          commandItem(
+            "Run Codegen FastAPI Demo",
+            "gemstonePy.runCodegenFastApiDemo",
+            "examples.typed_access.codegen_demo.run --reload",
+            "server-process",
           ),
         ],
       }),

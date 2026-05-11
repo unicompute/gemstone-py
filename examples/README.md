@@ -8,6 +8,8 @@ Run the quickstart first. It is intentionally small: connect, evaluate
 Smalltalk, write a value under `UserGlobals`, and read it back.
 
 ```bash
+cd /path/to/gemstone-py
+source .venv/bin/activate
 python -m examples.quickstart
 ```
 
@@ -15,6 +17,17 @@ Then use the broader examples as a cookbook. The import paths are stable and
 are referenced by tests and docs, so the examples stay in their current
 directories rather than being moved under a physical `cookbook/` package.
 The compact cookbook table of contents lives in `examples/cookbook/`.
+
+The `examples.*` module commands are source-checkout commands. Run them from the
+repository root, or set `PYTHONPATH` to the checkout path. From an installed
+package, use the packaged commands instead:
+
+```bash
+gemstone-examples list
+gemstone-examples quickstart
+gemstone-fastapi-example --reload
+gemstone-litestar-example --reload
+```
 
 For a fresh stone, initialize the GemStone-side roots used by the persistence
 helpers before exploring the larger examples:

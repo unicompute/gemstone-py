@@ -697,6 +697,9 @@ learning or maintaining `gemstone-py`:
 - run CI, live checks, benchmarks, and native checks explicitly
 - launch a configured `python-gemstone-database-explorer` checkout
 - embed the running database explorer in a VS Code webview
+- open a visual Codegen Explorer for selecting live classes/methods, previewing
+  generated wrappers, diffing output, saving a reusable mapping, and running
+  Codegen checks
 - verify the workbench setup and copy the resulting report or export script
 - open Jasper when you need Smalltalk IDE tooling
 
@@ -708,9 +711,9 @@ same `GS_STONE` or `GS_STONE_NAME`, `GS_USERNAME`, `GS_PASSWORD`, `GS_LIB`, and
 library-path values you would use at the shell.
 
 That makes VS Code a convenient Python control panel: use the workbench for
-examples, docs, backend checks, and test commands; use the database explorer for
-browser-based object inspection; and use Jasper when you need a full Smalltalk
-IDE.
+examples, docs, backend checks, test commands, and the Codegen Explorer; use the
+database explorer for browser-based object inspection; and use Jasper when you
+need a full Smalltalk IDE.
 
 ---
 

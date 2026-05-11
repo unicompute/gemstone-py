@@ -2,7 +2,7 @@
   "name": "gemstone-py-workbench",
   "displayName": "gemstone-py Workbench",
   "description": "Run gemstone-py examples, check GemStone environment state, open docs, and launch the Python GemStone database explorer.",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "publisher": "unicompute",
   "icon": "media/emerald-logo.png",
   "license": "MIT",
@@ -50,6 +50,7 @@
     "onCommand:gemstonePy.generateCodegenWrappers",
     "onCommand:gemstonePy.runCodegenFastApiDemo",
     "onCommand:gemstonePy.openCodegenDocs",
+    "onCommand:gemstonePy.openCodegenExplorer",
     "onCommand:gemstonePy.showPlan3FeatureMap",
     "onCommand:gemstonePy.showEnvironment",
     "onCommand:gemstonePy.configureWorkbench",
@@ -97,7 +98,7 @@
         "gemstonePy.repoPath": {
           "type": "string",
           "default": "",
-          "description": "Local gemstone-py repository path. Leave empty to use the current VS Code workspace folder."
+          "description": "Local gemstone-py repository path. Leave empty to use the current VS Code workspace folder, or a gemstone-py child folder when the parent directory is open."
         },
         "gemstonePy.explorerPath": {
           "type": "string",
@@ -113,6 +114,21 @@
           "type": "number",
           "default": 9292,
           "description": "Port used when launching the Python GemStone database explorer."
+        },
+        "gemstonePy.codegenModule": {
+          "type": "string",
+          "default": "examples.typed_access.codegen_demo.models",
+          "description": "Default Protocol module used by the Codegen Explorer preview, diff, check, and generate actions."
+        },
+        "gemstonePy.codegenOutput": {
+          "type": "string",
+          "default": "examples/typed_access/codegen_demo/generated",
+          "description": "Default generated wrapper output package used by the Codegen Explorer."
+        },
+        "gemstonePy.codegenMappingPath": {
+          "type": "string",
+          "default": "codegen-workbench.json",
+          "description": "Reusable Codegen Explorer class and method selection file, relative to the gemstone-py checkout."
         },
         "gemstonePy.env": {
           "type": "object",
@@ -203,6 +219,10 @@
       {
         "command": "gemstonePy.openCodegenDocs",
         "title": "GemStone: Open Codegen Docs"
+      },
+      {
+        "command": "gemstonePy.openCodegenExplorer",
+        "title": "GemStone: Open Codegen Explorer"
       },
       {
         "command": "gemstonePy.showPlan3FeatureMap",

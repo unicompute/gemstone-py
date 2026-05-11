@@ -18,6 +18,7 @@ import {
   runRepoPythonModule,
   runRepoScript,
 } from "./terminal";
+import { openCodegenExplorer } from "./codegenExplorer";
 
 const JASPER_EXTENSION_ID = "gemtalksystems.gemstone-ide";
 const JASPER_MARKETPLACE_ID = "GemTalkSystems.gemstone-ide";
@@ -93,6 +94,10 @@ export function registerCommands(
     ),
     vscode.commands.registerCommand("gemstonePy.openCodegenDocs", () =>
       openRepoFile("docs/codegen.md"),
+    ),
+    vscode.commands.registerCommand(
+      "gemstonePy.openCodegenExplorer",
+      openCodegenExplorer,
     ),
     vscode.commands.registerCommand("gemstonePy.showPlan3FeatureMap", showPlan3FeatureMap),
     vscode.commands.registerCommand("gemstonePy.showEnvironment", showEnvironment),

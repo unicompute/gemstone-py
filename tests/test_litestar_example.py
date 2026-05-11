@@ -99,9 +99,23 @@ class LitestarExampleRunnerTests(unittest.TestCase):
     "Litestar is not installed",
 )
 class LitestarExampleAppTests(unittest.TestCase):
-    def test_create_app_exposes_route_handlers(self):
+    def test_create_app_serves_index_route(self):
+        from litestar.testing import TestClient
+
         app = litestar_example.create_app()
-        self.assertGreaterEqual(len(app.route_handlers), 2)
+
+        with TestClient(app=app) as client:
+            response = client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["name"], "gemstone-py Litestar example")
+        self.assertEqual(response.json()["framework"], "Litestar")
+        self.assertEqual(
+            response.json()["adapter"],
+            "gemstone_py.aio.litestar.session_dependency",
+        )
+        self.assertEqual(response.json()["dependencyInjection"], "litestar.di.Provide")
+        self.assertEqual(response.json()["endpoints"]["health"], "/health/gemstone")
 
 
 if __name__ == "__main__":

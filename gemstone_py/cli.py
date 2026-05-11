@@ -162,7 +162,8 @@ def run_smalltalk_demo() -> None:
 def run_list_examples() -> None:
     """Print the curated example map for new users."""
     print("gemstone-py examples")
-    print("  Start with: python -m examples.quickstart")
+    print("  Installed package: gemstone-examples quickstart")
+    print("  Source checkout:   cd /path/to/gemstone-py && python -m examples.quickstart")
     print("")
     for name, path, description in EXAMPLE_CATALOG:
         print(f"  {name:<14} {path:<32} {description}")

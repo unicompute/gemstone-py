@@ -16,7 +16,8 @@ export interface GemStonePyConfig {
 export function getConfig(): GemStonePyConfig {
   const configuration = vscode.workspace.getConfiguration("gemstonePy");
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-  const repoPath = readString(configuration, "repoPath") || workspaceRoot || "";
+  const configuredRepoPath = readString(configuration, "repoPath");
+  const repoPath = configuredRepoPath || inferRepoPath(workspaceRoot) || workspaceRoot || "";
 
   return {
     pythonPath: readString(configuration, "pythonPath") || repoPython(repoPath),
@@ -108,6 +109,23 @@ function readEnv(value: unknown): EnvMap {
     .map(([key, item]) => [key, item == null ? "" : String(item)]);
 
   return Object.fromEntries(entries);
+}
+
+function inferRepoPath(workspaceRoot: string | undefined): string | undefined {
+  if (!workspaceRoot) {
+    return undefined;
+  }
+
+  const candidates = [workspaceRoot, path.join(workspaceRoot, "gemstone-py")];
+  return candidates.find(isGemStonePyRepo);
+}
+
+function isGemStonePyRepo(candidate: string): boolean {
+  return (
+    pathExists(path.join(candidate, "pyproject.toml")) &&
+    pathExists(path.join(candidate, "gemstone_py")) &&
+    pathExists(path.join(candidate, "examples"))
+  );
 }
 
 function repoPython(repoPath: string): string {

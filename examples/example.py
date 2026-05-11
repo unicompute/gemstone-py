@@ -15,9 +15,11 @@ Covers:
   - listInstances
 
 Run:
-    python3 example.py
+    cd /path/to/gemstone-py
+    python -m examples.example
 """
 
+import sys
 from datetime import datetime, timezone
 
 import gemstone_py as gemstone
@@ -59,6 +61,15 @@ RUNTIME_REQUIREMENT = (
 
 SEP = '-' * 56
 SESSION_POLICY = gemstone.TransactionPolicy.COMMIT_ON_SUCCESS
+
+
+def _show_help_if_requested() -> None:
+    if any(arg in {"-h", "--help"} for arg in sys.argv[1:]):
+        print((__doc__ or "").strip())
+        raise SystemExit(0)
+
+
+_show_help_if_requested()
 
 
 def _load_session_config() -> gemstone.GemStoneConfig:

@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "test:smoke": "npm --prefix vscode-gemstone-py-workbench run test:smoke",
+    "vscode:compile": "npm --prefix vscode-gemstone-py-workbench run compile",
+    "vscode:test:smoke": "npm --prefix vscode-gemstone-py-workbench run test:smoke"
+  }
+}

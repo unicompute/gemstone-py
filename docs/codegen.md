@@ -110,6 +110,30 @@ repos:
       - id: gemstone-codegen-check
 ```
 
+## Visual Codegen Explorer
+
+The VS Code workbench includes `GemStone: Open Codegen Explorer` for the visual
+workflow around the same generator. It sits between the live
+`python-gemstone-database-explorer` class browser and the checked-in Protocol
+module:
+
+1. Start the database explorer with `gemstone-py: Launch Database Explorer`.
+2. Run `GemStone: Open Codegen Explorer`.
+3. Click `Connect` to load dictionaries from the live stone.
+4. Browse dictionaries, classes, protocols, methods, and source.
+5. Select classes and instance/class-side methods as wrapper targets.
+6. Use `Preview Wrappers` to generate into a temporary directory.
+7. Use `Diff Output` to compare the temporary output against the configured
+   generated package.
+8. Save the selection to `codegen-workbench.json`.
+9. Run `Run Check`, `Generate`, or `Run Demo` when the preview looks right.
+
+The visual selection file is intentionally separate from the Protocol module.
+It records the live classes and methods you chose while you design or review
+wrappers; the generated Python still comes from explicit
+`@gemstone_class(...)` Protocol definitions so the API remains reviewable and
+type-checkable.
+
 ## Selector Mapping
 
 Default mapping is intentionally small:

@@ -103,8 +103,10 @@ The extension contributes these settings:
 ```
 
 Leave `gemstonePy.repoPath` empty when the current VS Code workspace is the
-`gemstone-py` checkout. Leave `gemstonePy.pythonPath` empty to use
-`.venv/bin/python` from that checkout when it exists, otherwise `python3`.
+`gemstone-py` checkout. If you open the parent directory that contains a
+`gemstone-py/` child checkout, the extension now detects that child checkout
+automatically. Leave `gemstonePy.pythonPath` empty to use `.venv/bin/python`
+from that checkout when it exists, otherwise `python3`.
 Set `gemstonePy.explorerPath` to a local
 `python-gemstone-database-explorer` checkout before using the database explorer
 commands.
@@ -150,6 +152,16 @@ python3 -m examples.litestar.run --reload
 python3 -m examples.cookbook.plan3_feature_map
 ```
 
+The terminal working directory is `gemstonePy.repoPath`, so these commands work
+when `repoPath` points at the checkout root. If you run them manually, use the
+same shape:
+
+```bash
+cd /path/to/gemstone-py
+source .venv/bin/activate
+python -m examples.litestar.run --reload
+```
+
 Install the repository example dependencies once with:
 
 ```bash
@@ -163,6 +175,40 @@ available from the same sidebar.
 The Codegen commands mirror the repository workflow: check committed generated
 wrappers, regenerate them with stale-file cleanup, run the generated-wrapper
 FastAPI demo, and open `docs/codegen.md`.
+
+## Codegen Explorer
+
+Use `GemStone: Open Codegen Explorer` for the visual wrapper workflow. It uses
+the configured `python-gemstone-database-explorer` service as the live GemStone
+browser and keeps wrapper generation inside the `gemstone-py` checkout.
+
+The explorer can:
+
+- connect to the configured live stone through the database explorer
+- browse dictionaries, classes, protocols, methods, and source
+- select classes and instance/class-side methods as wrapper targets
+- preview generated Python wrappers in a temporary directory before writing
+  files
+- diff generated output against the configured output package
+- save the selected classes and methods to `codegen-workbench.json`
+- run Codegen check/generate commands and the Codegen FastAPI demo
+- probe selected live classes and methods, and report whether generated wrapper
+  classes exist for them
+
+The defaults are:
+
+```json
+{
+  "gemstonePy.codegenModule": "examples.typed_access.codegen_demo.models",
+  "gemstonePy.codegenOutput": "examples/typed_access/codegen_demo/generated",
+  "gemstonePy.codegenMappingPath": "codegen-workbench.json"
+}
+```
+
+Start the database explorer first with `gemstone-py: Launch Database Explorer`,
+or click `Launch Explorer` inside the Codegen Explorer. Then click `Connect`,
+select classes/methods, and use `Preview Wrappers` or `Diff Output` before
+running `Generate`.
 
 ## Database Explorer
 

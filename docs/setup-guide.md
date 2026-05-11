@@ -85,11 +85,18 @@ python -m pip install -e .[dev]
 For source-checkout examples without the full development toolchain:
 
 ```bash
+cd /path/to/gemstone-py
+source .venv/bin/activate
 python -m pip install -e ".[examples]"
 python -m examples.fastapi.run --reload
 python -m examples.litestar.run --reload
 gemstone-examples list
 ```
+
+Keep the terminal in the checkout root for `python -m examples...` commands.
+If you want to run examples from another directory, use the installed commands
+such as `gemstone-examples litestar --reload` or set `PYTHONPATH` to the
+checkout path explicitly.
 
 ## Required Environment Variables
 

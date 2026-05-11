@@ -11,12 +11,16 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from gemstone_py.aio import AsyncSession
+
 DEFAULT_APP_PATH = "gemstone_py.litestar_example:create_app"
 DEFAULT_MODULE_NAME = "gemstone_py.litestar_example"
 LITESTAR_DEPENDENCIES = ("litestar", "uvicorn")
 STARTUP_INSTRUCTIONS_ENV = "GEMSTONE_PY_LITESTAR_EXAMPLE_BASE_URL"
 INDEX_BODY_EXAMPLE = (
-    '{"name":"gemstone-py Litestar example","endpoints":'
+    '{"name":"gemstone-py Litestar example","framework":"Litestar",'
+    '"adapter":"gemstone_py.aio.litestar.session_dependency",'
+    '"dependencyInjection":"litestar.di.Provide","endpoints":'
     '{"health":"/health/gemstone","docs":"/schema/swagger","openapi":"/schema/openapi.json"}}'
 )
 
@@ -27,7 +31,6 @@ def create_app() -> Any:
     from litestar.di import Provide
 
     from gemstone_py import GemStoneConfig
-    from gemstone_py.aio import AsyncSession
     from gemstone_py.aio.litestar import session_dependency
 
     get_gemstone_session = session_dependency(
@@ -38,6 +41,9 @@ def create_app() -> Any:
     async def index() -> dict[str, Any]:
         return {
             "name": "gemstone-py Litestar example",
+            "framework": "Litestar",
+            "adapter": "gemstone_py.aio.litestar.session_dependency",
+            "dependencyInjection": "litestar.di.Provide",
             "endpoints": {
                 "health": "/health/gemstone",
                 "docs": "/schema/swagger",

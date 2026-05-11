@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0
+
+- Added `GemStone: Open Codegen Explorer`, a visual workbench for browsing live
+  GemStone dictionaries, classes, protocols, methods, and source through the
+  configured Python database explorer.
+- Added Codegen Explorer actions for selecting wrapper targets, previewing
+  generated wrapper files in a temporary directory, diffing generated output
+  against the repository, saving a reusable mapping file, running Codegen
+  check/generate commands, launching the Codegen FastAPI demo, and probing
+  selected live classes/methods.
+- Added workbench settings for the default Codegen Protocol module, generated
+  wrapper output package, and mapping file path.
+
 ## 0.2.2
 
 - Added Codegen workbench commands for checking generated wrappers,

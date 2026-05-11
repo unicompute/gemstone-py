@@ -49,10 +49,18 @@ Run examples as modules from the repository root so imports resolve exactly as
 they do in CI:
 
 ```bash
+cd /path/to/gemstone-py
+source .venv/bin/activate
 python -m examples.quickstart
 python -m examples.misc.smalltalk_demo
 python -m examples.async_features.session_root_and_collection
 ```
+
+If your prompt is in the parent directory, for example `src %`, change into the
+`gemstone-py` checkout first. The installed `gemstone-py` wheel exposes
+`gemstone-examples`, `gemstone-fastapi-example`, and
+`gemstone-litestar-example` from any directory; the repository-only
+`examples.*` modules require the checkout root on `PYTHONPATH`.
 
 For a fresh or shared stone, you can also audit and initialize the GemStone-side
 roots that the persistence helpers use:
@@ -132,6 +140,13 @@ extension scaffold for the Python-facing workflow. It adds a GemStone Py sidebar
 with example runners, environment/backend checks, docs/PDF launchers,
 maintainer scripts, Jasper links, setup verification actions, and launcher plus
 webview commands for `python-gemstone-database-explorer`.
+
+For generated wrappers, run `GemStone: Open Codegen Explorer`. It connects to
+the configured database explorer, browses live dictionaries/classes/protocols/
+methods/source, lets you select wrapper targets, previews generated files in a
+temporary directory, diffs them against the configured output package, saves a
+reusable `codegen-workbench.json` mapping, and can run the Codegen check,
+generation, FastAPI demo, and live target probe from the same view.
 
 Install it from the Visual Studio Marketplace:
 
@@ -962,8 +977,12 @@ python -m examples.litestar.run --reload
 The root route returns the available endpoints:
 
 ```json
-{"name":"gemstone-py Litestar example","endpoints":{"health":"/health/gemstone","docs":"/schema/swagger","openapi":"/schema/openapi.json"}}
+{"name":"gemstone-py Litestar example","framework":"Litestar","adapter":"gemstone_py.aio.litestar.session_dependency","dependencyInjection":"litestar.di.Provide","endpoints":{"health":"/health/gemstone","docs":"/schema/swagger","openapi":"/schema/openapi.json"}}
 ```
+
+This deliberately mirrors the FastAPI example's `/` and `/health/gemstone`
+contract while showing the Litestar-specific adapter, `Provide(...)`
+dependency injection, and schema routes.
 
 The installed package runner is:
 

@@ -26,6 +26,7 @@ let refreshedProviders = 0;
 let outputLines = [];
 let outputShown = false;
 let webviewPanels = [];
+let webviewMessages = [];
 
 function resetState() {
   configurationValues = {
@@ -58,6 +59,7 @@ function resetState() {
   outputLines = [];
   outputShown = false;
   webviewPanels = [];
+  webviewMessages = [];
 }
 
 class EventEmitter {
@@ -186,6 +188,14 @@ const fakeVscode = {
         options,
         webview: {
           html: "",
+          postMessage(message) {
+            webviewMessages.push(message);
+            return Promise.resolve(true);
+          },
+          onDidReceiveMessage(callback) {
+            this.messageHandler = callback;
+            return { dispose() {} };
+          },
         },
       };
       webviewPanels.push(panel);
@@ -298,6 +308,25 @@ test("getConfig uses a workspace .venv Python when pythonPath is empty", () => {
   const resolved = config.getConfig();
 
   assert.equal(resolved.repoPath, workspacePath);
+  assert.equal(resolved.pythonPath, pythonPath);
+});
+
+test("getConfig detects a gemstone-py child checkout from a parent workspace", () => {
+  const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), "workspace-"));
+  const checkoutPath = path.join(workspacePath, "gemstone-py");
+  const pythonPath = path.join(checkoutPath, ".venv", "bin", "python");
+  fs.mkdirSync(path.join(checkoutPath, "gemstone_py"), { recursive: true });
+  fs.mkdirSync(path.join(checkoutPath, "examples"), { recursive: true });
+  fs.mkdirSync(path.dirname(pythonPath), { recursive: true });
+  fs.writeFileSync(path.join(checkoutPath, "pyproject.toml"), "[project]\n");
+  fs.writeFileSync(pythonPath, "");
+  workspaceFolders = [{ uri: { fsPath: workspacePath } }];
+  configurationValues.pythonPath = "";
+  configurationValues.repoPath = "";
+
+  const resolved = config.getConfig();
+
+  assert.equal(resolved.repoPath, checkoutPath);
   assert.equal(resolved.pythonPath, pythonPath);
 });
 
@@ -421,6 +450,7 @@ test("tree providers expose expected commands and mask environment secrets", () 
       "gemstonePy.generateCodegenWrappers",
       "gemstonePy.runCodegenFastApiDemo",
       "gemstonePy.openCodegenDocs",
+      "gemstonePy.openCodegenExplorer",
       "gemstonePy.runLifetimeExample",
       "gemstonePy.checkNativeBackend",
       "gemstonePy.runFastApiExample",
@@ -467,6 +497,18 @@ test("tree providers expose expected commands and mask environment secrets", () 
       "gemstonePy.runDatabaseExplorerUiTests",
       "gemstonePy.runDatabaseExplorerLiveUiTests",
       "gemstonePy.openDatabaseExplorerRepository",
+    ],
+  );
+
+  const codegen = ide.find((item) => item.label === "Codegen");
+  assert.ok(codegen);
+  assert.deepEqual(
+    codegen.children.map((item) => item.options.command),
+    [
+      "gemstonePy.openCodegenExplorer",
+      "gemstonePy.runCodegenCheck",
+      "gemstonePy.generateCodegenWrappers",
+      "gemstonePy.runCodegenFastApiDemo",
     ],
   );
 
@@ -526,6 +568,10 @@ test("package contributes command palette titles for Codegen commands", () => {
     titlesByCommand.get("gemstonePy.openCodegenDocs"),
     "GemStone: Open Codegen Docs",
   );
+  assert.equal(
+    titlesByCommand.get("gemstonePy.openCodegenExplorer"),
+    "GemStone: Open Codegen Explorer",
+  );
 });
 
 test("package activation events include Codegen commands", () => {
@@ -539,6 +585,9 @@ test("package activation events include Codegen commands", () => {
     packageJson.activationEvents.includes("onCommand:gemstonePy.runCodegenFastApiDemo"),
   );
   assert.ok(packageJson.activationEvents.includes("onCommand:gemstonePy.openCodegenDocs"));
+  assert.ok(
+    packageJson.activationEvents.includes("onCommand:gemstonePy.openCodegenExplorer"),
+  );
 });
 
 test("openJasper activates installed Jasper and opens the GemStone sidebar", async () => {
@@ -681,6 +730,20 @@ test("openDatabaseExplorerWebview embeds the configured explorer URL", () => {
   assert.equal(webviewPanels[0].title, "GemStone Database Explorer");
   assert.match(webviewPanels[0].webview.html, /<iframe/);
   assert.match(webviewPanels[0].webview.html, /http:\/\/127\.0\.0\.1:9292\//);
+});
+
+test("openCodegenExplorer creates a visual codegen webview", () => {
+  const result = registeredCommand("gemstonePy.openCodegenExplorer")();
+
+  assert.equal(result, "http://127.0.0.1:9292/");
+  assert.equal(webviewPanels.length, 1);
+  assert.equal(webviewPanels[0].viewType, "gemstonePyCodegenExplorer");
+  assert.equal(webviewPanels[0].title, "GemStone Codegen Explorer");
+  assert.match(webviewPanels[0].webview.html, /Codegen Explorer/);
+  assert.match(webviewPanels[0].webview.html, /Preview Wrappers/);
+  assert.match(webviewPanels[0].webview.html, /Diff Output/);
+  assert.match(webviewPanels[0].webview.html, /Test Live Targets/);
+  assert.equal(typeof webviewPanels[0].webview.messageHandler, "function");
 });
 
 test("configureWorkbench writes workspace settings and refreshes views", async () => {

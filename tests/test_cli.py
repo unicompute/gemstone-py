@@ -43,6 +43,8 @@ class AggregateCliTests(unittest.TestCase):
         output = stream.getvalue()
         self.assertEqual(result, 0)
         self.assertIn("gemstone-py examples", output)
+        self.assertIn("Installed package: gemstone-examples quickstart", output)
+        self.assertIn("Source checkout:", output)
         self.assertIn("examples/quickstart.py", output)
         self.assertIn("examples/cookbook/", output)
 

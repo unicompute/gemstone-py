@@ -122,6 +122,17 @@ For the web examples without the full development toolchain:
 python3 -m pip install -e ".[examples]"
 ```
 
+Run `examples.*` modules from the checkout root. Activating the virtual
+environment from a parent directory is not enough, because `examples/` is a
+repository package, not part of the installed wheel:
+
+```bash
+cd /path/to/gemstone-py
+source .venv/bin/activate
+python -m examples.quickstart
+python -m examples.litestar.run --reload
+```
+
 ## Quickstart
 
 For the smallest live example from a source checkout:
@@ -225,7 +236,12 @@ to check Python paths, `GS_STONE`/`GS_STONE_NAME`, credentials, native backend
 state, and live GemStone connectivity from one output report.
 The report can open settings, copy itself, or copy an environment export script.
 The workbench also exposes Codegen commands for wrapper drift checks, wrapper
-regeneration, the generated-wrapper FastAPI demo, and the Codegen docs.
+regeneration, the generated-wrapper FastAPI demo, and the Codegen docs. Use
+`GemStone: Open Codegen Explorer` when you want a visual flow: browse live
+dictionaries/classes/methods through the database explorer, select wrapper
+targets, preview generated files in a temporary directory, diff against the
+checked-in output package, save `codegen-workbench.json`, and then run the
+Codegen check or generation command.
 
 Operational helper scripts:
 
@@ -447,6 +463,9 @@ For pooled Litestar handlers, use
 
 The runnable Litestar example lives in `examples/litestar/` and can also be
 started from an installed package with `gemstone-litestar-example --reload`.
+It mirrors the FastAPI example's `/` and `/health/gemstone` contract, but the
+index response names the Litestar adapter and `litestar.di.Provide` dependency
+injection path so the framework-specific wiring is visible.
 
 ## Typed OOPs and Handles
 
