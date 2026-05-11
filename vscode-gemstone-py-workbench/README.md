@@ -41,6 +41,18 @@ This extension focuses on the `gemstone-py` repository:
 
 ![gemstone-py Workbench configure verify and explorer webview flow](https://raw.githubusercontent.com/unicompute/gemstone-py/main/vscode-gemstone-py-workbench/media/screenshots/workbench-setup-flow.png)
 
+### Codegen Sidebar Actions
+
+![gemstone-py Workbench Codegen sidebar actions](https://raw.githubusercontent.com/unicompute/gemstone-py/main/vscode-gemstone-py-workbench/media/screenshots/codegen-sidebar.png)
+
+### Codegen Command Palette
+
+![gemstone-py Workbench Codegen commands in the Command Palette](https://raw.githubusercontent.com/unicompute/gemstone-py/main/vscode-gemstone-py-workbench/media/screenshots/codegen-command-palette.png)
+
+### Codegen Explorer
+
+![gemstone-py Workbench Codegen Explorer](https://raw.githubusercontent.com/unicompute/gemstone-py/main/vscode-gemstone-py-workbench/media/screenshots/codegen-explorer.png)
+
 ## Development
 
 From this directory:
@@ -209,6 +221,19 @@ Start the database explorer first with `gemstone-py: Launch Database Explorer`,
 or click `Launch Explorer` inside the Codegen Explorer. Then click `Connect`,
 select classes/methods, and use `Preview Wrappers` or `Diff Output` before
 running `Generate`.
+
+For the repository demo, select:
+
+| GemStone class | Class-side selectors | Instance selectors |
+| --- | --- | --- |
+| `OkzBooking` | `findById:` | `status`, `customer`, `markPaid:`, `transferTo:byUserId:`, `yourself` |
+| `OkzCustomer` | none | `name`, `yourself` |
+
+The matching example selection file is:
+
+```text
+examples/typed_access/codegen_demo/codegen-workbench.example.json
+```
 
 ## Database Explorer
 

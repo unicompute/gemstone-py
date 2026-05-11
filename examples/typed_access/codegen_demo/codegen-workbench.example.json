@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "codegenModule": "examples.typed_access.codegen_demo.models",
+  "codegenOutput": "examples/typed_access/codegen_demo/generated",
+  "classes": [
+    {
+      "dictionary": "UserGlobals",
+      "className": "OkzBooking",
+      "instanceMethods": [
+        "customer",
+        "markPaid:",
+        "status",
+        "transferTo:byUserId:",
+        "yourself"
+      ],
+      "classMethods": [
+        "findById:"
+      ]
+    },
+    {
+      "dictionary": "UserGlobals",
+      "className": "OkzCustomer",
+      "instanceMethods": [
+        "name",
+        "yourself"
+      ],
+      "classMethods": []
+    }
+  ]
+}

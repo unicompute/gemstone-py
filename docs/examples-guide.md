@@ -382,10 +382,13 @@ Usage:
 
 ```bash
 python -m examples.typed_access.typed_oops_and_queries
+python -m examples.typed_access.codegen_demo.preview
 gemstone-codegen \
   --module examples.typed_access.codegen_demo.models \
   --output examples/typed_access/codegen_demo/generated \
   --check
+python -m examples.typed_access.codegen_demo.run --reload
+python -m examples.typed_access.codegen_demo.live_probe --booking-id B-1001
 ```
 
 Typed OOPs:
@@ -454,6 +457,29 @@ with GemStoneSession(config=GemStoneConfig.from_env()) as session:
 
 Use `@gemstone_selector(...)` for selectors that do not map cleanly from Python
 snake_case to Smalltalk camelCase keywords.
+
+The offline preview example is the safest place to start. It generates the
+`OkzBooking` and `OkzCustomer` wrappers in a temporary directory, shows the
+generated package layout, and prints the exact `gemstone-codegen --clean` and
+`--check` commands:
+
+```bash
+python -m examples.typed_access.codegen_demo.preview --show-source
+```
+
+The VS Code workbench can then make the live-class selection concrete:
+
+![Codegen actions in the GemStone Py sidebar](../vscode-gemstone-py-workbench/media/screenshots/codegen-sidebar.png)
+
+Open `GemStone: Open Codegen Explorer`, connect to
+`python-gemstone-database-explorer`, select `OkzBooking` and `OkzCustomer`,
+preview the generated files, diff them against
+`examples/typed_access/codegen_demo/generated`, then save the selection. The
+example mapping file records the selectors to select from the live stone:
+
+```text
+examples/typed_access/codegen_demo/codegen-workbench.example.json
+```
 
 ## `examples/lifetime/`
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1
+
+- Added Codegen workbench screenshots to the public README for the Command
+  Palette actions, sidebar entries, and Codegen Explorer flow.
+- Documented the concrete Codegen demo mapping and selector workflow used by
+  the gemstone-py examples.
+
 ## 0.3.0
 
 - Added `GemStone: Open Codegen Explorer`, a visual workbench for browsing live

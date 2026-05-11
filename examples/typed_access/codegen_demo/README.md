@@ -7,6 +7,15 @@ This example shows the Protocol-to-wrapper workflow:
 3. run `gemstone-codegen`
 4. import the generated wrapper from application code
 
+Start with the offline preview. It writes generated files to a temporary
+directory and prints the concrete follow-up commands, so it is safe to run
+before changing checked-in generated files:
+
+```bash
+python -m examples.typed_access.codegen_demo.preview
+python -m examples.typed_access.codegen_demo.preview --show-source
+```
+
 Generate wrappers from the repository root:
 
 ```bash
@@ -28,6 +37,23 @@ gemstone-codegen \
 The generated package includes runtime `.py` modules, matching `.pyi` stubs,
 and `py.typed` so editors and type checkers can read the wrapper contract.
 
+The companion VS Code workbench can drive the same workflow visually. Open
+`GemStone: Open Codegen Explorer`, connect to the configured database explorer,
+select `OkzBooking` and `OkzCustomer`, preview wrappers, diff them against this
+`generated/` package, and save the selection as a reusable mapping. This
+example includes a starter mapping:
+
+```text
+examples/typed_access/codegen_demo/codegen-workbench.example.json
+```
+
+Use it as a concrete checklist for the live selection:
+
+| GemStone class | Class-side selectors | Instance selectors |
+| --- | --- | --- |
+| `OkzBooking` | `findById:` | `status`, `customer`, `markPaid:`, `transferTo:byUserId:`, `yourself` |
+| `OkzCustomer` | none | `name`, `yourself` |
+
 Run the generated-wrapper FastAPI demo:
 
 ```bash
@@ -44,6 +70,15 @@ http://127.0.0.1:8000/bookings/B-1001
 
 The booking endpoint needs GemStone credentials and a reachable stone because
 it calls `OkzBooking findById:` through the generated async wrapper.
+
+Probe the generated sync wrapper directly against a live stone:
+
+```bash
+export GS_STONE_NAME=gs64stone
+export GS_USERNAME=DataCurator
+export GS_PASSWORD=swordfish
+python -m examples.typed_access.codegen_demo.live_probe --booking-id B-1001
+```
 
 Use the generated sync wrapper:
 

@@ -177,7 +177,7 @@ gemstone-examples fastapi --reload
 gemstone-examples litestar --reload
 gemstone-fastapi-example --reload
 gemstone-litestar-example --reload
-gemstone-publish-verify --gemstone-version 0.2.12 --native-version 0.1.2 --skip-install
+gemstone-publish-verify --gemstone-version 0.2.14 --native-version 0.1.2 --skip-install
 ```
 
 Feature examples from the repository checkout:
@@ -186,7 +186,9 @@ Feature examples from the repository checkout:
 python -m examples.quickstart
 python -m examples.async_features.session_root_and_collection
 python -m examples.typed_access.typed_oops_and_queries
+python -m examples.typed_access.codegen_demo.preview
 gemstone-codegen --module examples.typed_access.codegen_demo.models --output examples/typed_access/codegen_demo/generated --check
+python -m examples.typed_access.codegen_demo.run --reload
 python -m examples.lifetime.managed_oop_handles
 python -m examples.native_backend.check_backend
 python -m examples.fastapi.run --reload
@@ -242,6 +244,10 @@ dictionaries/classes/methods through the database explorer, select wrapper
 targets, preview generated files in a temporary directory, diff against the
 checked-in output package, save `codegen-workbench.json`, and then run the
 Codegen check or generation command.
+
+Codegen screenshots and the concrete booking-wrapper workflow are documented
+in [docs/codegen.md](docs/codegen.md). The demo selection file is
+[`examples/typed_access/codegen_demo/codegen-workbench.example.json`](examples/typed_access/codegen_demo/codegen-workbench.example.json).
 
 Operational helper scripts:
 
@@ -510,6 +516,12 @@ gemstone-codegen \
   --module examples.typed_access.codegen_demo.models \
   --output examples/typed_access/codegen_demo/generated \
   --clean
+```
+
+Preview the same generated package without modifying checked-in files:
+
+```bash
+python -m examples.typed_access.codegen_demo.preview
 ```
 
 Then use the generated sync or async wrapper:
@@ -915,7 +927,7 @@ packaged verifier. It checks project JSON, version-specific JSON, the simple
 index, and temporary-virtualenv installs:
 
 ```bash
-gemstone-publish-verify --gemstone-version 0.2.12 --native-version 0.1.2
+gemstone-publish-verify --gemstone-version 0.2.14 --native-version 0.1.2
 ```
 
 Use `--skip-install` when you only want the metadata/index checks, or

@@ -2,7 +2,7 @@
   "name": "gemstone-py-workbench",
   "displayName": "gemstone-py Workbench",
   "description": "Run gemstone-py examples, check GemStone environment state, open docs, and launch the Python GemStone database explorer.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "unicompute",
   "icon": "media/emerald-logo.png",
   "license": "MIT",

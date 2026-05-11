@@ -150,17 +150,20 @@ Shows both static typing surfaces:
 
 ```
 python -m examples.typed_access.typed_oops_and_queries
+python -m examples.typed_access.codegen_demo.preview
 gemstone-codegen \
   --module examples.typed_access.codegen_demo.models \
   --output examples/typed_access/codegen_demo/generated \
   --check
 python -m examples.typed_access.codegen_demo.run --reload
+python -m examples.typed_access.codegen_demo.live_probe --booking-id B-1001
 ```
 
 `simple_blog_queries.py` also contains importable helper functions for the
 existing simple-blog data shape. `codegen_demo/` contains a Protocol module,
-checked-in generated wrappers, and a runnable FastAPI route that calls the
-generated async wrapper.
+an offline preview script, a reusable Codegen Explorer mapping, checked-in
+generated wrappers, a live generated-wrapper probe, and a runnable FastAPI
+route that calls the generated async wrapper.
 
 ---
 

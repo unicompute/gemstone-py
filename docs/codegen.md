@@ -117,6 +117,10 @@ workflow around the same generator. It sits between the live
 `python-gemstone-database-explorer` class browser and the checked-in Protocol
 module:
 
+![Codegen commands in the Command Palette](../vscode-gemstone-py-workbench/media/screenshots/codegen-command-palette.png)
+
+![Codegen Explorer webview](../vscode-gemstone-py-workbench/media/screenshots/codegen-explorer.png)
+
 1. Start the database explorer with `gemstone-py: Launch Database Explorer`.
 2. Run `GemStone: Open Codegen Explorer`.
 3. Click `Connect` to load dictionaries from the live stone.
@@ -133,6 +137,67 @@ It records the live classes and methods you chose while you design or review
 wrappers; the generated Python still comes from explicit
 `@gemstone_class(...)` Protocol definitions so the API remains reviewable and
 type-checkable.
+
+The demo mapping file is:
+
+```text
+examples/typed_access/codegen_demo/codegen-workbench.example.json
+```
+
+It records this useful first selection:
+
+| Class | Class-side selectors | Instance selectors |
+| --- | --- | --- |
+| `OkzBooking` | `findById:` | `status`, `customer`, `markPaid:`, `transferTo:byUserId:`, `yourself` |
+| `OkzCustomer` | none | `name`, `yourself` |
+
+Use that mapping as the checklist when you browse the live classes. Keep the
+Protocol module as the source of truth for the generated Python API.
+
+## Concrete Demo Workflow
+
+The repository includes a complete, reviewable Codegen demo under
+`examples/typed_access/codegen_demo/`.
+
+Preview generation without touching checked-in files:
+
+```bash
+python -m examples.typed_access.codegen_demo.preview
+python -m examples.typed_access.codegen_demo.preview --show-source
+```
+
+Regenerate the checked-in package:
+
+```bash
+gemstone-codegen \
+  --module examples.typed_access.codegen_demo.models \
+  --output examples/typed_access/codegen_demo/generated \
+  --clean
+```
+
+Verify that generated files are current:
+
+```bash
+gemstone-codegen \
+  --module examples.typed_access.codegen_demo.models \
+  --output examples/typed_access/codegen_demo/generated \
+  --check
+```
+
+Run the generated-wrapper FastAPI demo:
+
+```bash
+python -m examples.typed_access.codegen_demo.run --reload
+```
+
+Probe the generated sync wrapper against a live stone:
+
+```bash
+export GS_STONE_NAME=gs64stone
+export GS_USERNAME=DataCurator
+export GS_PASSWORD=swordfish
+python -m examples.typed_access.codegen_demo.live_probe --booking-id B-1001
+```
 
 ## Selector Mapping
 

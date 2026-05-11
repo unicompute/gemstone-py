@@ -4,6 +4,18 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+## 0.2.14 - 2026-05-11
+
+- Added concrete Codegen examples for offline wrapper preview, reusable
+  Workbench selection mappings, and live generated-wrapper probes.
+- Expanded the README, examples guide, Codegen guide, Medium article draft,
+  typed Codegen demo docs, and VS Code workbench README with runnable Codegen
+  commands and selector examples.
+- Added VS Code workbench Codegen screenshots for the Command Palette, sidebar
+  actions, and Codegen Explorer flow.
+- Added entrypoint smoke coverage so Codegen preview and live-probe help stay
+  runnable without opening a live GemStone session.
+
 ## 0.2.13 - 2026-05-11
 
 - Published the VS Code workbench `0.3.0` Codegen Explorer feature release,

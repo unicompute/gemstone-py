@@ -287,6 +287,13 @@ gemstone-codegen \
   --clean
 ```
 
+Start with the offline preview when you are learning or reviewing a wrapper
+change:
+
+```bash
+python -m examples.typed_access.codegen_demo.preview
+```
+
 Then application code uses normal Python methods while the generated wrapper
 builds `OkzBooking findById: 'B-1001'` and `markPaid:` under the hood:
 
