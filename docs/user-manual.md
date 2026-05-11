@@ -569,6 +569,7 @@ The main pieces are:
 - `GemStoneThreadLocalSessionProvider`
 - `session_scope(...)`
 - `gemstone_py.session_providers`
+- `gemstone_py.frameworks.django`
 - `gemstone_py.frameworks.flask`
 - `gemstone_py.web_core.RequestScope`
 - `gemstone_py.web_core.AsyncRequestScope`
@@ -657,6 +658,31 @@ Use this when your web stack is async-first. Use the Flask integration when your
 application is Flask-first.
 
 The runnable repository example is `examples/fastapi/app.py`.
+
+### Django
+
+Django integration lives in `gemstone_py.frameworks.django`. The module does
+not import Django directly; it exposes middleware and a `request_session(...)`
+helper that work with Django's standard request object.
+
+```python
+from django.http import JsonResponse
+from gemstone_py import GemStoneConfig
+from gemstone_py.frameworks.django import GemStoneSessionMiddleware, request_session
+
+def gemstone_session_middleware(get_response):
+    return GemStoneSessionMiddleware(get_response, config=GemStoneConfig.from_env())
+
+def health(request):
+    session = request_session(request)
+    return JsonResponse({"result": session.eval("3 + 4")})
+```
+
+Install the optional framework dependency with:
+
+```bash
+python -m pip install "gemstone-py[django]"
+```
 
 ### Litestar
 

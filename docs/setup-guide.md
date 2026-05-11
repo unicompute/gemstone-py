@@ -27,6 +27,7 @@ For the full local development experience, you will also want:
 | --- | --- |
 | Normal users | `python3 -m pip install gemstone-py` |
 | Native acceleration | `python3 -m pip install "gemstone-py[fast]"` |
+| Django web apps | `python3 -m pip install "gemstone-py[django]"` |
 | Litestar web apps | `python3 -m pip install "gemstone-py[litestar]"` |
 | Source checkout examples/development | `python3 -m pip install -e ".[examples,dev]"` |
 | VS Code users | `code --install-extension unicompute.gemstone-py-workbench` |
@@ -55,6 +56,12 @@ For web examples from an installed environment:
 ```bash
 python3 -m pip install "gemstone-py[fastapi]"
 gemstone-fastapi-example --reload
+```
+
+For Django applications:
+
+```bash
+python3 -m pip install "gemstone-py[django]"
 ```
 
 For Litestar applications:

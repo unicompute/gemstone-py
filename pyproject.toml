@@ -46,8 +46,12 @@ dev = [
 ]
 examples = [
   "Flask>=2.3",
+  "Django>=4.2",
   "fastapi>=0.115",
   "uvicorn[standard]>=0.30",
+]
+django = [
+  "Django>=4.2",
 ]
 fast = [
   "gemstone-py-native>=0.1.2",
@@ -117,6 +121,7 @@ files = [
   "gemstone_py/cli.py",
   "gemstone_py/client.py",
   "gemstone_py/frameworks/__init__.py",
+  "gemstone_py/frameworks/django.py",
   "gemstone_py/frameworks/flask.py",
   "gemstone_py/inspection.py",
   "gemstone_py/migrations.py",
@@ -184,6 +189,7 @@ strict = true
 [[tool.mypy.overrides]]
 module = [
   "gemstone_py.frameworks",
+  "gemstone_py.frameworks.django",
   "gemstone_py.frameworks.flask",
   "gemstone_py.session_providers",
   "gemstone_py.web_core",

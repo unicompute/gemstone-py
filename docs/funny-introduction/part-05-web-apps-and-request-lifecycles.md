@@ -50,7 +50,8 @@ That combination is offensively educational.
 - request lifecycle wiring
 
 The reusable providers now live in `gemstone_py.session_providers`, while
-Flask-specific imports also exist under `gemstone_py.frameworks.flask`.
+Flask-specific imports also exist under `gemstone_py.frameworks.flask` and
+Django middleware lives under `gemstone_py.frameworks.django`.
 
 This is not a random utility pile. It is the package's answer to the question:
 

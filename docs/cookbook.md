@@ -246,6 +246,21 @@ async def gemstone_health(session: AsyncSession = Depends(get_gemstone)):
     return {"result": await session.eval("3 + 4")}
 ```
 
+Django apps use the sync middleware adapter:
+
+```python
+from django.http import JsonResponse
+from gemstone_py import GemStoneConfig
+from gemstone_py.frameworks.django import GemStoneSessionMiddleware, request_session
+
+def gemstone_session_middleware(get_response):
+    return GemStoneSessionMiddleware(get_response, config=GemStoneConfig.from_env())
+
+def gemstone_health(request):
+    session = request_session(request)
+    return JsonResponse({"result": session.eval("3 + 4")})
+```
+
 For Litestar, use the sibling async adapter:
 
 ```python

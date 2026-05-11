@@ -15,6 +15,7 @@ New code should treat `gemstone_py.*` as the supported public API:
 
 ```python
 from gemstone_py import GemStoneConfig, GemStoneSession, TransactionPolicy
+from gemstone_py.frameworks.django import request_session as django_request_session
 from gemstone_py.frameworks.flask import install_flask_request_session
 from gemstone_py.session_providers import (
     GemStoneSessionPool,
@@ -37,6 +38,7 @@ from gemstone_py.session_facade import GemStoneSessionFacade
 | --- | --- |
 | Normal users | `python3 -m pip install gemstone-py` |
 | Native acceleration | `python3 -m pip install "gemstone-py[fast]"` |
+| Django web apps | `python3 -m pip install "gemstone-py[django]"` |
 | Litestar web apps | `python3 -m pip install "gemstone-py[litestar]"` |
 | Source checkout examples/development | `python3 -m pip install -e ".[examples,dev]"` |
 | VS Code users | `code --install-extension unicompute.gemstone-py-workbench` |
@@ -369,6 +371,22 @@ See `examples/async_features/session_root_and_collection.py` for async
 sessions, async persistent-root access, async `GSCollection`, and managed async
 OOP handles in one runnable script. See `examples/fastapi/app.py` for the
 minimal FastAPI dependency-injection shape.
+
+Django apps can use a synchronous request-scoped middleware without importing
+Django inside gemstone-py:
+
+```python
+from django.http import JsonResponse
+from gemstone_py import GemStoneConfig
+from gemstone_py.frameworks.django import GemStoneSessionMiddleware, request_session
+
+def gemstone_session_middleware(get_response):
+    return GemStoneSessionMiddleware(get_response, config=GemStoneConfig.from_env())
+
+def view(request):
+    session = request_session(request)
+    return JsonResponse({"result": session.eval("3 + 4")})
+```
 
 Litestar apps can use the same lifecycle through `gemstone_py.aio.litestar`:
 

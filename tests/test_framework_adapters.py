@@ -5,6 +5,7 @@ from gemstone_py import web as gemstone_web
 from gemstone_py.aio import AsyncSession
 from gemstone_py.aio import litestar as litestar_adapter
 from gemstone_py.aio.pool import AsyncSessionPool
+from gemstone_py.frameworks import django as django_adapter
 from gemstone_py.frameworks import flask as flask_adapter
 
 
@@ -33,6 +34,20 @@ class _FakeSyncSession:
         return 7
 
 
+class _FakeProvider:
+    def __init__(self, session):
+        self.session = session
+        self.releases = []
+        self.timeout = None
+
+    def acquire(self, timeout=None):
+        self.timeout = timeout
+        return self.session
+
+    def release(self, session, *, discard=False, clean=False):
+        self.releases.append((session, discard, clean))
+
+
 class FrameworkAdapterTests(unittest.TestCase):
     def test_flask_adapter_facade_preserves_existing_objects(self):
         self.assertIs(
@@ -50,6 +65,90 @@ class FrameworkAdapterTests(unittest.TestCase):
 
     def test_frameworks_module_is_exported(self):
         self.assertIs(gemstone.frameworks.flask, flask_adapter)
+        self.assertIs(gemstone.frameworks.django, django_adapter)
+
+
+class DjangoAdapterTests(unittest.TestCase):
+    def test_middleware_commits_factory_session_and_clears_request_state(self):
+        created = []
+
+        def factory(**kwargs):
+            session = _FakeSyncSession(**kwargs)
+            created.append(session)
+            return session
+
+        def view(request):
+            session = django_adapter.request_session(request)
+            self.assertIs(django_adapter.request_session(request), session)
+            return type("Response", (), {"status_code": 200})()
+
+        request = type("Request", (), {})()
+        middleware = django_adapter.GemStoneSessionMiddleware(view, session_factory=factory)
+
+        response = middleware(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(created[0].calls, ["login", "commit", "logout"])
+        self.assertIs(created[0].kwargs["transaction_policy"], gemstone.TransactionPolicy.MANUAL)
+        self.assertFalse(hasattr(request, "gemstone_session"))
+        self.assertFalse(hasattr(request, "_gemstone_request_scope"))
+
+    def test_middleware_aborts_on_exception(self):
+        created = []
+
+        def factory(**kwargs):
+            session = _FakeSyncSession(**kwargs)
+            created.append(session)
+            return session
+
+        def view(request):
+            django_adapter.request_session(request)
+            raise RuntimeError("boom")
+
+        middleware = django_adapter.GemStoneSessionMiddleware(view, session_factory=factory)
+
+        with self.assertRaises(RuntimeError):
+            middleware(type("Request", (), {})())
+
+        self.assertEqual(created[0].calls, ["login", "abort", "logout"])
+
+    def test_middleware_aborts_on_server_error_response(self):
+        created = []
+
+        def factory(**kwargs):
+            session = _FakeSyncSession(**kwargs)
+            created.append(session)
+            return session
+
+        def view(request):
+            django_adapter.request_session(request)
+            return type("Response", (), {"status_code": 503})()
+
+        middleware = django_adapter.GemStoneSessionMiddleware(view, session_factory=factory)
+
+        response = middleware(type("Request", (), {})())
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(created[0].calls, ["login", "abort", "logout"])
+
+    def test_middleware_releases_provider_session(self):
+        session = _FakeSyncSession()
+        provider = _FakeProvider(session)
+
+        def view(request):
+            self.assertIs(django_adapter.request_session(request), session)
+            return type("Response", (), {"status_code": 200})()
+
+        middleware = django_adapter.GemStoneSessionMiddleware(view, session_provider=provider)
+
+        middleware(type("Request", (), {})())
+
+        self.assertEqual(session.calls, ["commit"])
+        self.assertEqual(provider.releases, [(session, False, True)])
+
+    def test_request_session_requires_middleware_scope(self):
+        with self.assertRaisesRegex(RuntimeError, "No GemStone request scope"):
+            django_adapter.request_session(type("Request", (), {})())
 
 
 class LitestarAdapterTests(unittest.IsolatedAsyncioTestCase):

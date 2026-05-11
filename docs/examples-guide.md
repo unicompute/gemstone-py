@@ -91,6 +91,12 @@ python -m pip install "gemstone-py[fastapi]"
 gemstone-fastapi-example --reload
 ```
 
+For Django examples or applications:
+
+```bash
+python -m pip install "gemstone-py[django]"
+```
+
 For Litestar applications:
 
 ```bash
