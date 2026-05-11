@@ -33,7 +33,7 @@ The command creates missing `GStoreRoot` and `GSQueryRoot` entries under
 | Quickstart | `examples/quickstart.py` | You want the smallest live connection example. |
 | Grand tour | `examples/example.py` | You want one script that touches most persistence helpers. |
 | Realistic reference app | `examples/webstack/` | You want a web app with users, follows, and persisted posts. |
-| Async/FastAPI cookbook | `examples/async_features/`, `examples/fastapi/` | You need async sessions or request dependencies. |
+| Async web cookbook | `examples/async_features/`, `examples/fastapi/`, `examples/litestar/` | You need async sessions or request dependencies. |
 | Typed-access cookbook | `examples/typed_access/` | You want `TypedOop`, protocols, typed queries, or generated wrappers. |
 | Lifetime cookbook | `examples/lifetime/` | You need managed OOP/export-set lifetime examples. |
 | Native backend cookbook | `examples/native_backend/` | You need to verify `ctypes` versus native backend selection. |
@@ -46,13 +46,13 @@ The command creates missing `GStoreRoot` and `GSQueryRoot` entries under
 | GemStone / app concept | Python example surface |
 |------------------------|------------------------|
 | Session-bound persistence | `PersistentRoot(session)` or `GemStoneSessionFacade(session).persistent_root` |
-| Async sessions and request-friendly access | `examples/async_features/` and `examples/fastapi/` |
+| Async sessions and request-friendly access | `examples/async_features/`, `examples/fastapi/`, and `examples/litestar/` |
 | Typed OOPs, typed collection queries, and Smalltalk codegen | `examples/typed_access/` |
 | Export-set lifetime handles | `examples/lifetime/` |
 | Optional native backend discovery | `examples/native_backend/` |
 | Model-style helpers | `gemstone_model.py` |
 | Request transaction wrapper | Flask `SessionInterface` / `before_request` |
-| Web application examples | Flask / Django / `examples/webstack/` |
+| Web application examples | Flask / Django / FastAPI / Litestar / `examples/webstack/` |
 
 ## Prerequisites
 
@@ -177,6 +177,18 @@ Minimal FastAPI app using `gemstone_py.aio.fastapi.session_dependency`.
 ```
 python -m pip install -e ".[examples]"
 python -m examples.fastapi.run --reload
+```
+
+---
+
+## litestar/
+
+Minimal Litestar app using `gemstone_py.aio.litestar.session_dependency`.
+
+```
+python -m pip install -e ".[examples]"
+python -m examples.litestar.run --reload
+gemstone-litestar-example --reload
 ```
 
 ---

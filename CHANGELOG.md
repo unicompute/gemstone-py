@@ -22,6 +22,8 @@ All notable changes to `gemstone-py` should be recorded here.
   while keeping the historical `gemstone_py.web` and top-level imports stable.
 - Added a dependency-light Django adapter under `gemstone_py.frameworks.django`
   for request-scoped GemStone sessions backed by the shared web lifecycle core.
+- Added a runnable Litestar example, `gemstone-litestar-example`, and framework
+  adapter docs showing how to build new adapters on `gemstone_py.web_core`.
 - Added chunked `GSCollection.iter(...)`, `search_iter(...)`, typed
   `Query.iter(...)`, and async iterator equivalents for large result sets.
 - Made `GSCollection.search()`, `GSCollection.all()`, and typed `Query.all()`

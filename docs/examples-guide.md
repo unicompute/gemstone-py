@@ -97,10 +97,11 @@ For Django examples or applications:
 python -m pip install "gemstone-py[django]"
 ```
 
-For Litestar applications:
+For Litestar examples or applications:
 
 ```bash
 python -m pip install "gemstone-py[litestar]"
+gemstone-litestar-example --reload
 ```
 
 For FastAPI examples from a source checkout:
@@ -108,6 +109,13 @@ For FastAPI examples from a source checkout:
 ```bash
 python -m pip install -e ".[examples]"
 python -m examples.fastapi.run --reload
+```
+
+For Litestar examples from a source checkout:
+
+```bash
+python -m pip install -e ".[examples]"
+python -m examples.litestar.run --reload
 ```
 
 ## Running Examples From VS Code
@@ -915,6 +923,31 @@ For production-style request reuse, use a pool-backed dependency:
 ```python
 pool = AsyncSessionPool(maxsize=8, minsize=2, config=GemStoneConfig.from_env())
 get_gemstone_session = pool_session_dependency(pool)
+```
+
+## `examples/litestar/`
+
+This is the smallest Litestar web example. It uses
+`gemstone_py.aio.litestar.session_dependency(...)` to open one `AsyncSession`
+per request and finalize it with the request outcome.
+
+Usage:
+
+```bash
+python -m pip install -e ".[examples]"
+python -m examples.litestar.run --reload
+```
+
+The root route returns the available endpoints:
+
+```json
+{"name":"gemstone-py Litestar example","endpoints":{"health":"/health/gemstone","docs":"/schema/swagger","openapi":"/schema/openapi.json"}}
+```
+
+The installed package runner is:
+
+```bash
+gemstone-litestar-example --reload
 ```
 
 ## `examples/django/` and `examples/webstack/`

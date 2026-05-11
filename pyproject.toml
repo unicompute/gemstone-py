@@ -30,6 +30,7 @@ gemstone-examples = "gemstone_py.cli:main_entry"
 gemstone-fastapi-example = "gemstone_py.fastapi_example:main_entry"
 gemstone-hello = "gemstone_py.cli:hello_entry"
 gemstone-inspect = "gemstone_py.inspection:main_entry"
+gemstone-litestar-example = "gemstone_py.litestar_example:main_entry"
 gemstone-migrations = "gemstone_py.migrations:main_entry"
 gemstone-publish-verify = "gemstone_py.publish_verify:main_entry"
 gemstone-smalltalk-demo = "gemstone_py.cli:smalltalk_demo_entry"
@@ -48,6 +49,7 @@ examples = [
   "Flask>=2.3",
   "Django>=4.2",
   "fastapi>=0.115",
+  "litestar>=2.0",
   "uvicorn[standard]>=0.30",
 ]
 django = [
@@ -118,6 +120,7 @@ files = [
   "gemstone_py/session_facade.py",
   "gemstone_py/example_support.py",
   "gemstone_py/fastapi_example.py",
+  "gemstone_py/litestar_example.py",
   "gemstone_py/cli.py",
   "gemstone_py/client.py",
   "gemstone_py/frameworks/__init__.py",
@@ -157,6 +160,7 @@ module = [
   "gemstone_py.session_facade",
   "gemstone_py.example_support",
   "gemstone_py.fastapi_example",
+  "gemstone_py.litestar_example",
   "gemstone_py.inspection",
   "gemstone_py.cli",
   "gemstone_py.objectlog",

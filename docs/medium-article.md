@@ -422,7 +422,8 @@ async def gemstone_health(session: AsyncSession = Depends(get_gemstone)):
     return {"result": await session.eval("3 + 4")}
 ```
 
-Runnable examples live in `examples/async_features/` and `examples/fastapi/`.
+Runnable examples live in `examples/async_features/`, `examples/fastapi/`, and
+`examples/litestar/`.
 
 ---
 

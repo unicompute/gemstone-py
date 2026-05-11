@@ -14,9 +14,10 @@ If you are new to the project, use this order:
 3. [Examples Guide](examples-guide.md)
 4. [Cookbook](cookbook.md)
 5. [Type-Safe Smalltalk Codegen](codegen.md)
-6. [Observability](observability.md)
-7. [Performance](performance.md)
-8. [Funny Introduction](funny-introduction/README.md)
+6. [Framework Adapters](framework-adapters.md)
+7. [Observability](observability.md)
+8. [Performance](performance.md)
+9. [Funny Introduction](funny-introduction/README.md)
 
 If you want a narrative overview before diving in:
 
@@ -29,6 +30,7 @@ If you are already productive and only need answers:
 - "Which example should I run first?" → [Examples Guide](examples-guide.md)
 - "How do I do X quickly?" → [Cookbook](cookbook.md)
 - "How do I generate typed wrappers from Protocols?" → [Type-Safe Smalltalk Codegen](codegen.md)
+- "How do I add another web framework?" → [Framework Adapters](framework-adapters.md)
 - "How do I trace or measure GemStone calls?" → [Observability](observability.md)
 - "How do I inspect an OOP or class?" → [User Manual](user-manual.md)
 - "What are the current benchmark numbers?" → [Performance](performance.md)
@@ -41,7 +43,7 @@ If you are already productive and only need answers:
 - connecting to a GemStone stone from Python
 - GemStone-side bootstrap for the shared helper roots
 - transaction policies, session scopes, and failure behaviour
-- async sessions and FastAPI request integration
+- async sessions and FastAPI/Litestar request integration
 - typed OOPs, typed `GSCollection` queries, and managed OOP lifetimes
 - Protocol-to-Smalltalk code generation with checked-in typed wrappers
 - OOP/class inspection and recursive debug dumps
@@ -52,7 +54,7 @@ If you are already productive and only need answers:
   - `GStore`
   - `ObjectLog`
   - concurrency helpers such as `RCCounter`, `RCHash`, and `RCQueue`
-- Flask request-session integration
+- Flask, Django, FastAPI, and Litestar request-session integration
 - tracing, metrics, and slow-operation logs for session calls
 - benchmark numbers, release workflows, and the current examples directory
 - the companion VS Code workbench for running examples, opening docs, checking

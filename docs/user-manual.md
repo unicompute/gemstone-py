@@ -691,11 +691,19 @@ import Litestar directly; it provides async dependency callables and ASGI
 middleware that application code can wire into Litestar.
 
 ```python
+from litestar import Litestar, get
+from litestar.di import Provide
 from gemstone_py import GemStoneConfig
 from gemstone_py.aio.litestar import pool_session_dependency, session_dependency
 
 get_gemstone = session_dependency(config=GemStoneConfig.from_env())
 get_pooled_gemstone = pool_session_dependency(pool)
+
+@get("/health/gemstone", dependencies={"session": Provide(get_gemstone)})
+async def gemstone_health(session):
+    return {"result": await session.eval("3 + 4")}
+
+app = Litestar(route_handlers=[gemstone_health])
 ```
 
 Install the optional framework dependency with:
@@ -703,6 +711,8 @@ Install the optional framework dependency with:
 ```bash
 python -m pip install "gemstone-py[litestar]"
 ```
+
+The runnable repository example is `examples/litestar/app.py`.
 
 ### Adapter Core
 
@@ -728,6 +738,8 @@ finally:
 
 For an async framework, use `AsyncRequestScope` with `AsyncSessionPool` and
 await `scope.finalize(...)` from the framework's request cleanup hook.
+
+See `docs/framework-adapters.md` for a concise sync and async adapter recipe.
 
 ## Benchmarks and Build Lanes
 

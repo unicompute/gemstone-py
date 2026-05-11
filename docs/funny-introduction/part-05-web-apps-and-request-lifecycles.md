@@ -209,13 +209,14 @@ If you are using Flask:
 This is not over-engineering. It is the difference between a system you can
 debug and a system you can narrate only in retrospect.
 
-If you are using FastAPI:
+If you are using FastAPI or Litestar:
 
 1. use `gemstone_py.aio.AsyncSession`
 2. install `session_dependency(...)` for request-scoped sessions
 3. wrap writes in `async with session.transaction()`
 4. keep blocking GemStone calls inside the async facade
-5. run `examples/fastapi/app.py` before adapting it to a larger app
+5. run `examples/fastapi/app.py` or `examples/litestar/app.py` before adapting
+   it to a larger app
 
 
 ## The "Handled 500" Story

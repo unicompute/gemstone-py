@@ -264,10 +264,18 @@ def gemstone_health(request):
 For Litestar, use the sibling async adapter:
 
 ```python
+from litestar import Litestar, get
+from litestar.di import Provide
 from gemstone_py import GemStoneConfig
 from gemstone_py.aio.litestar import session_dependency
 
 get_gemstone = session_dependency(config=GemStoneConfig.from_env())
+
+@get("/health/gemstone", dependencies={"session": Provide(get_gemstone)})
+async def gemstone_health(session):
+    return {"result": await session.eval("3 + 4")}
+
+app = Litestar(route_handlers=[gemstone_health])
 ```
 
 ## Recipe 18: Query With a Typed Protocol

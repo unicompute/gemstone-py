@@ -68,6 +68,7 @@ For Litestar applications:
 
 ```bash
 python3 -m pip install "gemstone-py[litestar]"
+gemstone-litestar-example --reload
 ```
 
 ### Source Checkout

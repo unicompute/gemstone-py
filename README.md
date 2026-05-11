@@ -287,6 +287,13 @@ python -m pip install "gemstone-py[fastapi]"
 gemstone-fastapi-example --reload
 ```
 
+For Litestar:
+
+```bash
+python -m pip install "gemstone-py[litestar]"
+gemstone-litestar-example --reload
+```
+
 When the server starts, you should see output like:
 
 ```text
@@ -391,14 +398,25 @@ def view(request):
 Litestar apps can use the same lifecycle through `gemstone_py.aio.litestar`:
 
 ```python
+from litestar import Litestar, get
+from litestar.di import Provide
 from gemstone_py import GemStoneConfig
 from gemstone_py.aio.litestar import session_dependency
 
 get_gemstone = session_dependency(config=GemStoneConfig.from_env())
+
+@get("/health/gemstone", dependencies={"session": Provide(get_gemstone)})
+async def gemstone_health(session):
+    return {"result": await session.eval("3 + 4")}
+
+app = Litestar(route_handlers=[gemstone_health])
 ```
 
 For pooled Litestar handlers, use
 `gemstone_py.aio.litestar.pool_session_dependency(pool)`.
+
+The runnable Litestar example lives in `examples/litestar/` and can also be
+started from an installed package with `gemstone-litestar-example --reload`.
 
 ## Typed OOPs and Handles
 
@@ -609,7 +627,7 @@ Use `warm_flask_request_session_provider(app)` to pre-create pool sessions
 manually, and `close_flask_request_session_provider(app)` during server
 shutdown when you manage lifecycle explicitly.
 
-The Flask helpers and FastAPI helpers share the framework-neutral
+The Flask, Django, FastAPI, and Litestar helpers share the framework-neutral
 `gemstone_py.web_core` lifecycle primitives. If you are writing another adapter,
 build around `RequestScope` or `AsyncRequestScope` instead of copying Flask
 teardown code:
@@ -630,6 +648,9 @@ try:
 finally:
     scope.finalize()
 ```
+
+See [docs/framework-adapters.md](docs/framework-adapters.md) for the full
+sync/async adapter shape.
 
 ## Observability
 
