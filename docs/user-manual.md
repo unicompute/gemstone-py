@@ -568,6 +568,7 @@ The main pieces are:
 - `GemStoneSessionPool`
 - `GemStoneThreadLocalSessionProvider`
 - `session_scope(...)`
+- `gemstone_py.session_providers`
 - `gemstone_py.frameworks.flask`
 - `gemstone_py.web_core.RequestScope`
 - `gemstone_py.web_core.AsyncRequestScope`
@@ -577,6 +578,8 @@ framework-neutral lifecycle layer. `RequestScope` and `AsyncRequestScope` own
 the lazy session acquisition, commit-or-abort decision, and provider release or
 logout path. Use those primitives when adding another framework adapter instead
 of copying Flask teardown code.
+The reusable sync providers live in `gemstone_py.session_providers`; the older
+`gemstone_py.web` and top-level imports remain compatibility re-exports.
 
 ### One Session Per Request
 
@@ -682,7 +685,7 @@ finalize it during teardown:
 
 ```python
 from gemstone_py import GemStoneConfig, RequestScope, TransactionPolicy
-from gemstone_py.web import GemStoneSessionPool
+from gemstone_py.session_providers import GemStoneSessionPool
 
 pool = GemStoneSessionPool(maxsize=4, config=GemStoneConfig.from_env())
 

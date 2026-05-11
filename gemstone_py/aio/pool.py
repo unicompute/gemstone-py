@@ -13,7 +13,7 @@ from typing import Any
 from gemstone_py.aio import AsyncSession
 from gemstone_py.client import GemStoneSession, TransactionPolicy
 from gemstone_py.observability import NULL_METRICS, NULL_TRACER, MetricsCollector, Tracer
-from gemstone_py.web import GemStoneSessionPoolStats
+from gemstone_py.session_providers import GemStoneSessionPoolStats
 
 AsyncSessionHealthcheck = Callable[[AsyncSession], bool | Awaitable[bool]]
 

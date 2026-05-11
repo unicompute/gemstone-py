@@ -54,13 +54,15 @@ from .oop import (
     registered_gemstone_classes,
     typed_oop,
 )
-from .web import (
+from .session_providers import (
     GemStoneSessionPool,
     GemStoneSessionPoolStats,
     GemStoneSessionProvider,
     GemStoneSessionProviderEvent,
     GemStoneSessionProviderSnapshot,
     GemStoneThreadLocalSessionProvider,
+)
+from .web import (
     close_flask_request_session_provider,
     current_flask_request_session,
     finalize_flask_request_session,
@@ -104,6 +106,7 @@ _LAZY_EXPORTS = {
     "ordered_collection": "gemstone_py.ordered_collection",
     "persistent_root": "gemstone_py.persistent_root",
     "release_metadata": "gemstone_py.release_metadata",
+    "session_providers": "gemstone_py.session_providers",
     "session_facade": "gemstone_py.session_facade",
     "smalltalk_bridge": "gemstone_py.smalltalk_bridge",
     "web_core": "gemstone_py.web_core",
@@ -200,6 +203,7 @@ __all__ = [
     "release_metadata",
     "registered_gemstone_classes",
     "session_facade",
+    "session_providers",
     "session_scope",
     "typed_oop",
     "warm_flask_request_session_provider",

@@ -16,9 +16,11 @@ New code should treat `gemstone_py.*` as the supported public API:
 ```python
 from gemstone_py import GemStoneConfig, GemStoneSession, TransactionPolicy
 from gemstone_py.frameworks.flask import install_flask_request_session
-from gemstone_py.web import (
+from gemstone_py.session_providers import (
     GemStoneSessionPool,
     GemStoneThreadLocalSessionProvider,
+)
+from gemstone_py.web import (
     session_scope,
 )
 from gemstone_py.persistent_root import PersistentRoot
@@ -538,6 +540,9 @@ session across threads.
 The historical `from gemstone_py import install_flask_request_session` import
 still works; `gemstone_py.frameworks.flask` is the framework-specific path for
 new code.
+Likewise, `GemStoneSessionPool` and `GemStoneThreadLocalSessionProvider` still
+re-export from `gemstone_py.web`, but their implementation now lives in
+`gemstone_py.session_providers`.
 
 For operations dashboards, call `pool.stats()` to get stable counters for
 current capacity, idle/in-use sessions, total created sessions, evictions,
@@ -593,7 +598,7 @@ teardown code:
 
 ```python
 from gemstone_py import GemStoneConfig, RequestScope, TransactionPolicy
-from gemstone_py.web import GemStoneSessionPool
+from gemstone_py.session_providers import GemStoneSessionPool
 
 pool = GemStoneSessionPool(maxsize=4, config=GemStoneConfig.from_env())
 

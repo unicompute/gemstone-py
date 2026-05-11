@@ -748,6 +748,7 @@ gemstone-py
 │   ├── GemStoneSessionPool          pool of reusable sessions
 │   ├── install_flask_request_session  Flask integration
 │   └── current_flask_request_session  get the session for this request
+├── session_providers        reusable sync pool and thread-local providers
 ├── aio.fastapi              FastAPI dependency and middleware helpers
 ├── aio.litestar             Litestar dependency and ASGI middleware helpers
 │

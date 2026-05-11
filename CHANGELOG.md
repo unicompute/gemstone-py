@@ -18,6 +18,8 @@ All notable changes to `gemstone-py` should be recorded here.
 - Added `gemstone_py.frameworks.flask` as the Flask-specific adapter import
   path and `gemstone_py.aio.litestar` for Litestar dependency and ASGI
   middleware integration.
+- Moved sync session provider implementations into `gemstone_py.session_providers`
+  while keeping the historical `gemstone_py.web` and top-level imports stable.
 - Added chunked `GSCollection.iter(...)`, `search_iter(...)`, typed
   `Query.iter(...)`, and async iterator equivalents for large result sets.
 - Made `GSCollection.search()`, `GSCollection.all()`, and typed `Query.all()`

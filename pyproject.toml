@@ -108,6 +108,7 @@ files = [
   "gemstone_py/bootstrap.py",
   "gemstone_py/codegen.py",
   "gemstone_py/release_metadata.py",
+  "gemstone_py/session_providers.py",
   "gemstone_py/_smalltalk_batch.py",
   "gemstone_py/benchmarks.py",
   "gemstone_py/session_facade.py",
@@ -184,6 +185,7 @@ strict = true
 module = [
   "gemstone_py.frameworks",
   "gemstone_py.frameworks.flask",
+  "gemstone_py.session_providers",
   "gemstone_py.web_core",
 ]
 strict = true

@@ -39,7 +39,7 @@ That combination is offensively educational.
 
 ## What the Package Provides
 
-`gemstone_py.web` gives you:
+`gemstone_py.web` still gives you the compatibility surface:
 
 - `install_flask_request_session(...)`
 - `GemStoneSessionPool`
@@ -49,11 +49,15 @@ That combination is offensively educational.
 - close hooks
 - request lifecycle wiring
 
+The reusable providers now live in `gemstone_py.session_providers`, while
+Flask-specific imports also exist under `gemstone_py.frameworks.flask`.
+
 This is not a random utility pile. It is the package's answer to the question:
 
 > "How should a Python web app use GemStone responsibly?"
 
-For async web stacks, `gemstone_py.aio.fastapi` gives you:
+For async web stacks, `gemstone_py.aio.fastapi` and `gemstone_py.aio.litestar`
+give you:
 
 - `AsyncSession`
 - `session_dependency(...)`

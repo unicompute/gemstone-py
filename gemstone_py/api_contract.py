@@ -58,16 +58,19 @@ CORE_EXPORTS: dict[str, tuple[str, str]] = {
     ),
     "TransactionScope": ("gemstone_py.web_core", "TransactionScope"),
     "request_failed": ("gemstone_py.web_core", "request_failed"),
-    "GemStoneSessionPool": ("gemstone_py.web", "GemStoneSessionPool"),
-    "GemStoneSessionProvider": ("gemstone_py.web", "GemStoneSessionProvider"),
-    "GemStoneSessionProviderEvent": ("gemstone_py.web", "GemStoneSessionProviderEvent"),
+    "GemStoneSessionPool": ("gemstone_py.session_providers", "GemStoneSessionPool"),
+    "GemStoneSessionProvider": ("gemstone_py.session_providers", "GemStoneSessionProvider"),
+    "GemStoneSessionProviderEvent": (
+        "gemstone_py.session_providers",
+        "GemStoneSessionProviderEvent",
+    ),
     "GemStoneSessionProviderSnapshot": (
-        "gemstone_py.web",
+        "gemstone_py.session_providers",
         "GemStoneSessionProviderSnapshot",
     ),
-    "GemStoneSessionPoolStats": ("gemstone_py.web", "GemStoneSessionPoolStats"),
+    "GemStoneSessionPoolStats": ("gemstone_py.session_providers", "GemStoneSessionPoolStats"),
     "GemStoneThreadLocalSessionProvider": (
-        "gemstone_py.web",
+        "gemstone_py.session_providers",
         "GemStoneThreadLocalSessionProvider",
     ),
     "close_flask_request_session_provider": (
@@ -107,6 +110,7 @@ MODULE_EXPORTS: dict[str, str] = {
     "native": "gemstone_py.native",
     "observability": "gemstone_py.observability",
     "release_metadata": "gemstone_py.release_metadata",
+    "session_providers": "gemstone_py.session_providers",
     "session_facade": "gemstone_py.session_facade",
     "web_core": "gemstone_py.web_core",
 }

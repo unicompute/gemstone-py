@@ -146,11 +146,24 @@ class PackagingSmokeTests(unittest.TestCase):
         pkg = importlib.import_module("gemstone_py")
         client_mod = importlib.import_module("gemstone_py.client")
         gci_mod = importlib.import_module("gemstone_py._gci")
+        provider_mod = importlib.import_module("gemstone_py.session_providers")
         facade_mod = importlib.import_module("gemstone_py.session_facade")
         web_mod = importlib.import_module("gemstone_py.web")
 
         self.assertIs(pkg.GemStoneSession, client_mod.GemStoneSession)
         self.assertIs(pkg.TransactionPolicy, client_mod.TransactionPolicy)
+        self.assertIs(pkg.session_providers, provider_mod)
+        self.assertIs(web_mod.GemStoneSessionProviderEvent, provider_mod.GemStoneSessionProviderEvent)
+        self.assertIs(web_mod.GemStoneSessionProvider, provider_mod.GemStoneSessionProvider)
+        self.assertIs(
+            web_mod.GemStoneSessionProviderSnapshot,
+            provider_mod.GemStoneSessionProviderSnapshot,
+        )
+        self.assertIs(web_mod.GemStoneSessionPool, provider_mod.GemStoneSessionPool)
+        self.assertIs(
+            web_mod.GemStoneThreadLocalSessionProvider,
+            provider_mod.GemStoneThreadLocalSessionProvider,
+        )
         self.assertIs(pkg.GemStoneSessionProviderEvent, web_mod.GemStoneSessionProviderEvent)
         self.assertIs(pkg.GemStoneSessionProvider, web_mod.GemStoneSessionProvider)
         self.assertIs(

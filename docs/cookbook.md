@@ -186,7 +186,7 @@ Operational visibility is better than optimism.
 
 ```python
 from gemstone_py import GemStoneConfig, RequestScope, TransactionPolicy
-from gemstone_py.web import GemStoneSessionPool
+from gemstone_py.session_providers import GemStoneSessionPool
 
 pool = GemStoneSessionPool(maxsize=4, config=GemStoneConfig.from_env())
 
