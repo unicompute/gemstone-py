@@ -1,20 +1,17 @@
 # gemstone-py Next Release Draft
 
-This draft covers the post-0.2.10 work from the plan3 implementation pass. Use
-it as the starting point for the next GitHub release notes after choosing the
-final version number.
+This draft is for work after `0.2.11`. Move concrete entries here as the next
+release starts to take shape.
 
 ## Suggested Version
 
-Use a patch release if you are only publishing the current docs, examples, and
-adapter additions:
+Use a patch release for small follow-up fixes:
 
 ```bash
-0.2.11
+0.2.12
 ```
 
-Use a minor release if you want to present the web-adapter split as a larger
-feature milestone:
+Use a minor release for the next larger feature milestone:
 
 ```bash
 0.3.0
@@ -22,25 +19,7 @@ feature milestone:
 
 ## Highlights
 
-- Added production session provider internals under
-  `gemstone_py.session_providers` while keeping historical `gemstone_py.web`
-  imports and top-level exports stable.
-- Added a dependency-light Django adapter in `gemstone_py.frameworks.django`.
-- Added a Litestar adapter example and packaged runner:
-  `gemstone-litestar-example`.
-- Added `examples/litestar/` and `examples/cookbook/` so new users can find
-  the async web and cookbook paths quickly.
-- Added `gemstone-examples list`, `gemstone-examples plan3-map`, and
-  `gemstone-examples litestar`.
-- Added `docs/plan3-feature-map.md` to map each plan3 stream to the current
-  modules, examples, and docs.
-- Expanded the Medium article with a plan3 summary section that emphasizes
-  Codegen and ties every stream back to a user-facing feature.
-- Added `docs/framework-adapters.md` with the sync and async adapter recipe.
-- Reworked the README first screen around a two-minute start path and clearer
-  production/cookbook links.
-- Regenerated the documentation PDFs to include the new adapter and examples
-  material.
+- Pending.
 
 ## Install
 
@@ -95,17 +74,7 @@ Run the full release wrapper when public artifacts are expected to exist:
 ````markdown
 ## Highlights
 
-- Added framework-neutral web lifecycle docs and examples for Flask, Django,
-  FastAPI, and Litestar.
-- Added `gemstone_py.session_providers` as the canonical home for reusable sync
-  session pools/providers while preserving old imports.
-- Added `gemstone-litestar-example`, `examples/litestar/`,
-  `gemstone-examples litestar`, and `gemstone-examples list`.
-- Added `examples/cookbook/` as the stable table of contents for example
-  selection.
-- Added a plan3 feature map for users navigating by stream.
-- Expanded the Medium article with a plan3 summary centered on Codegen.
-- Polished the README around a two-minute start path.
+- Pending.
 
 ## Install
 
@@ -118,9 +87,5 @@ python -m pip install "gemstone-py[fast]"
 
 ```bash
 gemstone-examples list
-gemstone-examples plan3-map
-gemstone-examples quickstart
-gemstone-fastapi-example --reload
-gemstone-litestar-example --reload
 ```
 ````

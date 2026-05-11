@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1
+
+- Added Workbench commands and Examples view rows for the new example catalog,
+  quickstart, Litestar runner, and Plan3 feature map examples.
+- Added Docs view shortcuts for the Plan3 feature map and framework-adapter
+  documentation, including generated PDFs.
+
 ## 0.2.0
 
 - Added `gemstone-py: Open Database Explorer in VS Code`, which embeds the

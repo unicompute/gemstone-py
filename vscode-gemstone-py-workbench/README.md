@@ -133,13 +133,17 @@ The Examples view runs these repository modules in a VS Code terminal:
 
 ```bash
 python3 -m examples.example
+python3 -m gemstone_py.cli list
 python3 -m examples.hello_gemstone
+python3 -m examples.quickstart
 python3 -m examples.misc.smalltalk_demo
 python3 -m examples.async_features.session_root_and_collection
 python3 -m examples.typed_access.typed_oops_and_queries
 python3 -m examples.lifetime.managed_oop_handles
 python3 -m examples.native_backend.check_backend
 python3 -m examples.fastapi.run --reload
+python3 -m examples.litestar.run --reload
+python3 -m examples.cookbook.plan3_feature_map
 ```
 
 Install the repository example dependencies once with:
@@ -147,6 +151,10 @@ Install the repository example dependencies once with:
 ```bash
 python -m pip install -e ".[examples]"
 ```
+
+The Docs view also opens the new Plan3 feature map and framework-adapter docs,
+including generated PDFs, so the runnable examples and their design notes are
+available from the same sidebar.
 
 ## Database Explorer
 

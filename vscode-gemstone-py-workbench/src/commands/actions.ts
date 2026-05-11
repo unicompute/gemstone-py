@@ -49,8 +49,12 @@ export function registerCommands(
     vscode.commands.registerCommand("gemstonePy.runGrandTour", () =>
       runRepoPythonModule("Grand tour", "examples.example"),
     ),
+    vscode.commands.registerCommand("gemstonePy.listExamples", listExamples),
     vscode.commands.registerCommand("gemstonePy.runHelloGemstone", () =>
       runRepoPythonModule("Hello GemStone", "examples.hello_gemstone"),
+    ),
+    vscode.commands.registerCommand("gemstonePy.runQuickstartExample", () =>
+      runRepoPythonModule("Quickstart", "examples.quickstart"),
     ),
     vscode.commands.registerCommand("gemstonePy.runSmalltalkDemo", () =>
       runRepoPythonModule("Smalltalk demo", "examples.misc.smalltalk_demo"),
@@ -77,6 +81,8 @@ export function registerCommands(
       runRepoPythonModule("Native backend check", "examples.native_backend.check_backend"),
     ),
     vscode.commands.registerCommand("gemstonePy.runFastApiExample", runFastApiExample),
+    vscode.commands.registerCommand("gemstonePy.runLitestarExample", runLitestarExample),
+    vscode.commands.registerCommand("gemstonePy.showPlan3FeatureMap", showPlan3FeatureMap),
     vscode.commands.registerCommand("gemstonePy.showEnvironment", showEnvironment),
     vscode.commands.registerCommand("gemstonePy.configureWorkbench", () =>
       configureWorkbench(providers),
@@ -119,6 +125,18 @@ export function registerCommands(
     vscode.commands.registerCommand("gemstonePy.openExamplesGuide", () =>
       openRepoFile("docs/examples-guide.md"),
     ),
+    vscode.commands.registerCommand("gemstonePy.openFrameworkAdapters", () =>
+      openRepoFile("docs/framework-adapters.md"),
+    ),
+    vscode.commands.registerCommand("gemstonePy.openFrameworkAdaptersPdf", () =>
+      openRepoFile("docs/pdf/framework-adapters.pdf"),
+    ),
+    vscode.commands.registerCommand("gemstonePy.openPlan3FeatureMap", () =>
+      openRepoFile("docs/plan3-feature-map.md"),
+    ),
+    vscode.commands.registerCommand("gemstonePy.openPlan3FeatureMapPdf", () =>
+      openRepoFile("docs/pdf/plan3-feature-map.pdf"),
+    ),
     vscode.commands.registerCommand("gemstonePy.openUserManual", () =>
       openRepoFile("docs/user-manual.md"),
     ),
@@ -160,8 +178,20 @@ export function registerCommands(
   context.subscriptions.push(...subscriptions);
 }
 
+function listExamples(): void {
+  runRepoPythonModule("Example catalog", "gemstone_py.cli", ["list"]);
+}
+
 function runFastApiExample(): void {
   runRepoPythonModule("FastAPI example", "examples.fastapi.run", ["--reload"]);
+}
+
+function runLitestarExample(): void {
+  runRepoPythonModule("Litestar example", "examples.litestar.run", ["--reload"]);
+}
+
+function showPlan3FeatureMap(): void {
+  runRepoPythonModule("Plan3 feature map", "examples.cookbook.plan3_feature_map");
 }
 
 async function configureWorkbench(

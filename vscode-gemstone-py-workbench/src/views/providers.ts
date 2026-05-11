@@ -65,10 +65,17 @@ export class WorkbenchTreeProvider
 export function createExamplesProvider(): WorkbenchTreeProvider {
   return new WorkbenchTreeProvider(() => [
     commandItem("Grand tour", "gemstonePy.runGrandTour", "examples.example", "play"),
+    commandItem("Example catalog", "gemstonePy.listExamples", "gemstone-examples list", "list-unordered"),
     commandItem(
       "Hello GemStone",
       "gemstonePy.runHelloGemstone",
       "examples.hello_gemstone",
+      "play",
+    ),
+    commandItem(
+      "Quickstart",
+      "gemstonePy.runQuickstartExample",
+      "examples.quickstart",
       "play",
     ),
     commandItem(
@@ -106,6 +113,18 @@ export function createExamplesProvider(): WorkbenchTreeProvider {
       "gemstonePy.runFastApiExample",
       "examples.fastapi.run --reload",
       "server-process",
+    ),
+    commandItem(
+      "Litestar example",
+      "gemstonePy.runLitestarExample",
+      "examples.litestar.run --reload",
+      "server-process",
+    ),
+    commandItem(
+      "Plan3 feature map",
+      "gemstonePy.showPlan3FeatureMap",
+      "examples.cookbook.plan3_feature_map",
+      "map",
     ),
   ]);
 }
@@ -173,6 +192,30 @@ export function createDocsProvider(): WorkbenchTreeProvider {
       "gemstonePy.openExamplesGuide",
       "docs/examples-guide.md",
       "book",
+    ),
+    commandItem(
+      "Framework adapters",
+      "gemstonePy.openFrameworkAdapters",
+      "docs/framework-adapters.md",
+      "book",
+    ),
+    commandItem(
+      "Framework adapters PDF",
+      "gemstonePy.openFrameworkAdaptersPdf",
+      "docs/pdf/framework-adapters.pdf",
+      "file-pdf",
+    ),
+    commandItem(
+      "Plan3 feature map",
+      "gemstonePy.openPlan3FeatureMap",
+      "docs/plan3-feature-map.md",
+      "map",
+    ),
+    commandItem(
+      "Plan3 feature map PDF",
+      "gemstonePy.openPlan3FeatureMapPdf",
+      "docs/pdf/plan3-feature-map.pdf",
+      "file-pdf",
     ),
     commandItem("Medium article", "gemstonePy.openMediumArticle", "docs/medium-article.md", "book"),
     commandItem(

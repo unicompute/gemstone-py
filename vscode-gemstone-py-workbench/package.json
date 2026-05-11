@@ -2,7 +2,7 @@
   "name": "gemstone-py-workbench",
   "displayName": "gemstone-py Workbench",
   "description": "Run gemstone-py examples, check GemStone environment state, open docs, and launch the Python GemStone database explorer.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "unicompute",
   "icon": "media/emerald-logo.png",
   "license": "MIT",
@@ -36,13 +36,17 @@
     "onView:gemstonePy.maintainerView",
     "onView:gemstonePy.ideView",
     "onCommand:gemstonePy.runGrandTour",
+    "onCommand:gemstonePy.listExamples",
     "onCommand:gemstonePy.runHelloGemstone",
+    "onCommand:gemstonePy.runQuickstartExample",
     "onCommand:gemstonePy.runSmalltalkDemo",
     "onCommand:gemstonePy.runAsyncExample",
     "onCommand:gemstonePy.runTypedExample",
     "onCommand:gemstonePy.runLifetimeExample",
     "onCommand:gemstonePy.checkNativeBackend",
     "onCommand:gemstonePy.runFastApiExample",
+    "onCommand:gemstonePy.runLitestarExample",
+    "onCommand:gemstonePy.showPlan3FeatureMap",
     "onCommand:gemstonePy.showEnvironment",
     "onCommand:gemstonePy.configureWorkbench",
     "onCommand:gemstonePy.verifyWorkbenchSetup",
@@ -59,6 +63,10 @@
     "onCommand:gemstonePy.runDatabaseExplorerLiveUiTests",
     "onCommand:gemstonePy.openDatabaseExplorerRepository",
     "onCommand:gemstonePy.openExamplesGuide",
+    "onCommand:gemstonePy.openFrameworkAdapters",
+    "onCommand:gemstonePy.openFrameworkAdaptersPdf",
+    "onCommand:gemstonePy.openPlan3FeatureMap",
+    "onCommand:gemstonePy.openPlan3FeatureMapPdf",
     "onCommand:gemstonePy.openUserManual",
     "onCommand:gemstonePy.openMediumArticle",
     "onCommand:gemstonePy.openMediumArticlePdf",
@@ -137,8 +145,16 @@
         "title": "gemstone-py: Run Grand Tour Example"
       },
       {
+        "command": "gemstonePy.listExamples",
+        "title": "gemstone-py: List Examples"
+      },
+      {
         "command": "gemstonePy.runHelloGemstone",
         "title": "gemstone-py: Run Hello GemStone"
+      },
+      {
+        "command": "gemstonePy.runQuickstartExample",
+        "title": "gemstone-py: Run Quickstart Example"
       },
       {
         "command": "gemstonePy.runSmalltalkDemo",
@@ -163,6 +179,14 @@
       {
         "command": "gemstonePy.runFastApiExample",
         "title": "gemstone-py: Run FastAPI Example"
+      },
+      {
+        "command": "gemstonePy.runLitestarExample",
+        "title": "gemstone-py: Run Litestar Example"
+      },
+      {
+        "command": "gemstonePy.showPlan3FeatureMap",
+        "title": "gemstone-py: Show Plan3 Feature Map"
       },
       {
         "command": "gemstonePy.showEnvironment",
@@ -227,6 +251,22 @@
       {
         "command": "gemstonePy.openExamplesGuide",
         "title": "gemstone-py: Open Examples Guide"
+      },
+      {
+        "command": "gemstonePy.openFrameworkAdapters",
+        "title": "gemstone-py: Open Framework Adapters"
+      },
+      {
+        "command": "gemstonePy.openFrameworkAdaptersPdf",
+        "title": "gemstone-py: Open Framework Adapters PDF"
+      },
+      {
+        "command": "gemstonePy.openPlan3FeatureMap",
+        "title": "gemstone-py: Open Plan3 Feature Map"
+      },
+      {
+        "command": "gemstonePy.openPlan3FeatureMapPdf",
+        "title": "gemstone-py: Open Plan3 Feature Map PDF"
       },
       {
         "command": "gemstonePy.openUserManual",

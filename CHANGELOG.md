@@ -4,6 +4,8 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+## 0.2.11 - 2026-05-11
+
 - Added `gemstone-bootstrap`, an idempotent GemStone-side bootstrap/audit
   command for the `GStoreRoot`, `GSQueryRoot`, and bootstrap marker roots.
 - Added `GemStoneSessionPool.stats()`, validation-query intervals, and

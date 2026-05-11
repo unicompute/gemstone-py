@@ -166,7 +166,7 @@ gemstone-examples fastapi --reload
 gemstone-examples litestar --reload
 gemstone-fastapi-example --reload
 gemstone-litestar-example --reload
-gemstone-publish-verify --gemstone-version 0.2.10 --native-version 0.1.2 --skip-install
+gemstone-publish-verify --gemstone-version 0.2.11 --native-version 0.1.2 --skip-install
 ```
 
 Feature examples from the repository checkout:
@@ -894,7 +894,7 @@ packaged verifier. It checks project JSON, version-specific JSON, the simple
 index, and temporary-virtualenv installs:
 
 ```bash
-gemstone-publish-verify --gemstone-version 0.2.10 --native-version 0.1.2
+gemstone-publish-verify --gemstone-version 0.2.11 --native-version 0.1.2
 ```
 
 Use `--skip-install` when you only want the metadata/index checks, or

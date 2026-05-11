@@ -13,7 +13,11 @@ async function run() {
 
   const commands = await vscode.commands.getCommands(true);
   for (const command of [
+    "gemstonePy.listExamples",
+    "gemstonePy.runQuickstartExample",
     "gemstonePy.runFastApiExample",
+    "gemstonePy.runLitestarExample",
+    "gemstonePy.showPlan3FeatureMap",
     "gemstonePy.launchDatabaseExplorer",
     "gemstonePy.configureWorkbench",
     "gemstonePy.verifyWorkbenchSetup",

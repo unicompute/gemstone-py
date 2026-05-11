@@ -342,20 +342,59 @@ test("runFastApiExample uses the dependency-checking repository runner", () => {
   ]);
 });
 
+test("new example commands use repository runners", () => {
+  registeredCommand("gemstonePy.listExamples")();
+  registeredCommand("gemstonePy.runQuickstartExample")();
+  registeredCommand("gemstonePy.runLitestarExample")();
+  registeredCommand("gemstonePy.showPlan3FeatureMap")();
+
+  assert.equal(terminals.length, 4);
+  assert.deepEqual(
+    terminals.map((terminal) => terminal.options.name),
+    [
+      "GemStone: Example catalog",
+      "GemStone: Quickstart",
+      "GemStone: Litestar example",
+      "GemStone: Plan3 feature map",
+    ],
+  );
+  assert.deepEqual(
+    terminals.map((terminal) => terminal.sentText[0]),
+    [
+      "python3 -m gemstone_py.cli list",
+      "python3 -m examples.quickstart",
+      "python3 -m examples.litestar.run --reload",
+      "python3 -m examples.cookbook.plan3_feature_map",
+    ],
+  );
+});
+
 test("tree providers expose expected commands and mask environment secrets", () => {
   const examples = providers.createExamplesProvider().getChildren();
   assert.deepEqual(
     examples.map((item) => item.options.command),
     [
       "gemstonePy.runGrandTour",
+      "gemstonePy.listExamples",
       "gemstonePy.runHelloGemstone",
+      "gemstonePy.runQuickstartExample",
       "gemstonePy.runSmalltalkDemo",
       "gemstonePy.runAsyncExample",
       "gemstonePy.runTypedExample",
       "gemstonePy.runLifetimeExample",
       "gemstonePy.checkNativeBackend",
       "gemstonePy.runFastApiExample",
+      "gemstonePy.runLitestarExample",
+      "gemstonePy.showPlan3FeatureMap",
     ],
+  );
+
+  const docs = providers.createDocsProvider().getChildren();
+  assert.ok(
+    docs.find((item) => item.options.command === "gemstonePy.openFrameworkAdapters"),
+  );
+  assert.ok(
+    docs.find((item) => item.options.command === "gemstonePy.openPlan3FeatureMap"),
   );
 
   const environment = providers.createEnvironmentProvider().getChildren();
