@@ -97,6 +97,15 @@ class MigrationResult:
     dry_run: bool = False
 
 
+@dataclass(frozen=True)
+class MigrationStatus:
+    """Current GemStone migration state for a manifest."""
+
+    current: str | None
+    applied: tuple[str, ...]
+    pending: tuple[str, ...]
+
+
 MigrationInput: TypeAlias = MigrationStep | ModuleType | str
 
 
@@ -168,6 +177,23 @@ def plan_upgrade(
     return tuple(pending)
 
 
+def validate_migration_state(
+    steps: Sequence[MigrationInput],
+    applied: Iterable[str] | Mapping[str, object],
+) -> tuple[MigrationStep, ...]:
+    """
+    Validate that the GemStone-side version table matches the local manifest.
+
+    This catches two dangerous cases before applying more migrations:
+
+    - the stone has an applied migration id that the local manifest does not know
+    - an applied migration file checksum differs from the local migration module
+    """
+    ordered = _ordered_steps(_coerce_steps(steps))
+    _check_applied_against_manifest(ordered, applied)
+    return ordered
+
+
 def plan_downgrade(
     steps: Sequence[MigrationInput],
     applied: Iterable[str] | Mapping[str, object],
@@ -220,13 +246,25 @@ def current_version(
 ) -> str | None:
     """Return the latest applied migration id, or ``None`` for a base stone."""
     applied = applied_migrations(session, root_key=root_key)
-    if not applied:
-        return None
-    latest = max(
-        applied.values(),
-        key=lambda record: (record.get("applied_at", ""), record.get("id", "")),
+    return _current_version_from_applied(applied)
+
+
+def migration_status(
+    session: gemstone.GemStoneSession,
+    steps: Sequence[MigrationInput],
+    *,
+    root_key: str = DEFAULT_VERSION_ROOT,
+) -> MigrationStatus:
+    """Return applied and pending migration ids for a live GemStone session."""
+    applied = applied_migrations(session, root_key=root_key)
+    ordered = validate_migration_state(steps, applied)
+    pending = plan_upgrade(ordered, applied)
+    latest = _current_version_from_applied(applied)
+    return MigrationStatus(
+        current=latest,
+        applied=tuple(_applied_id_set(applied)),
+        pending=tuple(step.id for step in pending),
     )
-    return latest.get("id")
 
 
 def upgrade(
@@ -239,7 +277,8 @@ def upgrade(
 ) -> MigrationResult:
     """Apply pending module-style migrations and record each committed step."""
     applied = applied_migrations(session, root_key=root_key)
-    pending = plan_upgrade(steps, applied, target=target)
+    ordered = validate_migration_state(steps, applied)
+    pending = plan_upgrade(ordered, applied, target=target)
     if dry_run:
         return MigrationResult("upgrade", target, tuple(step.id for step in pending), True)
 
@@ -265,7 +304,8 @@ def downgrade(
 ) -> MigrationResult:
     """Roll back applied module-style migrations down to ``target``."""
     applied = applied_migrations(session, root_key=root_key)
-    pending = plan_downgrade(steps, applied, target=target)
+    ordered = validate_migration_state(steps, applied)
+    pending = plan_downgrade(ordered, applied, target=target)
     missing = [step.id for step in pending if step.downgrade is None]
     if missing:
         raise MigrationError(f"migration(s) do not support downgrade: {', '.join(missing)}")
@@ -331,6 +371,44 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Migration id dependency. Can be passed more than once.",
     )
+    plan_parser = subcommands.add_parser("plan", help="Print pending migration steps.")
+    _add_online_arguments(plan_parser)
+    plan_parser.add_argument(
+        "--direction",
+        choices=("upgrade", "downgrade"),
+        default="upgrade",
+        help="Plan direction.",
+    )
+    plan_parser.add_argument("--target", help="Migration id target. Use base for full rollback.")
+
+    current_parser = subcommands.add_parser("current", help="Print the current migration id.")
+    current_parser.add_argument(
+        "--root-key",
+        default=DEFAULT_VERSION_ROOT,
+        help="UserGlobals key that stores applied migration metadata.",
+    )
+
+    upgrade_parser = subcommands.add_parser("upgrade", help="Apply pending migrations.")
+    _add_online_arguments(upgrade_parser)
+    upgrade_parser.add_argument("--target", help="Stop after applying this migration id.")
+    upgrade_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the pending steps without applying them.",
+    )
+
+    downgrade_parser = subcommands.add_parser("downgrade", help="Roll back applied migrations.")
+    _add_online_arguments(downgrade_parser)
+    downgrade_parser.add_argument(
+        "--target",
+        default="base",
+        help="Migration id to keep applied. Defaults to base.",
+    )
+    downgrade_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the rollback steps without applying them.",
+    )
     return parser
 
 
@@ -347,6 +425,45 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         print(path)
         return 0
+    if args.command == "current":
+        with _session_from_env() as session:
+            print(current_version(session, root_key=args.root_key) or "base")
+        return 0
+    if args.command == "plan":
+        steps = load_manifest(args.manifest)
+        with _session_from_env() as session:
+            applied = applied_migrations(session, root_key=args.root_key)
+            ordered = validate_migration_state(steps, applied)
+            if args.direction == "upgrade":
+                pending = plan_upgrade(ordered, applied, target=args.target)
+            else:
+                pending = plan_downgrade(ordered, applied, target=args.target)
+        _print_steps(args.direction, pending)
+        return 0
+    if args.command == "upgrade":
+        steps = load_manifest(args.manifest)
+        with _session_from_env() as session:
+            result = upgrade(
+                session,
+                steps,
+                target=args.target,
+                dry_run=bool(args.dry_run),
+                root_key=args.root_key,
+            )
+        _print_result(result)
+        return 0
+    if args.command == "downgrade":
+        steps = load_manifest(args.manifest)
+        with _session_from_env() as session:
+            result = downgrade(
+                session,
+                steps,
+                target=args.target,
+                dry_run=bool(args.dry_run),
+                root_key=args.root_key,
+            )
+        _print_result(result)
+        return 0
     parser.error(f"unknown command {args.command!r}")
     return 2
 
@@ -354,6 +471,37 @@ def main(argv: Sequence[str] | None = None) -> int:
 def main_entry() -> None:
     """Console-script wrapper for ``gemstone-migrations``."""
     raise SystemExit(main())
+
+
+def _add_online_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--manifest",
+        required=True,
+        help="Python module containing migrations or MIGRATIONS.",
+    )
+    parser.add_argument(
+        "--root-key",
+        default=DEFAULT_VERSION_ROOT,
+        help="UserGlobals key that stores applied migration metadata.",
+    )
+
+
+def _session_from_env() -> gemstone.GemStoneSession:
+    return gemstone.GemStoneSession(config=gemstone.GemStoneConfig.from_env())
+
+
+def _print_steps(direction: str, steps: Sequence[MigrationStep]) -> None:
+    print(f"{direction}: {len(steps)} step(s)")
+    for step in steps:
+        suffix = f" - {step.description}" if step.description else ""
+        print(f"  {step.id}{suffix}")
+
+
+def _print_result(result: MigrationResult) -> None:
+    label = f"{result.direction} dry-run" if result.dry_run else result.direction
+    print(f"{label}: {len(result.steps)} step(s)")
+    for migration_id in result.steps:
+        print(f"  {migration_id}")
 
 
 def _coerce_steps(entries: Iterable[MigrationInput]) -> tuple[MigrationStep, ...]:
@@ -399,6 +547,31 @@ def _ordered_steps(steps: Sequence[MigrationStep]) -> tuple[MigrationStep, ...]:
     return tuple(ordered)
 
 
+def _check_applied_against_manifest(
+    ordered: Sequence[MigrationStep],
+    applied: Iterable[str] | Mapping[str, object],
+) -> None:
+    by_id = {step.id: step for step in ordered}
+    applied_ids = _applied_id_set(applied)
+    unknown = sorted(applied_ids - set(by_id))
+    if unknown:
+        raise MigrationError(
+            "GemStone has applied migration(s) not present in the local manifest: "
+            + ", ".join(unknown)
+        )
+    if not isinstance(applied, Mapping):
+        return
+    for migration_id, raw_record in applied.items():
+        record = raw_record if isinstance(raw_record, Mapping) else {}
+        stored_checksum = str(record.get("checksum", ""))
+        local_checksum = by_id[str(migration_id)].checksum
+        if stored_checksum and local_checksum and stored_checksum != local_checksum:
+            raise MigrationError(
+                f"checksum mismatch for applied migration {migration_id}: "
+                f"GemStone has {stored_checksum}, local file has {local_checksum}"
+            )
+
+
 def _applied_id_set(applied: Iterable[str] | Mapping[str, object]) -> set[str]:
     if isinstance(applied, Mapping):
         return {str(key) for key in applied.keys()}
@@ -424,6 +597,16 @@ def _normalize_applied_table(table: object) -> dict[str, dict[str, str]]:
         record.setdefault("applied_at", "")
         result[key] = record
     return result
+
+
+def _current_version_from_applied(applied: Mapping[str, Mapping[str, str]]) -> str | None:
+    if not applied:
+        return None
+    latest = max(
+        applied.values(),
+        key=lambda record: (record.get("applied_at", ""), record.get("id", "")),
+    )
+    return latest.get("id")
 
 
 def _write_applied_migrations(

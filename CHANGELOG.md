@@ -39,6 +39,9 @@ All notable changes to `gemstone-py` should be recorded here.
 - Added module-style migration planning, dry-run, version tracking,
   rollback, scaffold generation, and the `gemstone-migrations` CLI while
   preserving the legacy `Migration` base class.
+- Extended `gemstone-migrations` with `current`, `plan`, `upgrade`, and
+  `downgrade` commands plus manifest/checksum drift checks before applying
+  new migrations.
 - Added `gemstone-publish-verify`, an end-to-end PyPI/TestPyPI verifier for
   project JSON, version-specific JSON, simple index pages, and temporary
   virtualenv install smoke checks.

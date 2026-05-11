@@ -635,6 +635,20 @@ with GemStoneSession(config=GemStoneConfig.from_env()) as session:
     upgrade(session, steps)
 ```
 
+The same workflow is available from the command line:
+
+```bash
+gemstone-migrations current
+gemstone-migrations plan --manifest my_app.migrations.manifest
+gemstone-migrations upgrade --manifest my_app.migrations.manifest --dry-run
+gemstone-migrations upgrade --manifest my_app.migrations.manifest
+gemstone-migrations downgrade --manifest my_app.migrations.manifest --target 001_initial
+```
+
+Before applying a new step, the runner checks that every GemStone-applied
+migration id still exists in the local manifest and that stored checksums still
+match local migration files when checksums are available.
+
 The key habit is to keep migration units explicit:
 
 ```python

@@ -1,6 +1,8 @@
+import io
 import sys
 import types
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import mock
@@ -15,10 +17,12 @@ from gemstone_py.migrations import (
     load_manifest,
     main,
     migration_from_module,
+    migration_status,
     plan_downgrade,
     plan_upgrade,
     scaffold,
     upgrade,
+    validate_migration_state,
 )
 
 
@@ -228,6 +232,38 @@ class ModuleMigrationTests(unittest.TestCase):
         with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value=root):
             self.assertEqual(current_version(mock.Mock()), "002_add_total")
 
+    def test_migration_status_reports_applied_and_pending(self):
+        root = {
+            DEFAULT_VERSION_ROOT: {
+                "001_initial": {"id": "001_initial", "applied_at": "2026-01-01T00:00:00Z"}
+            }
+        }
+        first = MigrationStep("001_initial", lambda current: None)
+        second = MigrationStep(
+            "002_add_total",
+            lambda current: None,
+            dependencies=("001_initial",),
+        )
+
+        with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value=root):
+            status = migration_status(mock.Mock(), [first, second])
+
+        self.assertEqual(status.current, "001_initial")
+        self.assertEqual(status.applied, ("001_initial",))
+        self.assertEqual(status.pending, ("002_add_total",))
+
+    def test_validate_migration_state_rejects_unknown_applied_version(self):
+        step = MigrationStep("001_initial", lambda current: None)
+
+        with self.assertRaisesRegex(MigrationError, "not present in the local manifest"):
+            validate_migration_state([step], {"999_missing": {}})
+
+    def test_validate_migration_state_rejects_checksum_drift(self):
+        step = MigrationStep("001_initial", lambda current: None, checksum="local")
+
+        with self.assertRaisesRegex(MigrationError, "checksum mismatch"):
+            validate_migration_state([step], {"001_initial": {"checksum": "stored"}})
+
     def test_scaffold_creates_next_numbered_file(self):
         with TemporaryDirectory() as temp_dir:
             directory = Path(temp_dir)
@@ -248,6 +284,60 @@ class ModuleMigrationTests(unittest.TestCase):
 
         self.assertEqual(result, 0)
         stdout.write.assert_any_call(str(Path(temp_dir) / "001_add_status.py"))
+
+    def test_plan_cli_prints_pending_steps(self):
+        stream = io.StringIO()
+        step = MigrationStep("001_initial", lambda current: None, description="Create shape.")
+        session = mock.Mock()
+        session_cm = mock.Mock()
+        session_cm.__enter__ = mock.Mock(return_value=session)
+        session_cm.__exit__ = mock.Mock(return_value=False)
+
+        with mock.patch("gemstone_py.migrations.load_manifest", return_value=(step,)):
+            with mock.patch("gemstone_py.migrations._session_from_env", return_value=session_cm):
+                with mock.patch("gemstone_py.migrations.applied_migrations", return_value={}):
+                    with redirect_stdout(stream):
+                        result = main(["plan", "--manifest", "app.migrations.manifest"])
+
+        self.assertEqual(result, 0)
+        self.assertIn("upgrade: 1 step(s)", stream.getvalue())
+        self.assertIn("001_initial - Create shape.", stream.getvalue())
+
+    def test_upgrade_cli_supports_dry_run(self):
+        stream = io.StringIO()
+        step = MigrationStep("001_initial", lambda current: None)
+        session = mock.Mock()
+        session_cm = mock.Mock()
+        session_cm.__enter__ = mock.Mock(return_value=session)
+        session_cm.__exit__ = mock.Mock(return_value=False)
+
+        with mock.patch("gemstone_py.migrations.load_manifest", return_value=(step,)):
+            with mock.patch("gemstone_py.migrations._session_from_env", return_value=session_cm):
+                with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value={}):
+                    with redirect_stdout(stream):
+                        result = main(
+                            ["upgrade", "--manifest", "app.migrations.manifest", "--dry-run"]
+                        )
+
+        self.assertEqual(result, 0)
+        self.assertIn("upgrade dry-run: 1 step(s)", stream.getvalue())
+        self.assertIn("001_initial", stream.getvalue())
+        session.commit.assert_not_called()
+
+    def test_current_cli_prints_base_for_empty_version_table(self):
+        stream = io.StringIO()
+        session = mock.Mock()
+        session_cm = mock.Mock()
+        session_cm.__enter__ = mock.Mock(return_value=session)
+        session_cm.__exit__ = mock.Mock(return_value=False)
+
+        with mock.patch("gemstone_py.migrations._session_from_env", return_value=session_cm):
+            with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value={}):
+                with redirect_stdout(stream):
+                    result = main(["current"])
+
+        self.assertEqual(result, 0)
+        self.assertEqual(stream.getvalue(), "base\n")
 
     def test_manifest_can_import_migration_module_by_name(self):
         migration_module = types.ModuleType("temp_migration_001")
