@@ -8,6 +8,52 @@ from gemstone_py.aio import AsyncGSCollection, AsyncManagedOop, AsyncSession, As
 from gemstone_py.aio.fastapi import pool_session_dependency, session_dependency
 
 
+class RecordingSpan:
+    def __init__(self):
+        self.attributes = {}
+
+    def set_attribute(self, key, value):
+        self.attributes[key] = value
+
+    def record_exception(self, exc):
+        del exc
+
+
+class RecordingSpanContext:
+    def __init__(self, span):
+        self.span = span
+
+    def __enter__(self):
+        return self.span
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        del exc_type, exc_val, exc_tb
+        return False
+
+
+class RecordingTracer:
+    def __init__(self):
+        self.started = []
+
+    def start_span(self, name, attrs=None):
+        span = RecordingSpan()
+        context = RecordingSpanContext(span)
+        self.started.append((name, dict(attrs or {}), span))
+        return context
+
+
+class RecordingMetrics:
+    def __init__(self):
+        self.increments = []
+        self.durations = []
+
+    def increment(self, name, labels=None, value=1):
+        self.increments.append((name, dict(labels or {}), value))
+
+    def record_duration(self, name, labels, duration_ms):
+        self.durations.append((name, dict(labels or {}), duration_ms))
+
+
 class FakeGemStoneSession:
     def __init__(self, **kwargs):
         self.kwargs = kwargs
@@ -283,6 +329,39 @@ class AsyncSessionPoolTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(stats.idle, 1)
         self.assertEqual(created[0].calls, ["login", "commit", "logout"])
+
+    async def test_pool_emits_standard_observability_metrics_and_spans(self):
+        metrics = RecordingMetrics()
+        tracer = RecordingTracer()
+        pool = AsyncSessionPool(
+            maxsize=1,
+            session_factory=FakeGemStoneSession,
+            metrics=metrics,
+            tracer=tracer,
+        )
+
+        session = await pool.acquire()
+        await pool.release(session, clean=True)
+        await pool.close()
+
+        event_labels = [labels for name, labels, _value in metrics.increments if name == "gemstone_py_pool_events"]
+        self.assertIn(
+            {
+                "event": "session_acquired",
+                "provider": "AsyncSessionPool",
+                "provider_type": "AsyncSessionPool",
+            },
+            event_labels,
+        )
+        self.assertTrue(
+            any(name == "gemstone_py_pool_acquire_wait_ms" for name, _labels, _duration in metrics.durations)
+        )
+        span_names = [name for name, _attrs, _span in tracer.started]
+        self.assertIn("gemstone.pool.session_acquired", span_names)
+        acquired_attrs = next(
+            attrs for name, attrs, _span in tracer.started if name == "gemstone.pool.session_acquired"
+        )
+        self.assertIn("wait_ms", acquired_attrs)
 
 
 class AsyncCollectionTests(unittest.IsolatedAsyncioTestCase):

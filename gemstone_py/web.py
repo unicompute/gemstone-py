@@ -11,6 +11,7 @@ from dataclasses import asdict, dataclass
 from typing import Any, Callable, Iterator, Optional
 
 from .client import GemStoneSession, TransactionPolicy
+from .observability import NULL_METRICS, NULL_TRACER, MetricsCollector, Tracer
 
 __all__ = [
     "GemStoneSessionProviderEvent",
@@ -150,6 +151,8 @@ class GemStoneSessionProvider:
         validation_interval_seconds: Optional[float] = None,
         metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
         event_listener: Optional[Callable[[GemStoneSessionProviderEvent], None]] = None,
+        metrics: MetricsCollector | None = None,
+        tracer: Tracer | None = None,
         logger: Any = None,
         **session_kwargs: Any,
     ) -> None:
@@ -177,6 +180,8 @@ class GemStoneSessionProvider:
         self._validation_interval_seconds = validation_interval_seconds
         self._metrics_exporter = metrics_exporter
         self._event_listener = event_listener
+        self._metrics = metrics or NULL_METRICS
+        self._tracer = tracer or NULL_TRACER
         self._logger = logger
         self._stats_lock = threading.Lock()
         self._created_total = 0
@@ -203,8 +208,10 @@ class GemStoneSessionProvider:
         with self._stats_lock:
             setattr(self, attr_name, getattr(self, attr_name) + float(delta))
 
-    def _record_acquire_wait(self, started_at: float) -> None:
-        self._record_float_stat("_acquire_wait_seconds", max(time.monotonic() - started_at, 0.0))
+    def _record_acquire_wait(self, started_at: float) -> float:
+        wait_seconds = max(time.monotonic() - started_at, 0.0)
+        self._record_float_stat("_acquire_wait_seconds", wait_seconds)
+        return wait_seconds
 
     @staticmethod
     def _session_created_at(session: GemStoneSession) -> float:
@@ -259,8 +266,10 @@ class GemStoneSessionProvider:
         *,
         session: Optional[GemStoneSession] = None,
         reason: Optional[str] = None,
+        attrs: Optional[dict[str, str | int | float | bool | None]] = None,
     ) -> None:
         snapshot = self.snapshot()
+        self._emit_standard_observability(event_name, snapshot, reason=reason, attrs=attrs)
         if self._metrics_exporter is not None:
             try:
                 self._metrics_exporter(snapshot)
@@ -296,6 +305,60 @@ class GemStoneSessionProvider:
                 )
             except Exception:
                 pass
+
+    def _emit_standard_observability(
+        self,
+        event_name: str,
+        snapshot: GemStoneSessionProviderSnapshot,
+        *,
+        reason: Optional[str] = None,
+        attrs: Optional[dict[str, str | int | float | bool | None]] = None,
+    ) -> None:
+        labels: dict[str, str] = {
+            "event": event_name,
+            "provider": snapshot.name,
+            "provider_type": snapshot.provider_type,
+        }
+        if reason is not None:
+            labels["reason"] = reason
+        try:
+            self._metrics.increment("gemstone_py_pool_events", labels)
+        except Exception:
+            pass
+
+        attributes: dict[str, str | int | float | bool | None] = {
+            "event": event_name,
+            "provider": snapshot.name,
+            "provider_type": snapshot.provider_type,
+            "pool_in_use": snapshot.in_use,
+            "pool_idle": snapshot.available,
+            "pool_capacity": snapshot.created,
+            "reason": reason,
+        }
+        if attrs:
+            attributes.update(attrs)
+        try:
+            with self._tracer.start_span(f"gemstone.pool.{event_name}", attributes) as span:
+                try:
+                    span.set_attribute("status", "ok")
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def _record_acquire_wait_metric(self, wait_seconds: float, snapshot: Any | None = None) -> None:
+        del snapshot
+        try:
+            self._metrics.record_duration(
+                "gemstone_py_pool_acquire_wait_ms",
+                {
+                    "provider": self._name,
+                    "provider_type": type(self).__name__,
+                },
+                wait_seconds * 1000.0,
+            )
+        except Exception:
+            pass
 
     def _create_session(self) -> GemStoneSession:
         options = dict(self._session_kwargs)
@@ -435,6 +498,8 @@ class GemStoneSessionPool(GemStoneSessionProvider):
         validation_interval_seconds: Optional[float] = None,
         metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
         event_listener: Optional[Callable[[GemStoneSessionProviderEvent], None]] = None,
+        metrics: MetricsCollector | None = None,
+        tracer: Tracer | None = None,
         logger: Any = None,
         name: Optional[str] = None,
         **session_kwargs: Any,
@@ -462,6 +527,8 @@ class GemStoneSessionPool(GemStoneSessionProvider):
             validation_interval_seconds=validation_interval_seconds,
             metrics_exporter=metrics_exporter,
             event_listener=event_listener,
+            metrics=metrics,
+            tracer=tracer,
             logger=logger,
             **session_kwargs,
         )
@@ -505,8 +572,13 @@ class GemStoneSessionPool(GemStoneSessionProvider):
                 session = self._available.get_nowait()
                 ready, reason = self._prepare_session_for_checkout(session)
                 if ready:
-                    self._record_acquire_wait(started_at)
-                    self._emit_observation("session_acquired", session=session)
+                    wait_seconds = self._record_acquire_wait(started_at)
+                    self._record_acquire_wait_metric(wait_seconds)
+                    self._emit_observation(
+                        "session_acquired",
+                        session=session,
+                        attrs={"wait_ms": wait_seconds * 1000.0},
+                    )
                     return session
                 self._discard_session(session, reason=reason)
                 continue
@@ -531,8 +603,13 @@ class GemStoneSessionPool(GemStoneSessionProvider):
                     raise
                 ready, reason = self._prepare_session_for_checkout(session)
                 if ready:
-                    self._record_acquire_wait(started_at)
-                    self._emit_observation("session_acquired", session=session)
+                    wait_seconds = self._record_acquire_wait(started_at)
+                    self._record_acquire_wait_metric(wait_seconds)
+                    self._emit_observation(
+                        "session_acquired",
+                        session=session,
+                        attrs={"wait_ms": wait_seconds * 1000.0},
+                    )
                     return session
                 self._discard_session(session, reason=reason)
                 continue
@@ -554,8 +631,13 @@ class GemStoneSessionPool(GemStoneSessionProvider):
                 ) from exc
             ready, reason = self._prepare_session_for_checkout(session)
             if ready:
-                self._record_acquire_wait(started_at)
-                self._emit_observation("session_acquired", session=session)
+                wait_seconds = self._record_acquire_wait(started_at)
+                self._record_acquire_wait_metric(wait_seconds)
+                self._emit_observation(
+                    "session_acquired",
+                    session=session,
+                    attrs={"wait_ms": wait_seconds * 1000.0},
+                )
                 return session
             self._discard_session(session, reason=reason)
 
@@ -786,6 +868,8 @@ class GemStoneThreadLocalSessionProvider(GemStoneSessionProvider):
         max_session_uses: Optional[int] = None,
         metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
         event_listener: Optional[Callable[[GemStoneSessionProviderEvent], None]] = None,
+        metrics: MetricsCollector | None = None,
+        tracer: Tracer | None = None,
         logger: Any = None,
         name: Optional[str] = None,
         **session_kwargs: Any,
@@ -798,6 +882,8 @@ class GemStoneThreadLocalSessionProvider(GemStoneSessionProvider):
             max_session_uses=max_session_uses,
             metrics_exporter=metrics_exporter,
             event_listener=event_listener,
+            metrics=metrics,
+            tracer=tracer,
             logger=logger,
             **session_kwargs,
         )
@@ -1023,6 +1109,8 @@ def _resolve_session_provider(
     validation_interval_seconds: Optional[float] = None,
     metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
     event_listener: Optional[Callable[[GemStoneSessionProviderEvent], None]] = None,
+    metrics: MetricsCollector | None = None,
+    tracer: Tracer | None = None,
     logger: Any = None,
     **kwargs: Any,
 ) -> Optional[GemStoneSessionProvider]:
@@ -1053,6 +1141,8 @@ def _resolve_session_provider(
             validation_interval_seconds=validation_interval_seconds,
             metrics_exporter=metrics_exporter,
             event_listener=event_listener,
+            metrics=metrics,
+            tracer=tracer,
             logger=logger,
             **kwargs,
         )
@@ -1064,6 +1154,8 @@ def _resolve_session_provider(
             max_session_uses=max_session_uses,
             metrics_exporter=metrics_exporter,
             event_listener=event_listener,
+            metrics=metrics,
+            tracer=tracer,
             logger=logger,
             **kwargs,
         )
@@ -1168,6 +1260,8 @@ def install_flask_request_session(
     validation_interval_seconds: Optional[float] = None,
     metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
     event_listener: Optional[Callable[[GemStoneSessionProviderEvent], None]] = None,
+    metrics: MetricsCollector | None = None,
+    tracer: Tracer | None = None,
     logger: Any = None,
     warmup_sessions: int = 0,
     close_at_exit: bool = False,
@@ -1198,6 +1292,8 @@ def install_flask_request_session(
         validation_interval_seconds=validation_interval_seconds,
         metrics_exporter=metrics_exporter,
         event_listener=event_listener,
+        metrics=metrics,
+        tracer=tracer,
         logger=logger,
         **kwargs,
     )
@@ -1279,6 +1375,8 @@ def session_scope(
     max_session_uses: Optional[int] = None,
     metrics_exporter: Optional[Callable[[GemStoneSessionProviderSnapshot], None]] = None,
     event_listener: Optional[Callable[[GemStoneSessionProviderEvent], None]] = None,
+    metrics: MetricsCollector | None = None,
+    tracer: Tracer | None = None,
     logger: Any = None,
     **kwargs: Any,
 ) -> Iterator[GemStoneSession]:
@@ -1309,6 +1407,8 @@ def session_scope(
         max_session_uses=max_session_uses,
         metrics_exporter=metrics_exporter,
         event_listener=event_listener,
+        metrics=metrics,
+        tracer=tracer,
         logger=logger,
         **kwargs,
     )

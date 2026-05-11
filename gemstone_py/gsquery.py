@@ -82,6 +82,7 @@ This is the standard GemStone equality-index operation.
 
 import json
 from collections.abc import Callable, Iterator
+from contextlib import nullcontext
 from dataclasses import dataclass
 from types import TracebackType
 from typing import Any, ContextManager, Generic, Iterable, List, Literal, TypeVar, cast, overload
@@ -279,6 +280,19 @@ def _close_iterator(iterator: object) -> None:
     close = getattr(iterator, "close", None)
     if callable(close):
         close()
+
+
+def _observe_session_operation(
+    session: object,
+    operation: str,
+    attrs: dict[str, str | int | float | bool | None],
+) -> ContextManager[object]:
+    if not isinstance(session, gemstone.GemStoneSession):
+        return nullcontext()
+    observer = getattr(session, "_observe_operation", None)
+    if callable(observer):
+        return cast(ContextManager[object], observer(operation, attrs))
+    return nullcontext()
 
 
 class GSCollection:
@@ -1005,6 +1019,8 @@ class GSCollectionIterator(Iterator[Record]):
         self._next_index = 1
         self._buffer: list[Record] = []
         self._closed = False
+        self._chunks_fetched = 0
+        self._yielded = 0
 
     def __iter__(self) -> "GSCollectionIterator":
         return self
@@ -1015,6 +1031,7 @@ class GSCollectionIterator(Iterator[Record]):
         if not self._buffer:
             self.close()
             raise StopIteration
+        self._yielded += 1
         return self._buffer.pop(0)
 
     def __enter__(self) -> "GSCollectionIterator":
@@ -1036,8 +1053,21 @@ class GSCollectionIterator(Iterator[Record]):
             return
         self._closed = True
         session_cm = self._session_cm
+        session = self._session
         self._session_cm = None
         self._session = None
+        if session is not None:
+            with _observe_session_operation(
+                session,
+                "query_iter",
+                {
+                    "collection": self._collection._name,
+                    "chunk_size": self._chunk_size,
+                    "total_yielded": self._yielded,
+                    "chunks_fetched": self._chunks_fetched,
+                },
+            ):
+                pass
         if session_cm is not None:
             session_cm.__exit__(None, None, None)
 
@@ -1068,12 +1098,23 @@ class GSCollectionIterator(Iterator[Record]):
         if session is None or array_oop is None:
             raise RuntimeError("GSCollectionIterator is not open")
         stop = min(self._next_index + self._chunk_size - 1, self._size)
-        self._buffer = self._collection._records_from_array_range_oop(
+        with _observe_session_operation(
             session,
-            array_oop,
-            self._next_index,
-            stop,
-        )
+            "query_iter_chunk",
+            {
+                "collection": self._collection._name,
+                "chunk_size": self._chunk_size,
+                "start": self._next_index,
+                "stop": stop,
+            },
+        ):
+            self._buffer = self._collection._records_from_array_range_oop(
+                session,
+                array_oop,
+                self._next_index,
+                stop,
+            )
+        self._chunks_fetched += 1
         self._next_index = stop + 1
 
     def __del__(self) -> None:

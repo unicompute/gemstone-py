@@ -81,6 +81,52 @@ class _ValidationSession(_PoolSession):
         return 2
 
 
+class _RecordingSpan:
+    def __init__(self):
+        self.attributes = {}
+
+    def set_attribute(self, key, value):
+        self.attributes[key] = value
+
+    def record_exception(self, exc):
+        del exc
+
+
+class _RecordingSpanContext:
+    def __init__(self, span):
+        self.span = span
+
+    def __enter__(self):
+        return self.span
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        del exc_type, exc_val, exc_tb
+        return False
+
+
+class _RecordingTracer:
+    def __init__(self):
+        self.started = []
+
+    def start_span(self, name, attrs=None):
+        span = _RecordingSpan()
+        context = _RecordingSpanContext(span)
+        self.started.append((name, dict(attrs or {}), span))
+        return context
+
+
+class _RecordingMetrics:
+    def __init__(self):
+        self.increments = []
+        self.durations = []
+
+    def increment(self, name, labels=None, value=1):
+        self.increments.append((name, dict(labels or {}), value))
+
+    def record_duration(self, name, labels, duration_ms):
+        self.durations.append((name, dict(labels or {}), duration_ms))
+
+
 class GemStoneRequestSessionTests(unittest.TestCase):
     def test_session_scope_reuses_request_scoped_session(self):
         marker = object()
@@ -669,6 +715,44 @@ class GemStoneSessionPoolTests(unittest.TestCase):
         self.assertIn("session_acquired", [event.name for event in events])
         self.assertIn("session_released", [event.name for event in events])
         self.assertIn("provider_closed", [event.name for event in events])
+
+    def test_pool_emits_standard_observability_metrics_and_spans(self):
+        metrics = _RecordingMetrics()
+        tracer = _RecordingTracer()
+        pool = gemstone.GemStoneSessionPool(
+            maxsize=1,
+            session_factory=_PoolSession,
+            metrics=metrics,
+            tracer=tracer,
+            name="observed-pool",
+            stone="demo",
+            username="alice",
+            password="secret",
+        )
+
+        session = pool.acquire()
+        pool.release(session, clean=True)
+        pool.close()
+
+        event_labels = [labels for name, labels, _value in metrics.increments if name == "gemstone_py_pool_events"]
+        self.assertIn(
+            {
+                "event": "session_acquired",
+                "provider": "observed-pool",
+                "provider_type": "GemStoneSessionPool",
+            },
+            event_labels,
+        )
+        self.assertTrue(
+            any(name == "gemstone_py_pool_acquire_wait_ms" for name, _labels, _duration in metrics.durations)
+        )
+        span_names = [name for name, _attrs, _span in tracer.started]
+        self.assertIn("gemstone.pool.session_acquired", span_names)
+        acquired_attrs = next(
+            attrs for name, attrs, _span in tracer.started if name == "gemstone.pool.session_acquired"
+        )
+        self.assertEqual(acquired_attrs["provider"], "observed-pool")
+        self.assertIn("wait_ms", acquired_attrs)
 
 
 class GemStoneThreadLocalProviderTests(unittest.TestCase):

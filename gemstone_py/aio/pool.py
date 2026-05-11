@@ -12,6 +12,7 @@ from typing import Any
 
 from gemstone_py.aio import AsyncSession
 from gemstone_py.client import GemStoneSession, TransactionPolicy
+from gemstone_py.observability import NULL_METRICS, NULL_TRACER, MetricsCollector, Tracer
 from gemstone_py.web import GemStoneSessionPoolStats
 
 AsyncSessionHealthcheck = Callable[[AsyncSession], bool | Awaitable[bool]]
@@ -42,6 +43,8 @@ class AsyncSessionPool:
         idle_sweep_interval_seconds: float | None = None,
         validation_query: str | None = None,
         validation_interval_seconds: float | None = None,
+        metrics: MetricsCollector | None = None,
+        tracer: Tracer | None = None,
         **session_kwargs: Any,
     ) -> None:
         if maxsize < 1:
@@ -77,6 +80,8 @@ class AsyncSessionPool:
             else ("1 + 1" if validation_interval_seconds is not None else None)
         )
         self._validation_interval_seconds = validation_interval_seconds
+        self._metrics = metrics or NULL_METRICS
+        self._tracer = tracer or NULL_TRACER
         self._session_kwargs = dict(session_kwargs)
 
         self._available: asyncio.LifoQueue[AsyncSession] = asyncio.LifoQueue(maxsize)
@@ -136,6 +141,7 @@ class AsyncSessionPool:
         self._mark_session_released(session)
         try:
             self._available.put_nowait(session)
+            self._emit_observation("session_released")
         except asyncio.QueueFull:
             await self._discard_session(session)
 
@@ -166,6 +172,7 @@ class AsyncSessionPool:
                 await self._discard_session(session)
                 break
             warmed += 1
+            self._emit_observation("session_warmed")
         return warmed
 
     async def sweep_idle(self) -> int:
@@ -201,6 +208,8 @@ class AsyncSessionPool:
             except asyncio.QueueFull:
                 await self._discard_session(session)
                 swept += 1
+        if swept:
+            self._emit_observation("idle_sweep", reason="idle_timeout")
         return swept
 
     def stats(self) -> GemStoneSessionPoolStats:
@@ -234,6 +243,7 @@ class AsyncSessionPool:
             except asyncio.QueueEmpty:
                 break
             await self._discard_session(session)
+        self._emit_observation("pool_closed")
 
     async def aclose(self) -> None:
         """Alias for ``close()``."""
@@ -270,7 +280,12 @@ class AsyncSessionPool:
             try:
                 session = self._available.get_nowait()
                 if await self._prepare_session_for_checkout(session):
-                    self._record_acquire_wait(started_at)
+                    wait_seconds = self._record_acquire_wait(started_at)
+                    self._record_acquire_wait_metric(wait_seconds)
+                    self._emit_observation(
+                        "session_acquired",
+                        attrs={"wait_ms": wait_seconds * 1000.0},
+                    )
                     return session
                 await self._discard_session(session)
                 continue
@@ -294,7 +309,12 @@ class AsyncSessionPool:
                         self._created -= 1
                     raise
                 if await self._prepare_session_for_checkout(session):
-                    self._record_acquire_wait(started_at)
+                    wait_seconds = self._record_acquire_wait(started_at)
+                    self._record_acquire_wait_metric(wait_seconds)
+                    self._emit_observation(
+                        "session_acquired",
+                        attrs={"wait_ms": wait_seconds * 1000.0},
+                    )
                     return session
                 await self._discard_session(session)
                 continue
@@ -303,6 +323,7 @@ class AsyncSessionPool:
             if deadline is not None:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
+                    self._emit_observation("acquire_timeout", reason="timeout")
                     raise TimeoutError("Timed out waiting for an AsyncSession from the pool.")
             try:
                 if remaining is None:
@@ -310,11 +331,17 @@ class AsyncSessionPool:
                 else:
                     session = await asyncio.wait_for(self._available.get(), timeout=remaining)
             except asyncio.TimeoutError as exc:
+                self._emit_observation("acquire_timeout", reason="timeout")
                 raise TimeoutError(
                     "Timed out waiting for an AsyncSession from the pool."
                 ) from exc
             if await self._prepare_session_for_checkout(session):
-                self._record_acquire_wait(started_at)
+                wait_seconds = self._record_acquire_wait(started_at)
+                self._record_acquire_wait_metric(wait_seconds)
+                self._emit_observation(
+                    "session_acquired",
+                    attrs={"wait_ms": wait_seconds * 1000.0},
+                )
                 return session
             await self._discard_session(session)
 
@@ -336,6 +363,7 @@ class AsyncSessionPool:
             async with self._lock:
                 if self._created > 0:
                     self._created -= 1
+        self._emit_observation("session_discarded")
 
     async def _reset_session(self, session: AsyncSession) -> bool:
         try:
@@ -429,8 +457,63 @@ class AsyncSessionPool:
     def _mark_session_released(session: AsyncSession) -> None:
         setattr(session, "_gemstone_pool_last_used_at", time.monotonic())
 
-    def _record_acquire_wait(self, started_at: float) -> None:
-        self._acquire_wait_seconds += max(time.monotonic() - started_at, 0.0)
+    def _record_acquire_wait(self, started_at: float) -> float:
+        wait_seconds = max(time.monotonic() - started_at, 0.0)
+        self._acquire_wait_seconds += wait_seconds
+        return wait_seconds
+
+    def _record_acquire_wait_metric(self, wait_seconds: float) -> None:
+        try:
+            self._metrics.record_duration(
+                "gemstone_py_pool_acquire_wait_ms",
+                {
+                    "provider": type(self).__name__,
+                    "provider_type": type(self).__name__,
+                },
+                wait_seconds * 1000.0,
+            )
+        except Exception:
+            pass
+
+    def _emit_observation(
+        self,
+        event_name: str,
+        *,
+        reason: str | None = None,
+        attrs: dict[str, str | int | float | bool | None] | None = None,
+    ) -> None:
+        stats = self.stats()
+        labels: dict[str, str] = {
+            "event": event_name,
+            "provider": type(self).__name__,
+            "provider_type": type(self).__name__,
+        }
+        if reason is not None:
+            labels["reason"] = reason
+        try:
+            self._metrics.increment("gemstone_py_pool_events", labels)
+        except Exception:
+            pass
+
+        attributes: dict[str, str | int | float | bool | None] = {
+            "event": event_name,
+            "provider": type(self).__name__,
+            "provider_type": type(self).__name__,
+            "pool_in_use": stats.in_use,
+            "pool_idle": stats.idle,
+            "pool_capacity": stats.current_capacity,
+            "reason": reason,
+        }
+        if attrs:
+            attributes.update(attrs)
+        try:
+            with self._tracer.start_span(f"gemstone.pool.{event_name}", attributes) as span:
+                try:
+                    span.set_attribute("status", "ok")
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     def _ensure_sweeper_started(self) -> None:
         if self._idle_timeout_seconds is None or self._sweeper_task is not None:

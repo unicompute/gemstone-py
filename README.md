@@ -549,6 +549,11 @@ with GemStoneSession(
     session.execute("1 + 1")
 ```
 
+The same `metrics=` and `tracer=` objects can be passed to
+`GemStoneSessionPool`, `GemStoneThreadLocalSessionProvider`, and
+`AsyncSessionPool` so acquire/release/discard events and acquire wait time are
+visible alongside session calls.
+
 See [`docs/observability.md`](docs/observability.md) for the full setup.
 
 ## Inspect And Debug

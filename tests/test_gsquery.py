@@ -365,6 +365,53 @@ class GSCollectionQueryTests(unittest.TestCase):
 
         self.assertEqual(events, ["enter", "exit"])
 
+    def test_iterator_observes_chunks_and_close_summary_for_real_sessions(self):
+        col = GSCollection('People')
+        session = gemstone.GemStoneSession(username="alice", password="secret")
+        session.perform_oop = mock.Mock(return_value=222)  # type: ignore[method-assign]
+        session.perform_value = mock.Mock(return_value=1)  # type: ignore[method-assign]
+
+        class Observation:
+            def __init__(self, operation, attrs):
+                self.operation = operation
+                self.attrs = attrs
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                del exc_type, exc_val, exc_tb
+                return False
+
+        observations = []
+
+        def observe(operation, attrs):
+            observations.append((operation, dict(attrs)))
+            return Observation(operation, attrs)
+
+        session._observe_operation = observe  # type: ignore[method-assign]
+
+        with mock.patch.object(
+            GSCollection,
+            '_set_oop',
+            autospec=True,
+            return_value=111,
+        ):
+            with mock.patch.object(
+                GSCollection,
+                '_records_from_array_range_oop',
+                autospec=True,
+                return_value=[{'@name': 'Alice'}],
+            ):
+                with col.iter(chunk_size=1, session=session) as iterator:
+                    self.assertEqual(next(iterator), {'@name': 'Alice'})
+
+        self.assertEqual(observations[0][0], "query_iter_chunk")
+        self.assertEqual(observations[0][1]["chunk_size"], 1)
+        self.assertEqual(observations[-1][0], "query_iter")
+        self.assertEqual(observations[-1][1]["total_yielded"], 1)
+        self.assertEqual(observations[-1][1]["chunks_fetched"], 1)
+
     def test_search_iter_streams_from_search_result_oop(self):
         col = GSCollection('People')
         session = mock.Mock()

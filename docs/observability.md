@@ -78,6 +78,49 @@ The session emits:
 For existing Prometheus setup, pass your service's registry to
 `PrometheusMetrics(registry=...)`.
 
+## Pool And Query Signals
+
+`GemStoneSessionPool`, `GemStoneThreadLocalSessionProvider`, and
+`AsyncSessionPool` accept the same `metrics=` and `tracer=` objects:
+
+```python
+from gemstone_py import GemStoneConfig, GemStoneSessionPool, PrometheusMetrics
+
+metrics = PrometheusMetrics()
+pool = GemStoneSessionPool(
+    maxsize=4,
+    config=GemStoneConfig.from_env(),
+    metrics=metrics,
+)
+```
+
+The pool emits:
+
+| Metric | Labels | Meaning |
+| --- | --- | --- |
+| `gemstone_py_pool_events` | `event`, `provider`, `provider_type`, optional `reason` | Pool lifecycle/event counter. |
+| `gemstone_py_pool_acquire_wait_ms` | `provider`, `provider_type` | Time spent waiting for a pooled session. |
+
+Pool spans are named like:
+
+```text
+gemstone.pool.session_acquired
+gemstone.pool.session_released
+gemstone.pool.session_discarded
+gemstone.pool.acquire_timeout
+```
+
+Chunked query iteration emits session-level spans when tracing is configured on
+the session:
+
+```text
+gemstone.session.query_iter_chunk
+gemstone.session.query_iter
+```
+
+Those spans include the collection name, chunk size, chunk range, number of
+chunks fetched, and total yielded rows.
+
 ## Slow Operation Log
 
 Enable structured warning logs for slow operations:

@@ -19,6 +19,8 @@ All notable changes to `gemstone-py` should be recorded here.
   `all()` versus streaming `iter()` memory use.
 - Added `gemstone_py.observability` with no-op defaults, OpenTelemetry and
   Prometheus adapters, session operation metrics, and slow-operation logging.
+- Extended observability to sync/async session pools and chunked query
+  iterators, including pool event counters and acquire-wait timings.
 - Added `GemStoneSession.inspect(...)`, `dump(...)`, `describe_class(...)`, and
   the `gemstone-inspect` CLI for inspecting live GemStone objects and classes.
 - Added `gemstone-publish-verify`, an end-to-end PyPI/TestPyPI verifier for
