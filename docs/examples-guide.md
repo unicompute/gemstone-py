@@ -595,6 +595,7 @@ Use these when you want patterns for:
 - chunked migration
 - retry loops
 - explicit transactional migration steps
+- module-style forward and rollback migrations
 
 Usage:
 
@@ -602,6 +603,36 @@ Usage:
 python -m examples.persistence.migrations.write_posts
 python -m examples.persistence.migrations.migrate
 python -m examples.persistence.migrations.migrate_by_chunks
+```
+
+For application migrations, scaffold a numbered file:
+
+```bash
+gemstone-migrations scaffold add_amount_to_booking --directory migrations
+```
+
+That creates a module with `upgrade(session)` and `downgrade(session)`.
+Register files in a manifest:
+
+```python
+migrations = [
+    "my_app.migrations.001_initial",
+    "my_app.migrations.002_add_amount_to_booking",
+]
+```
+
+Then apply or dry-run the manifest:
+
+```python
+from gemstone_py import GemStoneConfig, GemStoneSession
+from gemstone_py.migrations import current_version, load_manifest, upgrade
+
+steps = load_manifest("my_app.migrations.manifest")
+
+with GemStoneSession(config=GemStoneConfig.from_env()) as session:
+    print(current_version(session))
+    print(upgrade(session, steps, dry_run=True))
+    upgrade(session, steps)
 ```
 
 The key habit is to keep migration units explicit:

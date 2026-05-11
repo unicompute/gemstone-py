@@ -355,7 +355,45 @@ gemstone-publish-verify --gemstone-version 0.2.10 --native-version 0.1.2
 That command checks project JSON, version-specific JSON, the simple index, and
 temporary-virtualenv installs for both the pure package and native package.
 
-## Recipe 25: Run the Live Test Lane
+## Recipe 25: Scaffold and Run Module-Style Migrations
+
+Create a numbered migration file:
+
+```bash
+gemstone-migrations scaffold add_amount_to_booking --directory migrations
+```
+
+A migration module exposes `upgrade(session)`, optional `downgrade(session)`,
+and optional `dependencies`:
+
+```python
+id = "002_add_amount_to_booking"
+dependencies = ("001_initial",)
+
+def upgrade(session):
+    ...
+
+def downgrade(session):
+    ...
+```
+
+Register modules in a manifest and apply them:
+
+```python
+from gemstone_py import GemStoneConfig, GemStoneSession
+from gemstone_py.migrations import current_version, load_manifest, upgrade
+
+steps = load_manifest("my_app.migrations.manifest")
+
+with GemStoneSession(config=GemStoneConfig.from_env()) as session:
+    print(current_version(session))
+    print(upgrade(session, steps, dry_run=True))
+    upgrade(session, steps)
+```
+
+Applied versions are recorded under `GemstonePyMigrations` in `UserGlobals`.
+
+## Recipe 26: Run the Live Test Lane
 
 ```bash
 GS_RUN_LIVE=1 ./scripts/run_live_checks.sh
@@ -367,7 +405,7 @@ Longer soak run:
 GS_RUN_LIVE=1 GS_RUN_LIVE_SOAK=1 ./scripts/run_live_checks.sh
 ```
 
-## Recipe 26: Handle Commit Conflicts Without Pretending They Are Rare
+## Recipe 27: Handle Commit Conflicts Without Pretending They Are Rare
 
 When multiple sessions modify overlapping state, conflicts are normal. The right
 pattern:
@@ -400,13 +438,13 @@ Rules:
 - bound the retry count — do not loop forever
 - log conflicts — frequent conflicts signal a design smell, not bad luck
 
-## Recipe 27: Learn a Queue With a Hat
+## Recipe 28: Learn a Queue With a Hat
 
 The hat trick example is memorable because it teaches a real primitive through a
 slightly ridiculous scenario. You should keep more examples like that in your
 own codebase than you probably do.
 
-## Recipe 28: Explain `gemstone-py` to a New Teammate
+## Recipe 29: Explain `gemstone-py` to a New Teammate
 
 Use this sentence:
 

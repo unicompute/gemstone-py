@@ -36,6 +36,9 @@ All notable changes to `gemstone-py` should be recorded here.
   details.
 - Added a runnable generated-wrapper FastAPI demo entry point with smoke
   coverage for the index, docs, and generated booking route.
+- Added module-style migration planning, dry-run, version tracking,
+  rollback, scaffold generation, and the `gemstone-migrations` CLI while
+  preserving the legacy `Migration` base class.
 - Added `gemstone-publish-verify`, an end-to-end PyPI/TestPyPI verifier for
   project JSON, version-specific JSON, simple index pages, and temporary
   virtualenv install smoke checks.

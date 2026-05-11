@@ -30,6 +30,7 @@ gemstone-examples = "gemstone_py.cli:main_entry"
 gemstone-fastapi-example = "gemstone_py.fastapi_example:main_entry"
 gemstone-hello = "gemstone_py.cli:hello_entry"
 gemstone-inspect = "gemstone_py.inspection:main_entry"
+gemstone-migrations = "gemstone_py.migrations:main_entry"
 gemstone-publish-verify = "gemstone_py.publish_verify:main_entry"
 gemstone-smalltalk-demo = "gemstone_py.cli:smalltalk_demo_entry"
 
@@ -111,6 +112,7 @@ files = [
   "gemstone_py/cli.py",
   "gemstone_py/client.py",
   "gemstone_py/inspection.py",
+  "gemstone_py/migrations.py",
   "gemstone_py/native.py",
   "gemstone_py/observability.py",
   "gemstone_py/oop.py",
