@@ -34,6 +34,7 @@ with GemStoneSession(config=GemStoneConfig.from_env()) as session:
     booking = OkzBooking.find_by_id(session, "B-1001")
     print(booking.status)
     booking.mark_paid(1_779_912_000)
+    same_booking = booking.yourself()
 ```
 
 Use the generated async wrapper in a FastAPI handler:
@@ -67,5 +68,6 @@ Instance methods use `perform_value(...)` through the typed OOP session:
 
 ```python
 booking.mark_paid(1_779_912_000)  # Smalltalk selector markPaid:
+booking.yourself()                # wraps the returned OOP as OkzBooking
 booking.transfer(42, 7)           # Smalltalk selector transferTo:byUserId:
 ```

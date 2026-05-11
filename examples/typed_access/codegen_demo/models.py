@@ -18,6 +18,9 @@ class OkzBookingProto(Protocol):
     def find_by_id(cls, booking_id: str) -> "OkzBookingProto":
         ...
 
+    def yourself(self) -> "OkzBookingProto":
+        ...
+
     def mark_paid(self, at_posix_seconds: int) -> None:
         ...
 

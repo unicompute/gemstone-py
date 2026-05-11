@@ -21,7 +21,15 @@ class CodegenBookingProto(Protocol):
     def find_by_id(cls, booking_id: str) -> "CodegenBookingProto":
         ...
 
+    @classmethod
+    @gemstone.gemstone_selector("countAll")
+    def count_all(cls) -> int:
+        ...
+
     def mark_paid(self, at: int) -> None:
+        ...
+
+    def yourself(self) -> "CodegenBookingProto":
         ...
 
     @gemstone.gemstone_selector("transferTo:byUserId:")
@@ -32,29 +40,49 @@ class CodegenBookingProto(Protocol):
 class FakeSyncSession:
     def __init__(self) -> None:
         self.sources: list[str] = []
+        self.value_sources: list[str] = []
         self.performed: list[tuple[int, str, tuple[int, ...]]] = []
+        self.performed_oops: list[tuple[int, str, tuple[int, ...]]] = []
 
     def execute_oop(self, source: str) -> int:
         self.sources.append(source)
         return 0xB00
 
+    def eval(self, source: str) -> int:
+        self.value_sources.append(source)
+        return 42
+
     def perform_value(self, receiver: int, selector: str, *args: int) -> str:
         self.performed.append((receiver, selector, args))
         return f"{selector}-result"
+
+    def perform_oop(self, receiver: int, selector: str, *args: int) -> int:
+        self.performed_oops.append((receiver, selector, args))
+        return 0xB01
 
 
 class FakeAsyncSession:
     def __init__(self) -> None:
         self.sources: list[str] = []
+        self.value_sources: list[str] = []
         self.performed: list[tuple[int, str, tuple[int, ...]]] = []
+        self.performed_oops: list[tuple[int, str, tuple[int, ...]]] = []
 
     async def execute_oop(self, source: str) -> int:
         self.sources.append(source)
         return 0xC00
 
+    async def eval(self, source: str) -> int:
+        self.value_sources.append(source)
+        return 84
+
     async def perform_value(self, receiver: int, selector: str, *args: int) -> str:
         self.performed.append((receiver, selector, args))
         return f"{selector}-result"
+
+    async def perform_oop(self, receiver: int, selector: str, *args: int) -> int:
+        self.performed_oops.append((receiver, selector, args))
+        return 0xC01
 
 
 class CodegenTests(unittest.TestCase):
@@ -81,9 +109,13 @@ class CodegenTests(unittest.TestCase):
 
         self.assertIn("class CodegenBooking(TypedOop[Any]):", source)
         self.assertIn("class AsyncCodegenBooking(TypedOop[Any]):", source)
-        self.assertIn("return self.send('status')", source)
-        self.assertIn("return self.send('markPaid:', at)", source)
-        self.assertIn("return self.send('transferTo:byUserId:', user_id, by_user_id)", source)
+        self.assertIn("def status(self) -> str:", source)
+        self.assertIn("def mark_paid(self, at: int) -> None:", source)
+        self.assertIn("def yourself(self) -> CodegenBooking:", source)
+        self.assertIn("async def yourself(self) -> AsyncCodegenBooking:", source)
+        self.assertIn("self.send('markPaid:', at)", source)
+        self.assertIn("oop = self.send_oop('yourself')", source)
+        self.assertIn("self.send('transferTo:byUserId:', user_id, by_user_id)", source)
 
     def test_generated_sync_wrapper_builds_smalltalk_sources(self) -> None:
         namespace: dict[str, Any] = {}
@@ -92,12 +124,20 @@ class CodegenTests(unittest.TestCase):
         session = FakeSyncSession()
 
         booking = booking_cls.find_by_id(session, "A'7")
+        count = booking_cls.count_all(session)
         status = booking.status
-        booking.mark_paid(123)
+        paid_result = booking.mark_paid(123)
+        refreshed = booking.yourself()
         booking.transfer(456, 789)
 
         self.assertEqual(session.sources, ["CodegenBooking findById: 'A''7'"])
+        self.assertEqual(session.value_sources, ["CodegenBooking countAll"])
+        self.assertEqual(count, 42)
         self.assertEqual(status, "status-result")
+        self.assertIsNone(paid_result)
+        self.assertIsInstance(refreshed, booking_cls)
+        self.assertEqual(int(refreshed), 0xB01)
+        self.assertIs(refreshed.wrapper_type, booking_cls)
         self.assertEqual(
             session.performed,
             [
@@ -106,6 +146,7 @@ class CodegenTests(unittest.TestCase):
                 (0xB00, "transferTo:byUserId:", (456, 789)),
             ],
         )
+        self.assertEqual(session.performed_oops, [(0xB00, "yourself", ())])
 
     def test_generated_async_wrapper_calls_async_session(self) -> None:
         namespace: dict[str, Any] = {}
@@ -115,20 +156,30 @@ class CodegenTests(unittest.TestCase):
 
         async def run() -> None:
             booking = await booking_cls.find_by_id(session, "B-8")
+            count = await booking_cls.count_all(session)
             status = await booking.status()
-            await booking.mark_paid(321)
+            paid_result = await booking.mark_paid(321)
+            refreshed = await booking.yourself()
+            await booking.transfer(654, 987)
+            self.assertEqual(count, 84)
             self.assertEqual(status, "status-result")
+            self.assertIsNone(paid_result)
+            self.assertIsInstance(refreshed, booking_cls)
+            self.assertEqual(int(refreshed), 0xC01)
 
         asyncio.run(run())
 
         self.assertEqual(session.sources, ["CodegenBooking findById: 'B-8'"])
+        self.assertEqual(session.value_sources, ["CodegenBooking countAll"])
         self.assertEqual(
             session.performed,
             [
                 (0xC00, "status", ()),
                 (0xC00, "markPaid:", (321,)),
+                (0xC00, "transferTo:byUserId:", (654, 987)),
             ],
         )
+        self.assertEqual(session.performed_oops, [(0xC00, "yourself", ())])
 
     def test_generate_package_writes_checked_in_style_modules(self) -> None:
         with TemporaryDirectory() as temp_dir:
@@ -164,6 +215,17 @@ class CodegenTests(unittest.TestCase):
         self.assertTrue(all(file.up_to_date for file in files))
         self.assertTrue(all(file.up_to_date for file in checked))
         self.assertTrue(any(file.path.name == "invoice.py" for file in files))
+
+    def test_repository_codegen_check_script_tracks_demo_wrapper(self) -> None:
+        script = Path("scripts/check_codegen.sh").read_text(encoding="utf-8")
+        ci_script = Path("scripts/run_ci_checks.sh").read_text(encoding="utf-8")
+        pre_commit_hooks = Path(".pre-commit-hooks.yaml").read_text(encoding="utf-8")
+
+        self.assertIn("--module examples.typed_access.codegen_demo.models", script)
+        self.assertIn("--output examples/typed_access/codegen_demo/generated", script)
+        self.assertIn("--check", script)
+        self.assertIn("scripts/check_codegen.sh", ci_script)
+        self.assertIn("gemstone-codegen-check", pre_commit_hooks)
 
 
 if __name__ == "__main__":

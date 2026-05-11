@@ -26,6 +26,9 @@ All notable changes to `gemstone-py` should be recorded here.
 - Added `gemstone-codegen`, `@gemstone_selector(...)`, Protocol-to-`TypedOop`
   wrapper generation, async wrapper generation, CI `--check` mode, and a typed
   access codegen demo.
+- Extended generated wrappers to preserve simple Protocol annotations, return
+  `None` for command-style methods, wrap self-typed OOP results, and run a
+  repository codegen drift check from CI/pre-commit.
 - Added `gemstone-publish-verify`, an end-to-end PyPI/TestPyPI verifier for
   project JSON, version-specific JSON, simple index pages, and temporary
   virtualenv install smoke checks.

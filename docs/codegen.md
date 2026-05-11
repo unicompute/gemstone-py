@@ -41,6 +41,9 @@ class OkzBookingProto(Protocol):
     def mark_paid(self, at_posix_seconds: int) -> None:
         ...
 
+    def yourself(self) -> "OkzBookingProto":
+        ...
+
     @gemstone_selector("transferTo:byUserId:")
     def transfer(self, user_id: int, by_user_id: int) -> None:
         ...
@@ -74,6 +77,22 @@ gemstone-codegen \
   --check
 ```
 
+The repository CI runs the same check through:
+
+```bash
+./scripts/check_codegen.sh
+```
+
+If your application uses `pre-commit`, it can consume the packaged hook:
+
+```yaml
+repos:
+  - repo: https://github.com/unicompute/gemstone-py
+    rev: main
+    hooks:
+      - id: gemstone-codegen-check
+```
+
 ## Selector Mapping
 
 Default mapping is intentionally small:
@@ -89,6 +108,32 @@ For selectors that do not map cleanly, use `@gemstone_selector(...)`. The
 explicit selector must have the same keyword count as the Python method has
 arguments.
 
+## Return Mapping
+
+The generator uses simple Protocol annotations to choose the send path and the
+generated Python return type:
+
+| Protocol return annotation | Generated behaviour |
+| --- | --- |
+| no annotation | `perform_value(...)` / `session.eval(...)`, returns `Any` |
+| `None` | sends the message and returns `None` |
+| same Protocol class, wrapper class, or `Self` | uses `perform_oop(...)` or `execute_oop(...)` and wraps the returned OOP |
+| simple builtins such as `str`, `int`, `float`, `bool` | value send with that return annotation |
+
+That means this method returns another typed wrapper:
+
+```python
+def yourself(self) -> "OkzBookingProto":
+    ...
+```
+
+while this method is treated as a mutating command:
+
+```python
+def mark_paid(self, at_posix_seconds: int) -> None:
+    ...
+```
+
 ## Sync Usage
 
 Generated class-side methods take a session and build the Smalltalk source:
@@ -101,6 +146,7 @@ with GemStoneSession(config=GemStoneConfig.from_env()) as session:
     booking = OkzBooking.find_by_id(session, "B-1001")
     print(booking.status)
     booking.mark_paid(1_779_912_000)
+    same_booking = booking.yourself()
 ```
 
 That class-side call evaluates:
@@ -109,8 +155,9 @@ That class-side call evaluates:
 OkzBooking findById: 'B-1001'
 ```
 
-Instance methods call `perform_value(...)` through the session associated with
-the returned `TypedOop`.
+Instance methods call `perform_value(...)` for value returns and
+`perform_oop(...)` for self-typed wrapper returns through the session
+associated with the returned `TypedOop`.
 
 ## Async Usage
 
@@ -141,13 +188,16 @@ async def booking_status(
 The first generator pass handles:
 
 - annotated fields and `@property` methods as no-argument sends
-- instance methods as `perform_value(...)` sends
+- instance methods as `perform_value(...)` or `perform_oop(...)` sends based on
+  return annotations
 - class methods as class-side Smalltalk source strings
+- self-returning class and instance methods as wrapped `TypedOop` results
 - string, integer, float, boolean, and `None` literals in class-side calls
 - explicit selector overrides with `@gemstone_selector(...)`
-- checked-in sync and async generated modules
+- checked-in sync and async generated modules plus CI/pre-commit drift checks
+- an opt-in live smoke test for generated wrappers against GemStone `Date`
 
-It does not infer return OOP types, marshal arbitrary Python objects into
-class-side source literals, or replace hand-written Smalltalk for complex
-queries. Use it for method-shaped object access and keep raw `session.eval(...)`
-or `SmalltalkBridge` calls where a full Smalltalk expression is clearer.
+It does not marshal arbitrary Python objects into class-side source literals or
+replace hand-written Smalltalk for complex queries. Use it for method-shaped
+object access and keep raw `session.eval(...)` or `SmalltalkBridge` calls where
+a full Smalltalk expression is clearer.

@@ -646,6 +646,12 @@ python3 -m pip install -e .[dev]
 ./scripts/run_ci_checks.sh
 ```
 
+Check only generated wrapper drift:
+
+```bash
+./scripts/check_codegen.sh
+```
+
 Run the live lane with the optional longer soak coverage:
 
 ```bash

@@ -19,6 +19,7 @@ Opt-in live integration coverage:
 ```bash
 GS_RUN_LIVE=1 python3 -m unittest \
   tests.test_live_smoke \
+  tests.test_live_codegen \
   tests.test_live_integration \
   tests.test_live_async_integration
 ```

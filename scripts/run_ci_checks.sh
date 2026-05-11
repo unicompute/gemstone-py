@@ -13,6 +13,7 @@ fi
 "${pybin}" -m compileall gemstone_py tests examples
 "${pybin}" -m ruff check .
 "${pybin}" -m mypy
+"${repo_root}/scripts/check_codegen.sh"
 "${pybin}" -m unittest discover -s tests -p 'test*.py'
 "${pybin}" -m gemstone_py.api_contract --help >/dev/null
 "${pybin}" -m gemstone_py.benchmark_baseline_register --help >/dev/null

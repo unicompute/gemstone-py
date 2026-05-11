@@ -10,11 +10,12 @@ from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Final, TypeVar
+from typing import Any, Final, Literal, TypeVar
 
 from gemstone_py.oop import gemstone_class_name
 
 F = TypeVar("F", bound=Callable[..., Any])
+ReturnKind = Literal["value", "none", "self_oop"]
 
 SELECTOR_ATTR: Final = "__gemstone_selector__"
 ASYNC_ATTR: Final = "__gemstone_codegen_async__"
@@ -47,14 +48,28 @@ class GeneratedWrapper:
 class _PropertySpec:
     python_name: str
     selector: str
+    annotation: str
+
+
+@dataclass(frozen=True)
+class _ArgSpec:
+    python_name: str
+    annotation: str
 
 
 @dataclass(frozen=True)
 class _MethodSpec:
     python_name: str
     selector: str
-    arg_names: tuple[str, ...]
+    args: tuple[_ArgSpec, ...]
     class_side: bool
+    return_kind: ReturnKind
+    return_annotation: str
+
+    @property
+    def arg_names(self) -> tuple[str, ...]:
+        """Return the Python argument names for this method."""
+        return tuple(arg.python_name for arg in self.args)
 
 
 def gemstone_selector(selector: str) -> Callable[[F], F]:
@@ -107,7 +122,7 @@ def generate_wrapper_details(protocol_cls: type[Any]) -> GeneratedWrapper:
         raise ValueError(f"{protocol_cls.__qualname__} is not decorated with @gemstone_class")
 
     wrapper_name = _wrapper_class_name(protocol_cls.__name__)
-    properties, methods, warnings = _collect_specs(protocol_cls)
+    properties, methods, warnings = _collect_specs(protocol_cls, wrapper_name)
     source = _render_source(
         wrapper_name=wrapper_name,
         protocol_name=protocol_cls.__name__,
@@ -238,6 +253,7 @@ def _iter_registered_classes(module: ModuleType) -> tuple[type[Any], ...]:
 
 def _collect_specs(
     protocol_cls: type[Any],
+    wrapper_name: str,
 ) -> tuple[tuple[_PropertySpec, ...], tuple[_MethodSpec, ...], tuple[str, ...]]:
     properties: list[_PropertySpec] = []
     methods: list[_MethodSpec] = []
@@ -246,10 +262,16 @@ def _collect_specs(
 
     annotations = getattr(protocol_cls, "__annotations__", {})
     if isinstance(annotations, dict):
-        for python_name in annotations:
+        for python_name, annotation in annotations.items():
             if python_name.startswith("_"):
                 continue
-            properties.append(_PropertySpec(python_name, _snake_to_camel(python_name)))
+            properties.append(
+                _PropertySpec(
+                    python_name,
+                    _snake_to_camel(python_name),
+                    _annotation_to_source(annotation, protocol_cls.__name__, wrapper_name),
+                )
+            )
             seen_properties.add(python_name)
 
     for python_name, member in protocol_cls.__dict__.items():
@@ -257,19 +279,44 @@ def _collect_specs(
             continue
         if isinstance(member, property):
             if python_name not in seen_properties:
+                return_annotation = (
+                    inspect.signature(member.fget).return_annotation
+                    if member.fget is not None
+                    else inspect.Signature.empty
+                )
                 properties.append(
-                    _PropertySpec(python_name, _selector_for_callable(python_name, ()))
+                    _PropertySpec(
+                        python_name,
+                        _selector_for_callable(python_name, ()),
+                        _annotation_to_source(
+                            return_annotation,
+                            protocol_cls.__name__,
+                            wrapper_name,
+                        ),
+                    )
                 )
                 seen_properties.add(python_name)
             continue
         if isinstance(member, classmethod):
-            spec, warning = _method_spec(python_name, member.__func__, class_side=True)
+            spec, warning = _method_spec(
+                python_name,
+                member.__func__,
+                class_side=True,
+                protocol_name=protocol_cls.__name__,
+                wrapper_name=wrapper_name,
+            )
             methods.append(spec)
             if warning is not None:
                 warnings.append(warning)
             continue
         if inspect.isfunction(member):
-            spec, warning = _method_spec(python_name, member, class_side=False)
+            spec, warning = _method_spec(
+                python_name,
+                member,
+                class_side=False,
+                protocol_name=protocol_cls.__name__,
+                wrapper_name=wrapper_name,
+            )
             methods.append(spec)
             if warning is not None:
                 warnings.append(warning)
@@ -282,12 +329,14 @@ def _method_spec(
     fn: Callable[..., Any],
     *,
     class_side: bool,
+    protocol_name: str,
+    wrapper_name: str,
 ) -> tuple[_MethodSpec, str | None]:
     signature = inspect.signature(fn)
     params = list(signature.parameters.values())
     if params and params[0].name in {"self", "cls"}:
         params = params[1:]
-    arg_names: list[str] = []
+    arg_specs: list[_ArgSpec] = []
     for param in params:
         if param.kind not in {
             inspect.Parameter.POSITIONAL_OR_KEYWORD,
@@ -301,9 +350,20 @@ def _method_spec(
                 f"{python_name} uses default arguments; generated wrappers require "
                 "explicit arguments"
             )
-        arg_names.append(param.name)
+        arg_specs.append(
+            _ArgSpec(
+                param.name,
+                _annotation_to_source(param.annotation, protocol_name, wrapper_name),
+            )
+        )
 
+    arg_names = tuple(arg.python_name for arg in arg_specs)
     selector = _selector_for_callable(python_name, tuple(arg_names), fn=fn)
+    return_kind, return_annotation = _return_spec(
+        signature.return_annotation,
+        protocol_name,
+        wrapper_name,
+    )
     warning = None
     if len(arg_names) > 1 and getattr(fn, SELECTOR_ATTR, None) is None:
         warning = (
@@ -313,8 +373,10 @@ def _method_spec(
     return _MethodSpec(
         python_name=python_name,
         selector=selector,
-        arg_names=tuple(arg_names),
+        args=tuple(arg_specs),
         class_side=class_side,
+        return_kind=return_kind,
+        return_annotation=return_annotation,
     ), warning
 
 
@@ -458,7 +520,7 @@ def _render_class(
 def _render_property(prop: _PropertySpec, *, async_class: bool) -> list[str]:
     if async_class:
         return [
-            f"    async def {prop.python_name}(self) -> Any:",
+            f"    async def {prop.python_name}(self) -> {prop.annotation}:",
             "        session = self.session",
             "        if session is None:",
             "            raise RuntimeError(\"TypedOop has no associated GemStoneSession\")",
@@ -466,7 +528,7 @@ def _render_property(prop: _PropertySpec, *, async_class: bool) -> list[str]:
         ]
     return [
         "    @property",
-        f"    def {prop.python_name}(self) -> Any:",
+        f"    def {prop.python_name}(self) -> {prop.annotation}:",
         f"        return self.send({prop.selector!r})",
     ]
 
@@ -477,53 +539,106 @@ def _render_method(
     *,
     async_class: bool,
 ) -> list[str]:
-    args = ", ".join(f"{arg}: Any" for arg in method.arg_names)
+    args = ", ".join(f"{arg.python_name}: {arg.annotation}" for arg in method.args)
     call_args = ", ".join(method.arg_names)
     call_tuple = _tuple_expression(method.arg_names)
+    return_annotation = (
+        class_name if method.return_kind == "self_oop" else method.return_annotation
+    )
     if method.class_side:
         prefix = "async " if async_class else ""
         await_prefix = "await " if async_class else ""
         signature_args = f"session: Any{', ' if args else ''}{args}"
+        signature = (
+            f"    {prefix}def {method.python_name}(cls, {signature_args}) "
+            f"-> {return_annotation}:"
+        )
         lines = [
             "    @classmethod",
-            f"    {prefix}def {method.python_name}(cls, {signature_args}) -> {class_name!r}:",
+            signature,
             "        source = _build_smalltalk_source(",
             "            cls.__gemstone_class_name__,",
             f"            {method.selector!r},",
             f"            {call_tuple},",
             "        )",
-            f"        oop = {await_prefix}session.execute_oop(source)",
-            "        return cls(",
-            "            oop,",
-            "            session=session,",
-            "            wrapper_type=cls,",
-            "            gemstone_class_name=cls.__gemstone_class_name__,",
-            "        )",
         ]
+        if method.return_kind == "self_oop":
+            lines.extend(
+                [
+                    f"        oop = {await_prefix}session.execute_oop(source)",
+                    "        return cls(",
+                    "            oop,",
+                    "            session=session,",
+                    "            wrapper_type=cls,",
+                    "            gemstone_class_name=cls.__gemstone_class_name__,",
+                    "        )",
+                ]
+            )
+        elif method.return_kind == "none":
+            lines.append(f"        {await_prefix}session.eval(source)")
+        else:
+            lines.append(f"        return {await_prefix}session.eval(source)")
         return lines
     if async_class:
         signature_args = f"{', ' if args else ''}{args}"
         raw_args = _oop_tuple_expression(method.arg_names)
         call_suffix = ", *raw_args" if call_args else ""
+        signature = (
+            f"    async def {method.python_name}(self{signature_args}) "
+            f"-> {return_annotation}:"
+        )
         lines = [
-            f"    async def {method.python_name}(self{signature_args}) -> Any:",
+            signature,
             "        session = self.session",
             "        if session is None:",
             "            raise RuntimeError(\"TypedOop has no associated GemStoneSession\")",
         ]
         if call_args:
             lines.append(f"        raw_args = {raw_args}")
-        lines.append(
-            f"        return await session.perform_value("
-            f"int(self), {method.selector!r}{call_suffix})"
-        )
+        if method.return_kind == "self_oop":
+            lines.extend(
+                [
+                    f"        oop = await session.perform_oop("
+                    f"int(self), {method.selector!r}{call_suffix})",
+                    "        return type(self)(",
+                    "            oop,",
+                    "            session=session,",
+                    "            wrapper_type=type(self),",
+                    "            gemstone_class_name=self.__gemstone_class_name__,",
+                    "        )",
+                ]
+            )
+        elif method.return_kind == "none":
+            lines.append(
+                f"        await session.perform_value("
+                f"int(self), {method.selector!r}{call_suffix})"
+            )
+        else:
+            lines.append(
+                f"        return await session.perform_value("
+                f"int(self), {method.selector!r}{call_suffix})"
+            )
         return lines
     signature_args = f"{', ' if args else ''}{args}"
     call_suffix = f", {call_args}" if call_args else ""
-    return [
-        f"    def {method.python_name}(self{signature_args}) -> Any:",
-        f"        return self.send({method.selector!r}{call_suffix})",
-    ]
+    lines = [f"    def {method.python_name}(self{signature_args}) -> {return_annotation}:"]
+    if method.return_kind == "self_oop":
+        lines.extend(
+            [
+                f"        oop = self.send_oop({method.selector!r}{call_suffix})",
+                "        return type(self)(",
+                "            oop,",
+                "            session=self.session,",
+                "            wrapper_type=type(self),",
+                "            gemstone_class_name=self.__gemstone_class_name__,",
+                "        )",
+            ]
+        )
+    elif method.return_kind == "none":
+        lines.append(f"        self.send({method.selector!r}{call_suffix})")
+    else:
+        lines.append(f"        return self.send({method.selector!r}{call_suffix})")
+    return lines
 
 
 def _render_package_init(wrappers: Sequence[GeneratedWrapper]) -> str:
@@ -578,6 +693,62 @@ def _validate_selector_arity(selector: str, argc: int, python_name: str) -> None
             f"{python_name} selector {selector!r} has {colon_count} keyword(s), "
             f"but the Python method has {argc} argument(s)"
         )
+
+
+def _return_spec(
+    annotation: Any,
+    protocol_name: str,
+    wrapper_name: str,
+) -> tuple[ReturnKind, str]:
+    normalized = _normalized_annotation(annotation)
+    if normalized is None:
+        return "value", "Any"
+    if normalized in {"None", "NoneType"}:
+        return "none", "None"
+    if normalized in {protocol_name, wrapper_name, "Self", "typing.Self"}:
+        return "self_oop", wrapper_name
+    return "value", _safe_annotation_source(normalized)
+
+
+def _annotation_to_source(annotation: Any, protocol_name: str, wrapper_name: str) -> str:
+    normalized = _normalized_annotation(annotation)
+    if normalized is None:
+        return "Any"
+    if normalized in {protocol_name, wrapper_name, "Self", "typing.Self"}:
+        return wrapper_name
+    return _safe_annotation_source(normalized)
+
+
+def _normalized_annotation(annotation: Any) -> str | None:
+    if annotation is inspect.Signature.empty:
+        return None
+    if annotation is None:
+        return "None"
+    if annotation is Any:
+        return "Any"
+    if isinstance(annotation, str):
+        return _strip_annotation_quotes(annotation)
+    module = getattr(annotation, "__module__", "")
+    qualname = getattr(annotation, "__qualname__", None)
+    name = getattr(annotation, "__name__", None)
+    if module == "builtins" and isinstance(qualname, str):
+        return "None" if qualname == "NoneType" else qualname
+    if isinstance(name, str):
+        return name
+    return None
+
+
+def _safe_annotation_source(annotation: str) -> str:
+    if annotation in {"Any", "None", "str", "int", "float", "bool", "bytes", "object"}:
+        return annotation
+    return "Any"
+
+
+def _strip_annotation_quotes(annotation: str) -> str:
+    text = annotation.strip()
+    while len(text) >= 2 and text[0] == text[-1] and text[0] in {"'", '"'}:
+        text = text[1:-1].strip()
+    return text
 
 
 def _wrapper_class_name(protocol_name: str) -> str:

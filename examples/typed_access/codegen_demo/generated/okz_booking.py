@@ -53,11 +53,11 @@ class OkzBooking(TypedOop[Any]):
     __gemstone_class_name__ = 'OkzBooking'
 
     @property
-    def status(self) -> Any:
+    def status(self) -> str:
         return self.send('status')
 
     @classmethod
-    def find_by_id(cls, session: Any, booking_id: Any) -> 'OkzBooking':
+    def find_by_id(cls, session: Any, booking_id: str) -> OkzBooking:
         source = _build_smalltalk_source(
             cls.__gemstone_class_name__,
             'findById:',
@@ -71,24 +71,33 @@ class OkzBooking(TypedOop[Any]):
             gemstone_class_name=cls.__gemstone_class_name__,
         )
 
-    def mark_paid(self, at_posix_seconds: Any) -> Any:
-        return self.send('markPaid:', at_posix_seconds)
+    def yourself(self) -> OkzBooking:
+        oop = self.send_oop('yourself')
+        return type(self)(
+            oop,
+            session=self.session,
+            wrapper_type=type(self),
+            gemstone_class_name=self.__gemstone_class_name__,
+        )
 
-    def transfer(self, user_id: Any, by_user_id: Any) -> Any:
-        return self.send('transferTo:byUserId:', user_id, by_user_id)
+    def mark_paid(self, at_posix_seconds: int) -> None:
+        self.send('markPaid:', at_posix_seconds)
+
+    def transfer(self, user_id: int, by_user_id: int) -> None:
+        self.send('transferTo:byUserId:', user_id, by_user_id)
 
 
 class AsyncOkzBooking(TypedOop[Any]):
     __gemstone_class_name__ = 'OkzBooking'
 
-    async def status(self) -> Any:
+    async def status(self) -> str:
         session = self.session
         if session is None:
             raise RuntimeError("TypedOop has no associated GemStoneSession")
         return await session.perform_value(int(self), 'status')
 
     @classmethod
-    async def find_by_id(cls, session: Any, booking_id: Any) -> 'AsyncOkzBooking':
+    async def find_by_id(cls, session: Any, booking_id: str) -> AsyncOkzBooking:
         source = _build_smalltalk_source(
             cls.__gemstone_class_name__,
             'findById:',
@@ -102,19 +111,31 @@ class AsyncOkzBooking(TypedOop[Any]):
             gemstone_class_name=cls.__gemstone_class_name__,
         )
 
-    async def mark_paid(self, at_posix_seconds: Any) -> Any:
+    async def yourself(self) -> AsyncOkzBooking:
+        session = self.session
+        if session is None:
+            raise RuntimeError("TypedOop has no associated GemStoneSession")
+        oop = await session.perform_oop(int(self), 'yourself')
+        return type(self)(
+            oop,
+            session=session,
+            wrapper_type=type(self),
+            gemstone_class_name=self.__gemstone_class_name__,
+        )
+
+    async def mark_paid(self, at_posix_seconds: int) -> None:
         session = self.session
         if session is None:
             raise RuntimeError("TypedOop has no associated GemStoneSession")
         raw_args = (_argument_to_oop(at_posix_seconds),)
-        return await session.perform_value(int(self), 'markPaid:', *raw_args)
+        await session.perform_value(int(self), 'markPaid:', *raw_args)
 
-    async def transfer(self, user_id: Any, by_user_id: Any) -> Any:
+    async def transfer(self, user_id: int, by_user_id: int) -> None:
         session = self.session
         if session is None:
             raise RuntimeError("TypedOop has no associated GemStoneSession")
         raw_args = (_argument_to_oop(user_id), _argument_to_oop(by_user_id))
-        return await session.perform_value(int(self), 'transferTo:byUserId:', *raw_args)
+        await session.perform_value(int(self), 'transferTo:byUserId:', *raw_args)
 
 
 __all__ = ['OkzBooking', 'AsyncOkzBooking']

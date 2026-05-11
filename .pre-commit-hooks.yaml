@@ -1,0 +1,6 @@
+- id: gemstone-codegen-check
+  name: gemstone-codegen check
+  description: Verify checked-in gemstone-codegen wrappers are current.
+  entry: scripts/check_codegen.sh
+  language: script
+  pass_filenames: false
