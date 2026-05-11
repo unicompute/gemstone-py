@@ -109,12 +109,18 @@ fi
 
 if [[ "${run_public_verify}" == "1" ]]; then
   log "PyPI and TestPyPI verification"
-  # shellcheck disable=SC2206
-  extra_publish_args=(${PUBLISH_VERIFY_ARGS:-})
-  "${pybin}" -m gemstone_py.publish_verify \
-    --gemstone-version "${gemstone_version}" \
-    --native-version "${native_version}" \
-    "${extra_publish_args[@]}"
+  if [[ -n "${PUBLISH_VERIFY_ARGS:-}" ]]; then
+    # shellcheck disable=SC2206
+    extra_publish_args=(${PUBLISH_VERIFY_ARGS})
+    "${pybin}" -m gemstone_py.publish_verify \
+      --gemstone-version "${gemstone_version}" \
+      --native-version "${native_version}" \
+      "${extra_publish_args[@]}"
+  else
+    "${pybin}" -m gemstone_py.publish_verify \
+      --gemstone-version "${gemstone_version}" \
+      --native-version "${native_version}"
+  fi
 fi
 
 if [[ "${run_vsix}" == "1" ]]; then
