@@ -31,6 +31,9 @@ All notable changes to `gemstone-py` should be recorded here.
   repository codegen drift check from CI/pre-commit.
 - Added same-module cross-Protocol wrapper returns, generated `py.typed`
   markers, and `gemstone-codegen --clean` stale-wrapper cleanup.
+- Added generated `.pyi` stubs for wrapper packages so IDEs and type checkers
+  can consume the checked-in codegen output without inspecting implementation
+  details.
 - Added `gemstone-publish-verify`, an end-to-end PyPI/TestPyPI verifier for
   project JSON, version-specific JSON, simple index pages, and temporary
   virtualenv install smoke checks.

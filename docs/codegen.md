@@ -76,9 +76,10 @@ type checking predictable:
 git add examples/typed_access/codegen_demo/generated
 ```
 
-The generated package includes `py.typed` so type checkers treat the checked-in
-wrapper package as typed. `--clean` removes stale generated wrapper modules
-when a Protocol is renamed or deleted.
+The generated package includes `.pyi` stubs and `py.typed` so type checkers
+treat the checked-in wrapper package as typed. `--clean` removes stale
+generated wrapper modules and stale wrapper stubs when a Protocol is renamed or
+deleted.
 
 Use package generation for protocols that return other generated protocols.
 Single-class `generate_wrapper(...)` only has enough context to resolve
@@ -221,8 +222,8 @@ The first generator pass handles:
 - same-module cross-Protocol returns as lazily imported generated wrappers
 - string, integer, float, boolean, and `None` literals in class-side calls
 - explicit selector overrides with `@gemstone_selector(...)`
-- checked-in sync and async generated modules with `py.typed`, stale-file
-  cleanup, and CI/pre-commit drift checks
+- checked-in sync and async generated modules with `.pyi` stubs, `py.typed`,
+  stale-file cleanup, and CI/pre-commit drift checks
 - an opt-in live smoke test for generated wrappers against GemStone `Date`
 
 It does not marshal arbitrary Python objects into class-side source literals or

@@ -25,6 +25,9 @@ gemstone-codegen \
   --check
 ```
 
+The generated package includes runtime `.py` modules, matching `.pyi` stubs,
+and `py.typed` so editors and type checkers can read the wrapper contract.
+
 Use the generated sync wrapper:
 
 ```python

@@ -41,6 +41,7 @@ class GeneratedWrapper:
     class_name: str
     gemstone_class_name: str
     source: str
+    stub_source: str
     warnings: tuple[str, ...]
 
 
@@ -155,11 +156,18 @@ def _generate_wrapper_details(
         include_async=bool(getattr(protocol_cls, ASYNC_ATTR, False)),
         warnings=warnings,
     )
+    stub_source = _render_stub_source(
+        wrapper_name=wrapper_name,
+        properties=properties,
+        methods=methods,
+        include_async=bool(getattr(protocol_cls, ASYNC_ATTR, False)),
+    )
     return GeneratedWrapper(
         protocol_name=protocol_cls.__name__,
         class_name=wrapper_name,
         gemstone_class_name=gs_name,
         source=source,
+        stub_source=stub_source,
         warnings=warnings,
     )
 
@@ -203,6 +211,19 @@ def generate_package(
             check=check,
         )
     )
+    init_stub_path = output_path / "__init__.pyi"
+    init_stub_source = _render_package_init_stub(generated)
+    expected_paths.add(init_stub_path)
+    files.append(
+        _write_or_check(
+            protocol_name="__init__",
+            class_name="__init__",
+            path=init_stub_path,
+            source=init_stub_source,
+            warnings=(),
+            check=check,
+        )
+    )
     for wrapper in generated:
         path = output_path / f"{_to_snake(wrapper.class_name)}.py"
         expected_paths.add(path)
@@ -212,6 +233,18 @@ def generate_package(
                 class_name=wrapper.class_name,
                 path=path,
                 source=wrapper.source,
+                warnings=wrapper.warnings,
+                check=check,
+            )
+        )
+        stub_path = output_path / f"{_to_snake(wrapper.class_name)}.pyi"
+        expected_paths.add(stub_path)
+        files.append(
+            _write_or_check(
+                protocol_name=wrapper.protocol_name,
+                class_name=wrapper.class_name,
+                path=stub_path,
+                source=wrapper.stub_source,
                 warnings=wrapper.warnings,
                 check=check,
             )
@@ -561,6 +594,121 @@ def _render_source(
     return "\n".join(lines)
 
 
+def _render_stub_source(
+    *,
+    wrapper_name: str,
+    properties: Sequence[_PropertySpec],
+    methods: Sequence[_MethodSpec],
+    include_async: bool,
+) -> str:
+    stub_imports = _stub_imports(wrapper_name, methods, include_async=include_async)
+    lines = [
+        "from __future__ import annotations",
+        "",
+        "from typing import Any",
+        "",
+        "from gemstone_py import TypedOop",
+    ]
+    if stub_imports:
+        lines.append("")
+        for module_name, names in stub_imports:
+            lines.append(f"from .{module_name} import {', '.join(names)}")
+    lines.append("")
+    lines.extend(_render_stub_class(wrapper_name, properties, methods, async_class=False))
+    if include_async:
+        lines.append("")
+        lines.append("")
+        lines.extend(
+            _render_stub_class(
+                f"Async{wrapper_name}",
+                properties,
+                methods,
+                async_class=True,
+            )
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _stub_imports(
+    wrapper_name: str,
+    methods: Sequence[_MethodSpec],
+    *,
+    include_async: bool,
+) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    imports: dict[str, set[str]] = {}
+    for method in methods:
+        module_name = method.return_module_name
+        if method.return_kind != "oop_wrapper" or module_name is None:
+            continue
+        if method.return_wrapper_class == wrapper_name:
+            continue
+        names = imports.setdefault(module_name, set())
+        if method.return_wrapper_class is not None:
+            names.add(method.return_wrapper_class)
+        if include_async and method.return_async_wrapper_class is not None:
+            names.add(method.return_async_wrapper_class)
+    return tuple(
+        (module_name, tuple(sorted(names)))
+        for module_name, names in sorted(imports.items())
+    )
+
+
+def _render_stub_class(
+    class_name: str,
+    properties: Sequence[_PropertySpec],
+    methods: Sequence[_MethodSpec],
+    *,
+    async_class: bool,
+) -> list[str]:
+    lines = [
+        f"class {class_name}(TypedOop[Any]):",
+        "    __gemstone_class_name__: str",
+    ]
+    if not properties and not methods:
+        lines.append("    ...")
+        return lines
+    for prop in properties:
+        if async_class:
+            lines.append(
+                f"    async def {prop.python_name}(self) -> {prop.annotation}: ..."
+            )
+        else:
+            lines.append("    @property")
+            lines.append(f"    def {prop.python_name}(self) -> {prop.annotation}: ...")
+    for method in methods:
+        lines.extend(_render_stub_method(class_name, method, async_class=async_class))
+    return lines
+
+
+def _render_stub_method(
+    class_name: str,
+    method: _MethodSpec,
+    *,
+    async_class: bool,
+) -> list[str]:
+    args = ", ".join(f"{arg.python_name}: {arg.annotation}" for arg in method.args)
+    return_annotation = (
+        method.async_return_annotation if async_class else method.return_annotation
+    )
+    prefix = "async " if async_class else ""
+    lines: list[str] = []
+    if method.class_side:
+        signature_args = f"session: Any{', ' if args else ''}{args}"
+        lines.append("    @classmethod")
+        lines.append(
+            f"    {prefix}def {method.python_name}(cls, {signature_args}) "
+            f"-> {return_annotation}: ..."
+        )
+        return lines
+    signature_args = f"{', ' if args else ''}{args}"
+    lines.append(
+        f"    {prefix}def {method.python_name}(self{signature_args}) "
+        f"-> {return_annotation}: ..."
+    )
+    return lines
+
+
 def _type_checking_imports(
     wrapper_name: str,
     methods: Sequence[_MethodSpec],
@@ -846,10 +994,28 @@ def _render_package_init(wrappers: Sequence[GeneratedWrapper]) -> str:
         names = [wrapper.class_name]
         if f"class Async{wrapper.class_name}(" in wrapper.source:
             names.append(f"Async{wrapper.class_name}")
-        lines.append(f"from .{module_name} import {', '.join(sorted(names))}")
+        for name in sorted(names):
+            lines.append(f"from .{module_name} import {name} as {name}")
         public_names.extend(names)
     lines.append("")
     lines.append(f"__all__ = {public_names!r}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _render_package_init_stub(wrappers: Sequence[GeneratedWrapper]) -> str:
+    lines = ["from __future__ import annotations", ""]
+    public_names: list[str] = []
+    for wrapper in wrappers:
+        module_name = _to_snake(wrapper.class_name)
+        names = [wrapper.class_name]
+        if f"class Async{wrapper.class_name}(" in wrapper.source:
+            names.append(f"Async{wrapper.class_name}")
+        for name in sorted(names):
+            lines.append(f"from .{module_name} import {name} as {name}")
+        public_names.extend(names)
+    lines.append("")
+    lines.append("__all__: list[str]")
     lines.append("")
     return "\n".join(lines)
 
@@ -881,10 +1047,16 @@ def _write_or_check(
 def _remove_stale_generated_files(output_path: Path, expected_paths: set[Path]) -> None:
     if not output_path.exists():
         return
-    for path in output_path.glob("*.py"):
+    for pattern in ("*.py", "*.pyi"):
+        for path in output_path.glob(pattern):
+            if path in expected_paths:
+                continue
+            if _is_generated_wrapper_file(path):
+                path.unlink()
+    for path in output_path.glob("*.typed"):
         if path in expected_paths:
             continue
-        if _is_generated_wrapper_file(path):
+        if path.name == "py.typed":
             path.unlink()
 
 

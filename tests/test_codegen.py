@@ -220,6 +220,13 @@ class CodegenTests(unittest.TestCase):
                 '"""\n',
                 encoding="utf-8",
             )
+            stale_stub = output / "stale.pyi"
+            stale_stub.write_text(
+                '"""Generated GemStone wrappers.\n\n'
+                "Regenerate with `gemstone-codegen`; do not edit by hand.\n"
+                '"""\n',
+                encoding="utf-8",
+            )
             sys.path.insert(0, str(root))
             try:
                 files = generate_package("models", output, clean=True)
@@ -239,9 +246,13 @@ class CodegenTests(unittest.TestCase):
         self.assertTrue(all(file.up_to_date for file in files))
         self.assertTrue(all(file.up_to_date for file in checked))
         self.assertTrue(any(file.path.name == "invoice.py" for file in files))
+        self.assertTrue(any(file.path.name == "invoice.pyi" for file in files))
         self.assertTrue(any(file.path.name == "customer.py" for file in files))
+        self.assertTrue(any(file.path.name == "customer.pyi" for file in files))
+        self.assertTrue(any(file.path.name == "__init__.pyi" for file in files))
         self.assertTrue(any(file.path.name == "py.typed" for file in files))
         self.assertFalse(stale.exists())
+        self.assertFalse(stale_stub.exists())
         self.assertTrue(buyer_is_customer)
         self.assertEqual(buyer_oop, 0xB01)
 
