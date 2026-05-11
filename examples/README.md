@@ -15,6 +15,17 @@ Then use the broader examples as a cookbook. The import paths are stable and
 are referenced by tests and docs, so the examples stay in their current
 directories rather than being moved under a physical `cookbook/` package.
 
+For a fresh stone, initialize the GemStone-side roots used by the persistence
+helpers before exploring the larger examples:
+
+```bash
+gemstone-bootstrap --status
+gemstone-bootstrap
+```
+
+The command creates missing `GStoreRoot` and `GSQueryRoot` entries under
+`UserGlobals` without replacing existing application data.
+
 ## Example Map
 
 | Role | Path | Use it when |

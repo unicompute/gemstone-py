@@ -129,6 +129,8 @@ Installed demo commands:
 ```bash
 gemstone-benchmark-baseline-register
 gemstone-benchmarks
+gemstone-bootstrap --status
+gemstone-bootstrap
 gemstone-hello
 gemstone-smalltalk-demo
 gemstone-examples hello
@@ -149,6 +151,18 @@ python -m examples.lifetime.managed_oop_handles
 python -m examples.native_backend.check_backend
 python -m examples.fastapi.run --reload
 ```
+
+If you want to initialize the GemStone-side roots used by the higher-level
+helpers before running examples, use the packaged bootstrap command:
+
+```bash
+gemstone-bootstrap --status
+gemstone-bootstrap
+```
+
+The command is idempotent. It creates missing `UserGlobals` entries for
+`GStoreRoot`, `GSQueryRoot`, and `GemstonePyBootstrapVersion`, and it leaves
+existing application data in place.
 
 The repository also includes a companion VS Code extension scaffold under
 [`vscode-gemstone-py-workbench/`](vscode-gemstone-py-workbench/). It adds a

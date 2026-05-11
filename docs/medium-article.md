@@ -106,6 +106,18 @@ with gemstone.GemStoneSession(config=config) as session:
     print(version)  # 'GemStone/S 64 Bit 3.7.5 ...'
 ```
 
+For a fresh or shared stone, you can audit and initialize the GemStone-side
+roots used by the higher-level helpers:
+
+```bash
+gemstone-bootstrap --status
+gemstone-bootstrap
+```
+
+The bootstrap is idempotent. It creates missing `UserGlobals` entries for
+`GStoreRoot`, `GSQueryRoot`, and `GemstonePyBootstrapVersion`, and it leaves
+existing roots untouched.
+
 For remote stones:
 
 ```python

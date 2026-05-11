@@ -149,6 +149,7 @@ gemstone-hello
 gemstone-smalltalk-demo
 gemstone-examples hello
 gemstone-examples smalltalk-demo
+gemstone-bootstrap --status
 gemstone-benchmarks --help
 ```
 
@@ -166,10 +167,38 @@ What they are good for:
   Basic bridge demo that is easy to reason about.
 - `gemstone-examples ...`
   A stable wrapper for the example entry points.
+- `gemstone-bootstrap --status`
+  Checks whether the GemStone-side helper roots are already present.
 - `gemstone-benchmarks`
   The maintained benchmark lane, distinct from the teaching examples.
 - `examples.native_backend.check_backend`
   Shows whether the current process selected ctypes or the optional native GCI backend.
+
+## GemStone-Side Bootstrap
+
+Most helpers create their own GemStone-side roots lazily, but an explicit
+bootstrap step is useful for new stones, shared demo stones, and onboarding
+checks. The packaged command ships a small Smalltalk file and evaluates it once
+against the configured stone:
+
+```bash
+gemstone-bootstrap --status
+gemstone-bootstrap --dry-run
+gemstone-bootstrap
+```
+
+The command creates missing helper roots and writes a bootstrap version marker:
+
+| Key | Class | Used by |
+| --- | --- | --- |
+| `GemstonePyBootstrapVersion` | `String` | Bootstrap/version audit |
+| `GStoreRoot` | `StringKeyValueDictionary` | `gemstone_py.gstore.GStore` |
+| `GSQueryRoot` | `Dictionary` | `gemstone_py.gsquery.GSCollection` |
+
+It does not replace existing helper roots. If your stone already has
+`GStoreRoot` or `GSQueryRoot`, the command reports them as present and leaves
+them untouched. `ObjectLogEntry objectLog` is checked as a GemStone built-in
+object log, not created by the bootstrap script.
 
 ## Transaction Policy: Read This Early
 

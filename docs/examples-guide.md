@@ -54,6 +54,18 @@ python -m examples.misc.smalltalk_demo
 python -m examples.async_features.session_root_and_collection
 ```
 
+For a fresh or shared stone, you can also audit and initialize the GemStone-side
+roots that the persistence helpers use:
+
+```bash
+gemstone-bootstrap --status
+gemstone-bootstrap
+```
+
+That initializes `GStoreRoot` for `GStore`, `GSQueryRoot` for `GSCollection`,
+and a `GemstonePyBootstrapVersion` marker. It is safe to rerun because it does
+not replace existing roots.
+
 For a normal installed package:
 
 ```bash
