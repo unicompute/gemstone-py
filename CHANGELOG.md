@@ -26,6 +26,8 @@ All notable changes to `gemstone-py` should be recorded here.
   adapter docs showing how to build new adapters on `gemstone_py.web_core`.
 - Added `gemstone-examples list`, `gemstone-examples litestar`, and
   `examples/cookbook/` as a stable index for the broader example set.
+- Added a top-level two-minute README start path and made `gemstone_py.cli`
+  executable through `python -m gemstone_py.cli`.
 - Added chunked `GSCollection.iter(...)`, `search_iter(...)`, typed
   `Query.iter(...)`, and async iterator equivalents for large result sets.
 - Made `GSCollection.search()`, `GSCollection.all()`, and typed `Query.all()`

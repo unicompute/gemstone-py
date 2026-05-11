@@ -179,3 +179,7 @@ def hello_entry() -> None:
 def smalltalk_demo_entry() -> None:
     """Console-script wrapper for `gemstone-smalltalk-demo`."""
     raise SystemExit(smalltalk_demo_main())
+
+
+if __name__ == "__main__":
+    main_entry()

@@ -2,6 +2,24 @@
 
 `gemstone-py` is a direct Python bridge to GemStone/S over GCI, plus a set of translated persistence helpers and plain-GemStone session utilities.
 
+## Two-Minute Start
+
+```bash
+python3 -m pip install gemstone-py
+export GS_STONE=gs64stone GS_STONE_NAME=gs64stone
+export GS_USERNAME=DataCurator GS_PASSWORD=swordfish
+gemstone-examples quickstart
+gemstone-examples list
+```
+
+What this does: opens a GemStone session, evaluates `3 + 4`, writes a small
+value under `UserGlobals`, and shows the curated example map.
+
+For production setup, start with [session providers](#web-request-sessions),
+[observability](docs/observability.md), and the [FastAPI](#asyncsession-and-fastapi)
+or [Litestar](#asyncsession-and-fastapi) request examples. For task-focused
+examples, use [`examples/cookbook/`](examples/cookbook/).
+
 The repository has a single canonical package import path:
 
 ```python
