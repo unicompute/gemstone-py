@@ -181,7 +181,30 @@ def gemstone_health():
 
 Operational visibility is better than optimism.
 
-## Recipe 14: Open an Async Session
+## Recipe 14: Build a Custom Web Adapter
+
+```python
+from gemstone_py import GemStoneConfig, RequestScope, TransactionPolicy
+from gemstone_py.web import GemStoneSessionPool
+
+pool = GemStoneSessionPool(maxsize=4, config=GemStoneConfig.from_env())
+
+scope = RequestScope(
+    session_provider=pool,
+    transaction_policy=TransactionPolicy.COMMIT_ON_SUCCESS,
+)
+session = scope.session()
+try:
+    session.eval("3 + 4")
+finally:
+    scope.finalize()
+```
+
+`RequestScope` is the framework-neutral sync lifecycle primitive behind Flask
+request sessions. For async frameworks, pair `AsyncRequestScope` with
+`AsyncSessionPool` and await `scope.finalize(...)` from request cleanup.
+
+## Recipe 15: Open an Async Session
 
 ```python
 from gemstone_py import GemStoneConfig
@@ -195,7 +218,7 @@ async with AsyncSession.connect(config=config) as session:
 
 Use this when the surrounding application is already async.
 
-## Recipe 15: Use an Async Transaction
+## Recipe 16: Use an Async Transaction
 
 ```python
 async with AsyncSession.connect(config=config) as session:
@@ -206,7 +229,7 @@ async with AsyncSession.connect(config=config) as session:
 
 The transaction context commits on success and aborts on exception.
 
-## Recipe 16: Add FastAPI Dependency Injection
+## Recipe 17: Add FastAPI Dependency Injection
 
 ```python
 from fastapi import Depends, FastAPI
@@ -222,7 +245,7 @@ async def gemstone_health(session: AsyncSession = Depends(get_gemstone)):
     return {"result": await session.eval("3 + 4")}
 ```
 
-## Recipe 17: Query With a Typed Protocol
+## Recipe 18: Query With a Typed Protocol
 
 ```python
 from typing import Protocol
@@ -240,7 +263,7 @@ for post in posts.where(lambda row: row.status == "published").all():
 The lambda records an indexed GemStone path. It is not called for every row in
 Python.
 
-## Recipe 18: Generate a Typed Smalltalk Wrapper
+## Recipe 19: Generate a Typed Smalltalk Wrapper
 
 ```python
 from typing import Protocol
@@ -278,7 +301,7 @@ print(booking.status)
 booking.mark_paid(1_779_912_000)
 ```
 
-## Recipe 19: Keep an OOP Alive Explicitly
+## Recipe 20: Keep an OOP Alive Explicitly
 
 ```python
 with GemStoneSession(config=config) as session:
@@ -295,7 +318,7 @@ with session.handle(raw_oop) as handle:
     print(handle.send("printString"))
 ```
 
-## Recipe 20: Check the Native Backend
+## Recipe 21: Check the Native Backend
 
 ```bash
 python -m pip install "gemstone-py[fast]"
@@ -309,7 +332,7 @@ GEMSTONE_PY_GCI_BACKEND=ctypes python -m examples.native_backend.check_backend
 GEMSTONE_PY_GCI_BACKEND=native python -m examples.native_backend.check_backend
 ```
 
-## Recipe 21: Run the Maintained Benchmarks
+## Recipe 22: Run the Maintained Benchmarks
 
 ```bash
 gemstone-benchmarks --entries 500 --search-runs 20
@@ -321,7 +344,7 @@ Or emit JSON:
 gemstone-benchmarks --json --output benchmark-report.json
 ```
 
-## Recipe 22: Compare Benchmark Reports
+## Recipe 23: Compare Benchmark Reports
 
 ```bash
 gemstone-benchmark-compare old.json new.json --json --output compare.json
@@ -329,7 +352,7 @@ gemstone-benchmark-compare old.json new.json --json --output compare.json
 
 That turns performance arguments into evidence, which is disappointingly healthy.
 
-## Recipe 23: Register a New Accepted Benchmark Baseline
+## Recipe 24: Register a New Accepted Benchmark Baseline
 
 ```bash
 gemstone-benchmark-baseline-register \
@@ -337,7 +360,7 @@ gemstone-benchmark-baseline-register \
   --manifest .github/benchmarks/index.json
 ```
 
-## Recipe 24: Verify the Installed Artifact
+## Recipe 25: Verify the Installed Artifact
 
 ```bash
 python -m gemstone_py.api_contract --json
@@ -355,7 +378,7 @@ gemstone-publish-verify --gemstone-version 0.2.10 --native-version 0.1.2
 That command checks project JSON, version-specific JSON, the simple index, and
 temporary-virtualenv installs for both the pure package and native package.
 
-## Recipe 25: Scaffold and Run Module-Style Migrations
+## Recipe 26: Scaffold and Run Module-Style Migrations
 
 Create a numbered migration file:
 
@@ -453,7 +476,7 @@ gemstone-migrations diff-class OkzBooking \
 The output lists missing and extra instance variables and prints advisory
 `session.eval(...)` lines for a reviewed migration.
 
-## Recipe 26: Run the Live Test Lane
+## Recipe 27: Run the Live Test Lane
 
 ```bash
 GS_RUN_LIVE=1 ./scripts/run_live_checks.sh
@@ -465,7 +488,7 @@ Longer soak run:
 GS_RUN_LIVE=1 GS_RUN_LIVE_SOAK=1 ./scripts/run_live_checks.sh
 ```
 
-## Recipe 27: Handle Commit Conflicts Without Pretending They Are Rare
+## Recipe 28: Handle Commit Conflicts Without Pretending They Are Rare
 
 When multiple sessions modify overlapping state, conflicts are normal. The right
 pattern:
@@ -498,13 +521,13 @@ Rules:
 - bound the retry count — do not loop forever
 - log conflicts — frequent conflicts signal a design smell, not bad luck
 
-## Recipe 28: Learn a Queue With a Hat
+## Recipe 29: Learn a Queue With a Hat
 
 The hat trick example is memorable because it teaches a real primitive through a
 slightly ridiculous scenario. You should keep more examples like that in your
 own codebase than you probably do.
 
-## Recipe 29: Explain `gemstone-py` to a New Teammate
+## Recipe 30: Explain `gemstone-py` to a New Teammate
 
 Use this sentence:
 

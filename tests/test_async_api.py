@@ -405,7 +405,25 @@ class FastAPIDependencyTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(StopAsyncIteration):
             await generator.__anext__()
 
-        self.assertEqual(created[0].calls, ["login", "commit", "exit", "logout"])
+        self.assertEqual(created[0].calls, ["login", "commit", "logout"])
+
+    async def test_session_dependency_aborts_after_handler_error(self):
+        created = []
+
+        def factory(**kwargs):
+            session = FakeGemStoneSession(**kwargs)
+            created.append(session)
+            return session
+
+        dependency = session_dependency(session_factory=factory)
+        generator = dependency()
+        session = await generator.__anext__()
+        self.assertIsInstance(session, AsyncSession)
+
+        with self.assertRaises(RuntimeError):
+            await generator.athrow(RuntimeError("boom"))
+
+        self.assertEqual(created[0].calls, ["login", "abort", "logout"])
 
 
 if __name__ == "__main__":

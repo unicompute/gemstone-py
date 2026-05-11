@@ -71,6 +71,16 @@ from .web import (
     session_scope,
     warm_flask_request_session_provider,
 )
+from .web_core import (
+    AsyncRequestScope,
+    AsyncSessionProvider,
+    AsyncTransactionScope,
+    RequestScope,
+    SessionProvider,
+    TransactionFinalization,
+    TransactionScope,
+    request_failed,
+)
 
 _LAZY_EXPORTS = {
     "aio": "gemstone_py.aio",
@@ -95,6 +105,7 @@ _LAZY_EXPORTS = {
     "release_metadata": "gemstone_py.release_metadata",
     "session_facade": "gemstone_py.session_facade",
     "smalltalk_bridge": "gemstone_py.smalltalk_bridge",
+    "web_core": "gemstone_py.web_core",
 }
 
 
@@ -125,6 +136,9 @@ __all__ = [
     "GemStoneSessionProviderSnapshot",
     "GemStoneSessionPoolStats",
     "GemStoneThreadLocalSessionProvider",
+    "AsyncRequestScope",
+    "AsyncSessionProvider",
+    "AsyncTransactionScope",
     "ClassDescription",
     "GemStoneClassWrapper",
     "GemStoneObjectProxy",
@@ -148,11 +162,15 @@ __all__ = [
     "OopHandle",
     "OpenTelemetryTracer",
     "PrometheusMetrics",
+    "RequestScope",
+    "SessionProvider",
     "Span",
     "SpanContext",
     "Tracer",
+    "TransactionFinalization",
     "TypedOop",
     "PersistentRoot",
+    "TransactionScope",
     "TransactionPolicy",
     "_is_smallint",
     "_python_to_smallint",
@@ -183,4 +201,6 @@ __all__ = [
     "session_scope",
     "typed_oop",
     "warm_flask_request_session_provider",
+    "web_core",
+    "request_failed",
 ]

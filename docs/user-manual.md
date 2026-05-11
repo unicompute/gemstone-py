@@ -568,6 +568,14 @@ The main pieces are:
 - `GemStoneSessionPool`
 - `GemStoneThreadLocalSessionProvider`
 - `session_scope(...)`
+- `gemstone_py.web_core.RequestScope`
+- `gemstone_py.web_core.AsyncRequestScope`
+
+The Flask and FastAPI adapters now share `gemstone_py.web_core`, a
+framework-neutral lifecycle layer. `RequestScope` and `AsyncRequestScope` own
+the lazy session acquisition, commit-or-abort decision, and provider release or
+logout path. Use those primitives when adding another framework adapter instead
+of copying Flask teardown code.
 
 ### One Session Per Request
 
@@ -645,6 +653,31 @@ Use this when your web stack is async-first. Use the Flask integration when your
 application is Flask-first.
 
 The runnable repository example is `examples/fastapi/app.py`.
+
+### Adapter Core
+
+For a custom sync framework, keep one `RequestScope` in request-local state and
+finalize it during teardown:
+
+```python
+from gemstone_py import GemStoneConfig, RequestScope, TransactionPolicy
+from gemstone_py.web import GemStoneSessionPool
+
+pool = GemStoneSessionPool(maxsize=4, config=GemStoneConfig.from_env())
+
+scope = RequestScope(
+    session_provider=pool,
+    transaction_policy=TransactionPolicy.COMMIT_ON_SUCCESS,
+)
+session = scope.session()
+try:
+    session.eval("3 + 4")
+finally:
+    scope.finalize()
+```
+
+For an async framework, use `AsyncRequestScope` with `AsyncSessionPool` and
+await `scope.finalize(...)` from the framework's request cleanup hook.
 
 ## Benchmarks and Build Lanes
 

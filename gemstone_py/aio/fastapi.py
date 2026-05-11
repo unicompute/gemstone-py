@@ -8,6 +8,7 @@ from typing import Any, Callable, cast
 from gemstone_py.aio import AsyncSession
 from gemstone_py.aio.pool import AsyncSessionPool
 from gemstone_py.client import GemStoneConfig, TransactionPolicy
+from gemstone_py.web_core import AsyncRequestScope, AsyncSessionProvider
 
 
 def session_dependency(
@@ -23,13 +24,26 @@ def session_dependency(
     """
 
     async def get_session() -> AsyncIterator[AsyncSession]:
-        async with AsyncSession.connect(
-            transaction_policy=TransactionPolicy.MANUAL,
-            **session_kwargs,
-        ) as session:
+        scope = AsyncRequestScope(
+            session_factory=AsyncSession.connect,
+            session_kwargs={
+                **session_kwargs,
+                "transaction_policy": TransactionPolicy.MANUAL,
+            },
+            transaction_policy=(
+                TransactionPolicy.COMMIT_ON_SUCCESS
+                if commit_on_success
+                else TransactionPolicy.MANUAL
+            ),
+        )
+        try:
+            session = await scope.session()
             yield session
-            if commit_on_success:
-                await session.commit()
+        except Exception as exc:
+            await scope.finalize(exc)
+            raise
+        else:
+            await scope.finalize()
 
     return get_session
 
@@ -53,23 +67,22 @@ def pool_session_dependency(
     """
 
     async def get_pooled_session() -> AsyncIterator[AsyncSession]:
-        session = await pool.acquire()
-        clean = False
-        discard = False
+        scope = AsyncRequestScope(
+            session_provider=cast(AsyncSessionProvider[AsyncSession], pool),
+            transaction_policy=(
+                TransactionPolicy.COMMIT_ON_SUCCESS
+                if commit_on_success
+                else TransactionPolicy.MANUAL
+            ),
+        )
         try:
+            session = await scope.session()
             yield session
-            if commit_on_success:
-                await session.commit()
-                clean = True
-        except Exception:
-            try:
-                await session.abort()
-                clean = True
-            except Exception:
-                discard = True
+        except Exception as exc:
+            await scope.finalize(exc)
             raise
-        finally:
-            await pool.release(session, discard=discard, clean=clean)
+        else:
+            await scope.finalize()
 
     return get_pooled_session
 
@@ -108,20 +121,29 @@ class GemStoneSessionMiddleware:
                 response_status = int(message.get("status", 500))
             await send(message)
 
-        async with AsyncSession.connect(
-            transaction_policy=TransactionPolicy.MANUAL,
-            **self.session_kwargs,
-        ) as session:
-            state = scope.setdefault("state", {})
-            state[self.state_key] = session
-            try:
-                await self.app(scope, receive, tracking_send)
-                if self.commit_on_success and (response_status is None or response_status < 500):
-                    await session.commit()
-                else:
-                    await session.abort()
-            finally:
-                state.pop(self.state_key, None)
+        request_scope = AsyncRequestScope(
+            session_factory=AsyncSession.connect,
+            session_kwargs={
+                **self.session_kwargs,
+                "transaction_policy": TransactionPolicy.MANUAL,
+            },
+            transaction_policy=(
+                TransactionPolicy.COMMIT_ON_SUCCESS
+                if self.commit_on_success
+                else TransactionPolicy.ABORT_ON_EXIT
+            ),
+        )
+        state = scope.setdefault("state", {})
+        state[self.state_key] = await request_scope.session()
+        try:
+            await self.app(scope, receive, tracking_send)
+        except Exception as exc:
+            await request_scope.finalize(exc)
+            raise
+        else:
+            await request_scope.finalize(response_status=response_status)
+        finally:
+            state.pop(self.state_key, None)
 
 
 def install_fastapi_session(

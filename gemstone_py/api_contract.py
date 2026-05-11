@@ -47,6 +47,17 @@ CORE_EXPORTS: dict[str, tuple[str, str]] = {
     "Span": ("gemstone_py.observability", "Span"),
     "SpanContext": ("gemstone_py.observability", "SpanContext"),
     "Tracer": ("gemstone_py.observability", "Tracer"),
+    "AsyncRequestScope": ("gemstone_py.web_core", "AsyncRequestScope"),
+    "AsyncSessionProvider": ("gemstone_py.web_core", "AsyncSessionProvider"),
+    "AsyncTransactionScope": ("gemstone_py.web_core", "AsyncTransactionScope"),
+    "RequestScope": ("gemstone_py.web_core", "RequestScope"),
+    "SessionProvider": ("gemstone_py.web_core", "SessionProvider"),
+    "TransactionFinalization": (
+        "gemstone_py.web_core",
+        "TransactionFinalization",
+    ),
+    "TransactionScope": ("gemstone_py.web_core", "TransactionScope"),
+    "request_failed": ("gemstone_py.web_core", "request_failed"),
     "GemStoneSessionPool": ("gemstone_py.web", "GemStoneSessionPool"),
     "GemStoneSessionProvider": ("gemstone_py.web", "GemStoneSessionProvider"),
     "GemStoneSessionProviderEvent": ("gemstone_py.web", "GemStoneSessionProviderEvent"),
@@ -96,6 +107,7 @@ MODULE_EXPORTS: dict[str, str] = {
     "observability": "gemstone_py.observability",
     "release_metadata": "gemstone_py.release_metadata",
     "session_facade": "gemstone_py.session_facade",
+    "web_core": "gemstone_py.web_core",
 }
 
 

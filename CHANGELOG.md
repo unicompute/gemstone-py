@@ -12,6 +12,9 @@ All notable changes to `gemstone-py` should be recorded here.
   sweeping that never evicts checked-out sessions.
 - Added `AsyncSessionPool` and FastAPI `pool_session_dependency(...)` for
   pool-backed async request handling.
+- Added `gemstone_py.web_core` with framework-neutral sync/async request
+  scopes, transaction finalizers, and provider protocols, and moved Flask and
+  FastAPI request cleanup through the shared lifecycle core.
 - Added chunked `GSCollection.iter(...)`, `search_iter(...)`, typed
   `Query.iter(...)`, and async iterator equivalents for large result sets.
 - Made `GSCollection.search()`, `GSCollection.all()`, and typed `Query.all()`

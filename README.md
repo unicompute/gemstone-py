@@ -568,6 +568,28 @@ Use `warm_flask_request_session_provider(app)` to pre-create pool sessions
 manually, and `close_flask_request_session_provider(app)` during server
 shutdown when you manage lifecycle explicitly.
 
+The Flask helpers and FastAPI helpers share the framework-neutral
+`gemstone_py.web_core` lifecycle primitives. If you are writing another adapter,
+build around `RequestScope` or `AsyncRequestScope` instead of copying Flask
+teardown code:
+
+```python
+from gemstone_py import GemStoneConfig, RequestScope, TransactionPolicy
+from gemstone_py.web import GemStoneSessionPool
+
+pool = GemStoneSessionPool(maxsize=4, config=GemStoneConfig.from_env())
+
+scope = RequestScope(
+    session_provider=pool,
+    transaction_policy=TransactionPolicy.COMMIT_ON_SUCCESS,
+)
+session = scope.session()
+try:
+    session.eval("3 + 4")
+finally:
+    scope.finalize()
+```
+
 ## Observability
 
 For GCI-level tracing, metrics, and slow-operation logs, configure the session

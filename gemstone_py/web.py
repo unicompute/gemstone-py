@@ -12,6 +12,7 @@ from typing import Any, Callable, Iterator, Optional
 
 from .client import GemStoneSession, TransactionPolicy
 from .observability import NULL_METRICS, NULL_TRACER, MetricsCollector, Tracer
+from .web_core import RequestScope, TransactionScope
 
 __all__ = [
     "GemStoneSessionProviderEvent",
@@ -37,6 +38,7 @@ _FLASK_REQUEST_SESSION_ATTR = "_gemstone_request_session"
 _FLASK_REQUEST_SESSION_PROVIDER_ATTR = "_gemstone_request_session_provider"
 _FLASK_REQUEST_SESSION_POOL_ATTR = _FLASK_REQUEST_SESSION_PROVIDER_ATTR
 _FLASK_REQUEST_SESSION_RESPONSE_STATUS_ATTR = "_gemstone_request_session_response_status"
+_FLASK_REQUEST_SESSION_SCOPE_ATTR = "_gemstone_request_session_scope"
 
 
 @dataclass(frozen=True)
@@ -1021,6 +1023,7 @@ def _clear_flask_request_session_state(flask_g: Any) -> None:
         _FLASK_REQUEST_SESSION_PROVIDER_ATTR,
         _FLASK_REQUEST_SESSION_POOL_ATTR,
         _FLASK_REQUEST_SESSION_RESPONSE_STATUS_ATTR,
+        _FLASK_REQUEST_SESSION_SCOPE_ATTR,
     ):
         try:
             delattr(flask_g, attr_name)
@@ -1176,17 +1179,35 @@ def _get_or_create_flask_request_session(**kwargs: Any) -> Optional[GemStoneSess
     )
     if session is not None:
         return session
+    scope: RequestScope[GemStoneSession] | None = getattr(
+        flask_g,
+        _FLASK_REQUEST_SESSION_SCOPE_ATTR,
+        None,
+    )
+    if scope is not None:
+        session = scope.session()
+        setattr(flask_g, _FLASK_REQUEST_SESSION_ATTR, session)
+        return session
 
     session_provider = config.get("session_provider") or config.get("session_pool")
     if session_provider is not None:
-        session = session_provider.acquire()
+        scope = RequestScope(
+            session_provider=session_provider,
+            transaction_policy=TransactionPolicy.COMMIT_ON_SUCCESS,
+        )
+        session = scope.session()
         setattr(flask_g, _FLASK_REQUEST_SESSION_PROVIDER_ATTR, session_provider)
     else:
         options = dict(config.get("kwargs", {}))
         options.update(kwargs)
         options["transaction_policy"] = TransactionPolicy.MANUAL
-        session = GemStoneSession(**options)
-        session.login()
+        scope = RequestScope(
+            session_factory=GemStoneSession,
+            session_kwargs=options,
+            transaction_policy=TransactionPolicy.COMMIT_ON_SUCCESS,
+        )
+        session = scope.session()
+    setattr(flask_g, _FLASK_REQUEST_SESSION_SCOPE_ATTR, scope)
     setattr(flask_g, _FLASK_REQUEST_SESSION_ATTR, session)
     return session
 
@@ -1211,34 +1232,34 @@ def finalize_flask_request_session(exc: Optional[BaseException] = None) -> None:
         getattr(flask_g, _FLASK_REQUEST_SESSION_PROVIDER_ATTR, None)
         or getattr(flask_g, _FLASK_REQUEST_SESSION_POOL_ATTR, None)
     )
-    discard = False
-    clean = False
+    scope: RequestScope[GemStoneSession] | None = getattr(
+        flask_g,
+        _FLASK_REQUEST_SESSION_SCOPE_ATTR,
+        None,
+    )
     try:
-        if exc is None:
-            try:
-                session.commit()
-                clean = True
-            except Exception:
-                try:
-                    session.abort()
-                    clean = True
-                except Exception:
-                    discard = True
-                raise
+        if scope is not None:
+            scope.finalize(exc)
         else:
+            transaction = TransactionScope(
+                session,
+                transaction_policy=TransactionPolicy.COMMIT_ON_SUCCESS,
+            )
+            outcome = transaction.last_outcome
             try:
-                session.abort()
-                clean = True
-            except Exception:
-                discard = True
+                outcome = transaction.finalize(exc)
+            finally:
+                outcome = transaction.last_outcome if outcome.action == "none" else outcome
+                if session_provider is not None:
+                    session_provider.release(
+                        session,
+                        discard=outcome.discard,
+                        clean=outcome.clean,
+                    )
+                else:
+                    session.logout()
     finally:
-        try:
-            if session_provider is not None:
-                session_provider.release(session, discard=discard, clean=clean)
-            else:
-                session.logout()
-        finally:
-            _clear_flask_request_session_state(flask_g)
+        _clear_flask_request_session_state(flask_g)
 
 
 def install_flask_request_session(
@@ -1413,26 +1434,18 @@ def session_scope(
         **kwargs,
     )
     if provider is not None:
-        pooled_session = provider.acquire()
-        discard = False
-        clean = False
+        scope = RequestScope(
+            session_provider=provider,
+            transaction_policy=policy,
+        )
         try:
+            pooled_session = scope.session()
             yield pooled_session
-            if policy is TransactionPolicy.COMMIT_ON_SUCCESS:
-                pooled_session.commit()
-                clean = True
-            elif policy is TransactionPolicy.ABORT_ON_EXIT:
-                pooled_session.abort()
-                clean = True
-        except Exception:
-            try:
-                pooled_session.abort()
-                clean = True
-            except Exception:
-                discard = True
+        except Exception as exc:
+            scope.finalize(exc)
             raise
-        finally:
-            provider.release(pooled_session, discard=discard, clean=clean)
+        else:
+            scope.finalize()
         return
 
     with GemStoneSession(transaction_policy=policy, **kwargs) as new_session:
