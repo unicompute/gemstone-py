@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.4
+
+- Fixed the Marketplace README logo URL so it resolves through the
+  `vscode-gemstone-py-workbench/media/` directory instead of the repository
+  root.
+
 ## 0.3.3
 
 - Replaced the Marketplace icon with a 128x128 shrink of the current green
