@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.3
+
+- Replaced the Marketplace icon with a 128x128 shrink of the current green
+  gemstone graphic and bundled the README logo as a packaged media asset.
+
 ## 0.3.2
 
 - Normalized the Marketplace extension icon to an 8-bit 128x128 PNG so the
