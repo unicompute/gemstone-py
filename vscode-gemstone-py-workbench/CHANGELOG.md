@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2
+
+- Normalized the Marketplace extension icon to an 8-bit 128x128 PNG so the
+  public listing renders the emerald logo instead of the default icon.
+
 ## 0.3.1
 
 - Added Codegen workbench screenshots to the public README for the Command
