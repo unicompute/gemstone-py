@@ -1,0 +1,16 @@
+[workspace]
+members = [
+  "crates/gemstone-gci",
+]
+exclude = ["gemstone-py-native"]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+homepage = "https://github.com/unicompute/gemstone-py"
+repository = "https://github.com/unicompute/gemstone-py"
+
+[workspace.dependencies]
+gemstone-gci = { path = "crates/gemstone-gci" }
+libloading = "0.8"

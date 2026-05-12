@@ -13,5 +13,7 @@ name = "gemstone_py_native_gci"
 crate-type = ["cdylib"]
 
 [dependencies]
-libloading = "0.8"
+gemstone-gci = { path = "../crates/gemstone-gci" }
 pyo3 = { version = "0.28", features = ["abi3-py311", "extension-module"] }
+
+[workspace]

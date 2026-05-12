@@ -161,6 +161,7 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertIn("branches:", content)
         self.assertIn('"**"', content)
         self.assertIn("gemstone-py-native/**", content)
+        self.assertIn("crates/**", content)
         for platform in [
             "linux-x86_64",
             "linux-aarch64",

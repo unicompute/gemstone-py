@@ -84,7 +84,42 @@ python -c "from gemstone_py import _gci; print(_gci.IMPLEMENTATION)"
 ```
 
 The native package source lives in `gemstone-py-native/` and builds the
-`gemstone_py_native._gci` PyO3 extension with `maturin`.
+`gemstone_py_native._gci` PyO3 extension with `maturin`. The low-level
+`gemstone-gci` crate remains under `crates/` so the native Python wheels and
+sdists are self-contained.
+
+Direct Rust applications should use the separate `gemstone-rs` workspace. When
+checked out beside this repository, it lives at `../gemstone-rs`. The Cargo
+package is named `gemstone-rs`; Rust code imports it as `gemstone_rs`. See
+[Rust Client](docs/rust-client.md) for the longer guide.
+
+```rust
+use gemstone_rs::{Config, Session};
+
+fn main() -> gemstone_rs::Result<()> {
+    let config = Config::from_env()?;
+    let mut session = Session::login(config)?;
+    let value = session.eval("3 + 4")?;
+    println!("{value:?}");
+    session.logout()?;
+    Ok(())
+}
+```
+
+Run the Rust example from a source checkout with:
+
+```bash
+cd ../gemstone-rs
+cargo run -p gemstone-rs --example eval
+```
+
+Run the direct Rust live smoke test with a configured stone:
+
+```bash
+cd ../gemstone-rs
+GS_RUN_LIVE_RUST=1 cargo test -p gemstone-rs live_eval_smoke_returns_seven_when_enabled
+```
+
 When the native package is installed, `gemstone_py` uses it automatically.
 Set `GEMSTONE_PY_GCI_BACKEND=ctypes` or `GEMSTONE_PY_GCI_BACKEND=native` to
 force one backend while testing.

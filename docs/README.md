@@ -18,7 +18,8 @@ If you are new to the project, use this order:
 7. [Framework Adapters](framework-adapters.md)
 8. [Observability](observability.md)
 9. [Performance](performance.md)
-10. [Funny Introduction](funny-introduction/README.md)
+10. [Rust Client](rust-client.md)
+11. [Funny Introduction](funny-introduction/README.md)
 
 If you want a narrative overview before diving in:
 
@@ -38,6 +39,7 @@ If you are already productive and only need answers:
 - "How do I generate typed wrappers from Protocols?" → [Type-Safe Smalltalk Codegen](codegen.md)
 - "How do I add another web framework?" → [Framework Adapters](framework-adapters.md)
 - "How do I trace or measure GemStone calls?" → [Observability](observability.md)
+- "Can a Rust application talk to GemStone directly?" → [Rust Client](rust-client.md)
 - "How do I inspect an OOP or class?" → [User Manual](user-manual.md)
 - "What are the current benchmark numbers?" → [Performance](performance.md)
 - "I want the whole story, plus jokes." → [Funny Introduction](funny-introduction/README.md)
@@ -54,6 +56,7 @@ If you are already productive and only need answers:
 - Protocol-to-Smalltalk code generation with checked-in typed wrappers
 - OOP/class inspection and recursive debug dumps
 - optional native PyO3 backend installation and backend selection
+- a direct Rust client foundation in the separate `gemstone-rs` workspace
 - the persistent data helpers:
   - `PersistentRoot`
   - `GSCollection`

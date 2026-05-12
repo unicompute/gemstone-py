@@ -28,13 +28,46 @@ class NativeCrateTests(unittest.TestCase):
         self.assertIn("homepage", cargo["package"])
         self.assertIn("documentation", cargo["package"])
         self.assertIn("pyo3", cargo["dependencies"])
+        self.assertIn("gemstone-gci", cargo["dependencies"])
         self.assertIn("abi3-py311", cargo["dependencies"]["pyo3"]["features"])
         self.assertIn("pyo3/abi3-py311", pyproject["tool"]["maturin"]["features"])
+
+    def test_rust_workspace_keeps_native_gci_crate_self_contained(self) -> None:
+        workspace = tomllib.loads(pathlib.Path("Cargo.toml").read_text(encoding="utf-8"))
+        gci = tomllib.loads(
+            pathlib.Path("crates/gemstone-gci/Cargo.toml").read_text(encoding="utf-8")
+        )
+
+        self.assertIn("crates/gemstone-gci", workspace["workspace"]["members"])
+        self.assertNotIn("crates/gemstone-rs", workspace["workspace"]["members"])
+        self.assertNotIn("gemstone-py-native", workspace["workspace"]["members"])
+        self.assertEqual(gci["package"]["name"], "gemstone-gci")
+
+    def test_docs_point_rust_users_to_gemstone_rs(self) -> None:
+        readme = pathlib.Path("README.md").read_text(encoding="utf-8")
+        rust_doc = pathlib.Path("docs/rust-client.md").read_text(encoding="utf-8")
+
+        self.assertIn("separate `gemstone-rs` workspace", readme)
+        self.assertIn("gemstone_rs", readme)
+        self.assertIn("gemstone-rs/crates/gemstone-rs", rust_doc)
+        self.assertIn("Session::login", rust_doc)
+        self.assertIn("GS_RUN_LIVE_RUST", readme)
+
+    def test_low_level_rust_crate_exposes_oop_helpers(self) -> None:
+        source = pathlib.Path("crates/gemstone-gci/src/lib.rs").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("pub fn from_smallint", source)
+        self.assertIn("pub fn from_bool", source)
+        self.assertIn("pub fn from_char", source)
+        self.assertIn("pub fn char_to_oop", source)
 
     def test_native_extension_reexports_ctypes_surface(self) -> None:
         source = pathlib.Path("gemstone-py-native/src/lib.rs").read_text(encoding="utf-8")
 
         self.assertIn("struct NativeGciLibrary", source)
+        self.assertIn("GciLibrary", source)
         self.assertIn('"GciErrSType"', source)
         self.assertIn('"gci_init"', source)
         self.assertIn('wrap_pyfunction!(_load_library, module)', source)
@@ -60,6 +93,7 @@ class NativeCrateTests(unittest.TestCase):
         self.assertIn("maturin build", source)
         self.assertIn("maturin sdist", source)
         self.assertIn("cp311-abi3", source)
+        self.assertIn("gemstone-py-native/Cargo.toml", source)
         self.assertIn("License-Expression: MIT", source)
         self.assertIn("Classifier: Programming Language :: Rust", source)
         self.assertIn("GEMSTONE_PY_GCI_BACKEND=native", source)

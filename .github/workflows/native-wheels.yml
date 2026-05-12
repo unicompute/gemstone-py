@@ -19,10 +19,16 @@ on:
     branches:
       - "**"
     paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "crates/**"
       - "gemstone-py-native/**"
       - ".github/workflows/native-wheels.yml"
   pull_request:
     paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "crates/**"
       - "gemstone-py-native/**"
       - ".github/workflows/native-wheels.yml"
 
@@ -298,9 +304,11 @@ jobs:
           with tarfile.open(archives[0]) as archive:
               archive.extractall(extract_root)
 
-          manifests = sorted(extract_root.glob("*/Cargo.toml"))
+          manifests = sorted(extract_root.glob("*/gemstone-py-native/Cargo.toml"))
           if len(manifests) != 1:
-              raise SystemExit(f"Expected one native Cargo.toml from sdist, got {manifests!r}")
+              manifests = sorted(extract_root.glob("*/Cargo.toml"))
+          if len(manifests) != 1:
+              raise SystemExit(f"Expected one native package Cargo.toml from sdist, got {manifests!r}")
 
           subprocess.run(
               [
