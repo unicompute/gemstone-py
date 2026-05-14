@@ -13,9 +13,16 @@ fi
 export GS_RUN_LIVE="${GS_RUN_LIVE:-1}"
 export GS_RUN_DESTRUCTIVE_LIVE="${GS_RUN_DESTRUCTIVE_LIVE:-0}"
 export GS_RUN_LIVE_SOAK="${GS_RUN_LIVE_SOAK:-0}"
-"${pybin}" -m unittest \
+
+live_modules=(
   tests.test_live_smoke \
   tests.test_live_codegen \
   tests.test_live_migrations \
   tests.test_live_integration \
   tests.test_live_async_integration
+)
+
+printf 'Running live GemStone test modules:\n'
+printf '  %s\n' "${live_modules[@]}"
+
+"${pybin}" -m unittest "${live_modules[@]}"

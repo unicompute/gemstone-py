@@ -34,6 +34,19 @@ class WorkflowConfigTests(unittest.TestCase):
         self.assertIn("run-soak:", content)
         self.assertIn("GS_RUN_LIVE_SOAK", content)
 
+    def test_live_check_script_covers_all_live_modules(self) -> None:
+        content = pathlib.Path("scripts/run_live_checks.sh").read_text(
+            encoding="utf-8"
+        )
+        live_modules = {
+            path.with_suffix("").as_posix().replace("/", ".")
+            for path in pathlib.Path("tests").glob("test_live*.py")
+        }
+
+        self.assertIn("live_modules=(", content)
+        for module_name in sorted(live_modules):
+            self.assertIn(module_name, content)
+
     def test_vscode_workbench_live_workflow_verifies_setup_command(self) -> None:
         content = pathlib.Path(".github/workflows/vscode-workbench-live.yml").read_text(
             encoding="utf-8"
