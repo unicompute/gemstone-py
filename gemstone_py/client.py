@@ -896,13 +896,22 @@ class GemStoneSession:
             lib = self._require_login()
             return int(lib.GciFetchClass(ctypes.c_uint64(oop)))
 
-    def inspect(self, oop: int, *, slots: Sequence[str] | None = None) -> Any:
+    def inspect(
+        self,
+        oop: int,
+        *,
+        slots: Sequence[str] | None = None,
+        max_slots: int | None = None,
+    ) -> Any:
         """Return a one-level inspection result for a GemStone OOP."""
         from gemstone_py.inspection import inspect_oop
 
-        if slots is None:
-            return inspect_oop(self, oop)
-        return inspect_oop(self, oop, slots=slots)
+        kwargs: dict[str, Any] = {}
+        if slots is not None:
+            kwargs["slots"] = slots
+        if max_slots is not None:
+            kwargs["max_slots"] = max_slots
+        return inspect_oop(self, oop, **kwargs)
 
     def dump(
         self,
@@ -911,6 +920,7 @@ class GemStoneSession:
         depth: int = 2,
         slots: Sequence[str] | None = None,
         classes: Sequence[str] | None = None,
+        max_slots: int | None = None,
     ) -> dict[str, Any]:
         """Return a recursive JSON-serialisable structure dump for a GemStone OOP."""
         from gemstone_py.inspection import dump_oop
@@ -920,6 +930,8 @@ class GemStoneSession:
             kwargs["slots"] = slots
         if classes is not None:
             kwargs["classes"] = classes
+        if max_slots is not None:
+            kwargs["max_slots"] = max_slots
         payload: dict[str, Any] = dump_oop(self, oop, **kwargs)
         return payload
 

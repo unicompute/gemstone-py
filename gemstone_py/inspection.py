@@ -44,6 +44,7 @@ class InspectionResult:
     class_name: str
     summary: str
     slots: list[InspectedSlot]
+    omitted_slot_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -62,8 +63,11 @@ def inspect_oop(
     oop: int,
     *,
     slots: Sequence[str] | None = None,
+    max_slots: int | None = None,
 ) -> InspectionResult:
     """Return a one-level inspection of ``oop``."""
+    if max_slots is not None and max_slots < 0:
+        raise ValueError("max_slots must be at least 0")
     slot_filter = _name_filter(slots)
     rows = _rows(session.eval(_inspect_source(oop)))
     if not rows:
@@ -73,6 +77,7 @@ def inspect_oop(
     class_name = header[0] if len(header) > 0 else "Object"
     summary = header[1] if len(header) > 1 else ""
     inspected_slots: list[InspectedSlot] = []
+    omitted_slot_count = 0
     for row in rows[1:]:
         if len(row) < 4:
             continue
@@ -82,6 +87,9 @@ def inspect_oop(
         try:
             slot_oop = int(raw_oop)
         except ValueError:
+            continue
+        if max_slots is not None and len(inspected_slots) >= max_slots:
+            omitted_slot_count += 1
             continue
         inspected_slots.append(
             InspectedSlot(
@@ -98,6 +106,7 @@ def inspect_oop(
         class_name=class_name,
         summary=summary,
         slots=inspected_slots,
+        omitted_slot_count=omitted_slot_count,
     )
 
 
@@ -108,11 +117,14 @@ def dump_oop(
     depth: int = 2,
     slots: Sequence[str] | None = None,
     classes: Sequence[str] | None = None,
+    max_slots: int | None = None,
     _seen: set[int] | None = None,
 ) -> dict[str, Any]:
     """Return a recursive, JSON-serialisable structure dump for ``oop``."""
     if depth < 0:
         raise ValueError("depth must be at least 0")
+    if max_slots is not None and max_slots < 0:
+        raise ValueError("max_slots must be at least 0")
     class_filter = _name_filter(classes)
     seen = set(_seen or set())
     ref_oop = int(oop)
@@ -120,7 +132,7 @@ def dump_oop(
         return {"oop": ref_oop, "cycle": True}
     seen.add(ref_oop)
 
-    inspected = inspect_oop(session, ref_oop, slots=slots)
+    inspected = inspect_oop(session, ref_oop, slots=slots, max_slots=max_slots)
     payload: dict[str, Any] = {
         "oop": inspected.oop,
         "class_name": inspected.class_name,
@@ -131,6 +143,8 @@ def dump_oop(
         return payload
     if depth == 0:
         return payload
+    if inspected.omitted_slot_count:
+        payload["omitted_slot_count"] = inspected.omitted_slot_count
 
     slot_payload: dict[str, Any] = {}
     for slot in inspected.slots:
@@ -144,6 +158,7 @@ def dump_oop(
                 depth=depth - 1,
                 slots=slots,
                 classes=classes,
+                max_slots=max_slots,
                 _seen=seen,
             )
     payload["slots"] = slot_payload
@@ -158,6 +173,8 @@ def format_inspection(result: InspectionResult) -> str:
             f"  {slot.name}: {slot.value.class_name} "
             f"oop=0x{slot.value.oop:X} {slot.value.summary}"
         )
+    if result.omitted_slot_count:
+        lines.append(f"  ... {result.omitted_slot_count} slot(s) omitted")
     return "\n".join(lines)
 
 
@@ -252,6 +269,9 @@ def _format_dump_into(
             )
         else:
             lines.append(f"{prefix}  {child_name}: {child!r}")
+    omitted_slot_count = payload.get("omitted_slot_count")
+    if isinstance(omitted_slot_count, int) and omitted_slot_count > 0:
+        lines.append(f"{prefix}  ... {omitted_slot_count} slot(s) omitted")
 
 
 def _format_oop(oop: Any) -> str:
@@ -352,6 +372,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         help="Only recurse through this GemStone class name.",
     )
+    parser.add_argument(
+        "--max-slots",
+        type=int,
+        help="Maximum number of slots to include per inspected object.",
+    )
     parser.add_argument("--json", action="store_true", help="Emit JSON.")
     return parser
 
@@ -376,6 +401,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 depth=args.depth,
                 slots=args.slots,
                 classes=args.classes,
+                max_slots=args.max_slots,
             )
             if args.json:
                 print(json.dumps(payload, indent=2, sort_keys=True))
@@ -383,7 +409,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print(format_dump(payload))
             return 0
 
-        result = inspect_oop(session, args.oop, slots=args.slots)
+        result = inspect_oop(session, args.oop, slots=args.slots, max_slots=args.max_slots)
         if args.json:
             print(json.dumps(asdict(result), indent=2, sort_keys=True))
         else:

@@ -40,6 +40,29 @@ class InspectionParsingTests(unittest.TestCase):
 
         self.assertEqual([slot.name for slot in result.slots], ["address"])
 
+    def test_inspect_oop_limits_slots_after_filter(self):
+        session = mock.Mock()
+        session.eval.return_value = (
+            "Person|a Person\n"
+            "name|101|String|Alice\n"
+            "address|202|Address|10 High Street\n"
+            "status|303|Symbol|active\n"
+        )
+
+        result = inspection.inspect_oop(
+            session,
+            123,
+            slots=["name", "address", "status"],
+            max_slots=2,
+        )
+
+        self.assertEqual([slot.name for slot in result.slots], ["name", "address"])
+        self.assertEqual(result.omitted_slot_count, 1)
+
+    def test_inspect_oop_rejects_negative_max_slots(self):
+        with self.assertRaises(ValueError):
+            inspection.inspect_oop(mock.Mock(), 123, max_slots=-1)
+
     def test_dump_oop_recurses_and_marks_cycles(self):
         root = inspection.InspectionResult(
             oop=1,
@@ -72,6 +95,38 @@ class InspectionParsingTests(unittest.TestCase):
 
         self.assertEqual(payload["class_name"], "Node")
         self.assertEqual(payload["slots"]["child"]["slots"]["parent"], {"oop": 1, "cycle": True})
+
+    def test_dump_oop_carries_slot_limit_to_recursive_inspection(self):
+        root = inspection.InspectionResult(
+            oop=1,
+            class_name="Node",
+            summary="root",
+            slots=[
+                inspection.InspectedSlot(
+                    "child",
+                    inspection.InspectedReference(2, "Node", "child"),
+                )
+            ],
+            omitted_slot_count=2,
+        )
+        child = inspection.InspectionResult(
+            oop=2,
+            class_name="Node",
+            summary="child",
+            slots=[],
+            omitted_slot_count=1,
+        )
+
+        with mock.patch(
+            "gemstone_py.inspection.inspect_oop",
+            side_effect=[root, child],
+        ) as inspect_oop:
+            payload = inspection.dump_oop(mock.Mock(), 1, depth=2, max_slots=1)
+
+        self.assertEqual(payload["omitted_slot_count"], 2)
+        self.assertEqual(payload["slots"]["child"]["omitted_slot_count"], 1)
+        self.assertEqual(inspect_oop.call_args_list[0].kwargs["max_slots"], 1)
+        self.assertEqual(inspect_oop.call_args_list[1].kwargs["max_slots"], 1)
 
     def test_dump_oop_filters_slots_and_classes(self):
         root = inspection.InspectionResult(
@@ -123,11 +178,20 @@ class InspectionParsingTests(unittest.TestCase):
         )
         self.assertIn("Node  oop=0x1", inspection.format_inspection(result))
         self.assertIn("child: Node oop=0x2 child", inspection.format_inspection(result))
+        limited = inspection.InspectionResult(
+            oop=1,
+            class_name="Node",
+            summary="root",
+            slots=[],
+            omitted_slot_count=3,
+        )
+        self.assertIn("... 3 slot(s) omitted", inspection.format_inspection(limited))
 
         payload = {
             "oop": 1,
             "class_name": "Node",
             "summary": "root",
+            "omitted_slot_count": 2,
             "slots": {
                 "child": {
                     "oop": 2,
@@ -142,6 +206,7 @@ class InspectionParsingTests(unittest.TestCase):
         self.assertIn("Node oop=0x1 root", text)
         self.assertIn("child: Node oop=0x2 child", text)
         self.assertIn("parent: <cycle oop=0x1>", text)
+        self.assertIn("... 2 slot(s) omitted", text)
 
     def test_describe_class_parses_superclasses_and_instvars(self):
         session = mock.Mock()
@@ -168,12 +233,12 @@ class InspectionParsingTests(unittest.TestCase):
         session = gemstone.GemStoneSession(username="alice", password="secret")
 
         with mock.patch("gemstone_py.inspection.inspect_oop", return_value="inspected") as inspect_oop:
-            self.assertEqual(session.inspect(123), "inspected")
-        inspect_oop.assert_called_once_with(session, 123)
+            self.assertEqual(session.inspect(123, max_slots=3), "inspected")
+        inspect_oop.assert_called_once_with(session, 123, max_slots=3)
 
         with mock.patch("gemstone_py.inspection.dump_oop", return_value={"ok": True}) as dump_oop:
-            self.assertEqual(session.dump(123, depth=4), {"ok": True})
-        dump_oop.assert_called_once_with(session, 123, depth=4)
+            self.assertEqual(session.dump(123, depth=4, max_slots=3), {"ok": True})
+        dump_oop.assert_called_once_with(session, 123, depth=4, max_slots=3)
 
         with mock.patch(
             "gemstone_py.inspection.describe_class",
@@ -184,6 +249,17 @@ class InspectionParsingTests(unittest.TestCase):
 
 
 class InspectionCliTests(unittest.TestCase):
+    class SessionContext:
+        def __init__(self, *args, **kwargs):
+            del args, kwargs
+
+        def __enter__(self):
+            return mock.Mock()
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            del exc_type, exc_val, exc_tb
+            return False
+
     def test_main_prints_class_description_json(self):
         description = inspection.ClassDescription(
             name="OkzBooking",
@@ -193,19 +269,8 @@ class InspectionCliTests(unittest.TestCase):
             instance_count=2,
         )
 
-        class SessionContext:
-            def __init__(self, *args, **kwargs):
-                del args, kwargs
-
-            def __enter__(self):
-                return mock.Mock()
-
-            def __exit__(self, exc_type, exc_val, exc_tb):
-                del exc_type, exc_val, exc_tb
-                return False
-
         stream = io.StringIO()
-        with mock.patch("gemstone_py.inspection.GemStoneSession", SessionContext):
+        with mock.patch("gemstone_py.inspection.GemStoneSession", self.SessionContext):
             with mock.patch(
                 "gemstone_py.inspection.GemStoneConfig.from_env",
                 return_value=mock.Mock(),
@@ -221,6 +286,26 @@ class InspectionCliTests(unittest.TestCase):
         payload = json.loads(stream.getvalue())
         self.assertEqual(payload["name"], "OkzBooking")
         self.assertEqual(payload["instvars"], ["status"])
+
+    def test_main_passes_max_slots_to_dump(self):
+        stream = io.StringIO()
+        with mock.patch("gemstone_py.inspection.GemStoneSession", self.SessionContext):
+            with mock.patch(
+                "gemstone_py.inspection.GemStoneConfig.from_env",
+                return_value=mock.Mock(),
+            ):
+                with mock.patch(
+                    "gemstone_py.inspection.dump_oop",
+                    return_value={"oop": 123, "class_name": "Object", "summary": ""},
+                ) as dump_oop:
+                    with redirect_stdout(stream):
+                        exit_code = inspection.main(
+                            ["--oop", "123", "--dump", "--max-slots", "2"]
+                        )
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Object oop=0x7B", stream.getvalue())
+        self.assertEqual(dump_oop.call_args.kwargs["max_slots"], 2)
 
 
 if __name__ == "__main__":
