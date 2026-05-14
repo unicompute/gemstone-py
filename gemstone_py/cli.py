@@ -23,6 +23,11 @@ from gemstone_py.smalltalk_bridge import SmalltalkBridge
 QUICKSTART_ROOT_KEY = "GemstonePyQuickstart"
 EXAMPLE_CATALOG = (
     ("quickstart", "examples/quickstart.py", "Smallest live connection check."),
+    (
+        "value-converters",
+        "examples/cookbook/value_converters.py",
+        "Offline scalar conversion preview.",
+    ),
     ("webstack", "examples/webstack/", "Realistic Flask reference app."),
     ("fastapi", "examples/fastapi/", "Minimal async FastAPI request dependency."),
     ("litestar", "examples/litestar/", "Minimal async Litestar request dependency."),

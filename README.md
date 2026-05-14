@@ -780,6 +780,30 @@ visible alongside session calls.
 
 See [`docs/observability.md`](docs/observability.md) for the full setup.
 
+## Explicit Value Conversion
+
+Keep domain objects in Python unless a workflow proves it needs a stronger
+mapping layer. For scalar-ish values, use opt-in converters and pass the
+resulting `Oop` markers explicitly:
+
+```python
+from datetime import date
+from decimal import Decimal
+from gemstone_py import GemStoneConfig, GemStoneSession, scalar_value_converter_registry
+
+registry = scalar_value_converter_registry()
+
+with GemStoneSession(config=GemStoneConfig.from_env()) as session:
+    invoice_oop = session.eval_oop("UserGlobals at: #CurrentInvoice")
+    due_on, amount = registry.to_oops(session, [date(2026, 5, 15), Decimal("19.95")])
+    session.perform_oop(invoice_oop, "dueOn:amount:", due_on, amount)
+```
+
+Built-in converter factories cover `datetime`, exact `date`, `Decimal`, and
+`UUID`. Use `dataclass_to_dict(...)` when you want an explicit plain payload
+instead of a persistent Python object graph. See
+`python -m examples.cookbook.value_converters` for an offline preview.
+
 ## Inspect And Debug
 
 When an operation returns a raw OOP and you need to understand what it points

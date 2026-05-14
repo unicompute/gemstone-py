@@ -55,3 +55,22 @@ def test_codegen_live_probe_help_does_not_start_live_session():
     assert "--booking-id" in result.stdout
     assert "gci login" not in result.stdout
     assert "gci login" not in result.stderr
+
+
+def test_value_converters_example_does_not_start_live_session():
+    result = subprocess.run(
+        [sys.executable, "-m", "examples.cookbook.value_converters"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    assert result.returncode == 0
+    assert "gemstone-py lightweight value converter preview" in result.stdout
+    assert "Registered converters:" in result.stdout
+    assert "Converted OOP markers:" in result.stdout
+    assert "Plain payload:" in result.stdout
+    assert "gci login" not in result.stdout
+    assert "gci login" not in result.stderr

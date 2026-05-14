@@ -571,3 +571,38 @@ Use this sentence:
 > lanes."
 
 That sentence has rescued several meetings already. At minimum, it should rescue yours.
+
+## Recipe 31: Convert Scalar Values Explicitly
+
+```python
+from datetime import date
+from decimal import Decimal
+from gemstone_py import GemStoneConfig, GemStoneSession, scalar_value_converter_registry
+
+registry = scalar_value_converter_registry()
+
+with GemStoneSession(config=GemStoneConfig.from_env()) as session:
+    invoice_oop = session.eval_oop("UserGlobals at: #CurrentInvoice")
+    due_on, amount = registry.to_oops(session, [date(2026, 5, 15), Decimal("19.95")])
+    session.perform_oop(invoice_oop, "dueOn:amount:", due_on, amount)
+```
+
+The built-in factories cover `datetime`, exact `date`, `Decimal`, and `UUID`.
+`ValueConverterRegistry.copy()` and `extend(...)` make application-specific
+registries cheap to assemble without global state.
+
+For dataclasses, convert to a plain payload when that is what the GemStone-side
+API expects:
+
+```python
+from gemstone_py import dataclass_to_dict
+
+payload = dataclass_to_dict(booking_patch, recurse=False)
+root["PendingBookingPatch"] = payload
+```
+
+Run the offline preview without a live stone:
+
+```bash
+python -m examples.cookbook.value_converters
+```

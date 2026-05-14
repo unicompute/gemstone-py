@@ -46,6 +46,8 @@ class AggregateCliTests(unittest.TestCase):
         self.assertIn("Installed package: gemstone-examples quickstart", output)
         self.assertIn("Source checkout:", output)
         self.assertIn("examples/quickstart.py", output)
+        self.assertIn("value-converters", output)
+        self.assertIn("examples/cookbook/value_converters.py", output)
         self.assertIn("examples/cookbook/", output)
 
     def test_main_lists_plan3_feature_map(self):

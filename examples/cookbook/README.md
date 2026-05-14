@@ -8,6 +8,7 @@ tests, and user imports keep working.
 | --- | --- | --- |
 | Quickstart | `examples/quickstart.py` | `python -m examples.quickstart` |
 | Plan3 feature map | `examples/cookbook/plan3_feature_map.py` | `python -m examples.cookbook.plan3_feature_map` |
+| Explicit value converters | `examples/cookbook/value_converters.py` | `python -m examples.cookbook.value_converters` |
 | Realistic web app | `examples/webstack/` | `python -m examples.webstack.magtag_app` |
 | Async session basics | `examples/async_features/` | `python -m examples.async_features.session_root_and_collection` |
 | FastAPI request dependency | `examples/fastapi/` | `python -m examples.fastapi.run --reload` |
