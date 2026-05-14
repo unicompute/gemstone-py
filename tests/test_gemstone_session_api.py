@@ -148,6 +148,7 @@ class PackagingSmokeTests(unittest.TestCase):
         gci_mod = importlib.import_module("gemstone_py._gci")
         provider_mod = importlib.import_module("gemstone_py.session_providers")
         facade_mod = importlib.import_module("gemstone_py.session_facade")
+        transactions_mod = importlib.import_module("gemstone_py.transactions")
         web_mod = importlib.import_module("gemstone_py.web")
 
         self.assertIs(pkg.GemStoneSession, client_mod.GemStoneSession)
@@ -194,6 +195,11 @@ class PackagingSmokeTests(unittest.TestCase):
             web_mod.warm_flask_request_session_provider,
         )
         self.assertIs(pkg.GemStoneSessionFacade, facade_mod.GemStoneSessionFacade)
+        self.assertIs(pkg.retrying_transaction, transactions_mod.retrying_transaction)
+        self.assertIs(
+            pkg.run_transaction_with_retry,
+            transactions_mod.run_transaction_with_retry,
+        )
         self.assertIs(
             pkg.PersistentRoot,
             importlib.import_module("gemstone_py.persistent_root").PersistentRoot,

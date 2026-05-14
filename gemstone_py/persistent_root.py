@@ -40,15 +40,24 @@ Usage
 """
 
 import ctypes
-from typing import Any, Iterator, cast
+from typing import Any, Iterable, Iterator, cast
 
 import gemstone_py as _gs
 
+from ._smalltalk_batch import (
+    decode_escaped_field as _decode_escaped_field,
+)
+from ._smalltalk_batch import (
+    escaped_field_encoder_source as _escaped_field_encoder_source,
+)
 from ._smalltalk_batch import (
     fetch_mapping_string_keys as _fetch_mapping_string_keys,
 )
 from ._smalltalk_batch import (
     fetch_mapping_string_oop_pairs as _fetch_mapping_string_oop_pairs,
+)
+from ._smalltalk_batch import (
+    object_for_oop_expr as _object_for_oop_expr,
 )
 
 PORTING_STATUS = "plain_gemstone_port"
@@ -148,6 +157,28 @@ class GsDict:
         s = object.__getattribute__(self, '_session')
         oop = object.__getattribute__(self, '_oop')
         return _batched_mapping_values(s, oop)
+
+    def get_many(
+        self,
+        keys: Iterable[str],
+        default: Any = None,
+    ) -> dict[str, Any]:
+        """
+        Fetch several keys in one GemStone round-trip.
+
+        Missing keys are included with ``default``. Duplicate input keys follow
+        normal dict semantics: the last fetched value wins.
+        """
+        s = object.__getattribute__(self, '_session')
+        oop = object.__getattribute__(self, '_oop')
+        return {
+            key: default if value_oop is None else _from_oop(s, value_oop)
+            for key, value_oop in _batched_mapping_selected_value_oops(s, oop, keys)
+        }
+
+    def update_many(self, other: Any = None, /, **kwargs: Any) -> None:
+        """Apply several writes through the same live GemStone dictionary."""
+        self.update(other, **kwargs)
 
     def pop(self, key: str, default: Any = ...) -> Any:
         if key in self:
@@ -409,6 +440,33 @@ class PersistentRoot:
         ug = object.__getattribute__(self, '_ug')
         return _batched_mapping_values(s, ug)
 
+    def get_many(
+        self,
+        keys: Iterable[str],
+        default: Any = None,
+    ) -> dict[str, Any]:
+        """
+        Fetch several root keys in one GemStone round-trip.
+
+        Missing keys are included with ``default``. Duplicate input keys follow
+        normal dict semantics: the last fetched value wins.
+        """
+        s = object.__getattribute__(self, '_session')
+        ug = object.__getattribute__(self, '_ug')
+        return {
+            key: default if value_oop is None else _from_oop(s, value_oop)
+            for key, value_oop in _batched_mapping_selected_value_oops(
+                s,
+                ug,
+                keys,
+                symbol_keys=True,
+            )
+        }
+
+    def update_many(self, other: Any = None, /, **kwargs: Any) -> None:
+        """Apply several writes through the same live GemStone symbol dictionary."""
+        self.update(other, **kwargs)
+
     def pop(self, key: str, default: Any = ...) -> Any:
         if key in self:
             value = self[key]
@@ -468,6 +526,69 @@ def _batched_mapping_values(s: _gs.GemStoneSession, oop: int) -> list[Any]:
         _from_oop(s, value_oop)
         for _, value_oop in _fetch_mapping_string_oop_pairs(s, oop)
     ]
+
+
+def _batched_mapping_selected_value_oops(
+    s: _gs.GemStoneSession,
+    oop: int,
+    keys: Iterable[str],
+    *,
+    symbol_keys: bool = False,
+) -> list[tuple[str, int | None]]:
+    """Fetch selected mapping values as OOPs in one eval."""
+    key_list = [str(key) for key in keys]
+    if not key_list:
+        return []
+    assignments = "\n".join(
+        f"keys at: {index} put: {_smalltalk_string_literal(key)}."
+        for index, key in enumerate(key_list, start=1)
+    )
+    lookup_expr = "key asSymbol" if symbol_keys else "key"
+    raw = s.eval(
+        f"| mapping keys encode stream |\n"
+        f"mapping := {_object_for_oop_expr(oop)}.\n"
+        f"{_escaped_field_encoder_source('encode')}"
+        f"keys := Array new: {len(key_list)}.\n"
+        f"{assignments}\n"
+        "stream := ''.\n"
+        "keys do: [:key |\n"
+        "  | value lookupKey |\n"
+        f"  lookupKey := {lookup_expr}.\n"
+        "  stream := stream, (encode value: key), '|'.\n"
+        "  (mapping includesKey: lookupKey)\n"
+        "    ifTrue: [\n"
+        "      value := mapping at: lookupKey.\n"
+        "      stream := stream, '1|', (value asOop asString), String lf asString\n"
+        "    ]\n"
+        "    ifFalse: [stream := stream, '0|', String lf asString]\n"
+        "].\n"
+        "stream"
+    )
+    return _parse_selected_value_oops(raw)
+
+
+def _parse_selected_value_oops(raw: str | None) -> list[tuple[str, int | None]]:
+    if not raw:
+        return []
+    result: list[tuple[str, int | None]] = []
+    for line in raw.splitlines():
+        if not line:
+            continue
+        key, sep, rest = line.partition("|")
+        if not sep:
+            continue
+        present, _sep, raw_oop = rest.partition("|")
+        result.append(
+            (
+                _decode_escaped_field(key),
+                int(raw_oop) if present == "1" and raw_oop else None,
+            )
+        )
+    return result
+
+
+def _smalltalk_string_literal(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
 
 
 def _to_oop(s: _gs.GemStoneSession, value: Any) -> int:

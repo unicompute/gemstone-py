@@ -118,6 +118,7 @@ files = [
   "gemstone_py/_smalltalk_batch.py",
   "gemstone_py/benchmarks.py",
   "gemstone_py/session_facade.py",
+  "gemstone_py/transactions.py",
   "gemstone_py/example_support.py",
   "gemstone_py/fastapi_example.py",
   "gemstone_py/litestar_example.py",

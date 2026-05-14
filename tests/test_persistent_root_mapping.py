@@ -134,6 +134,34 @@ class GsDictMappingTests(unittest.TestCase):
         )
         session.eval.assert_called_once()
 
+    def test_get_many_fetches_selected_values_in_one_eval(self):
+        gs_dict, session = _make_gs_dict()
+        session.eval.return_value = "alpha|1|101\nmissing|0|\nbeta\\pkey|1|202\n"
+
+        with mock.patch.object(mod, "_from_oop", side_effect=["first", "second"]) as from_oop:
+            result = gs_dict.get_many(["alpha", "missing", "beta|key"], default="fallback")
+
+        self.assertEqual(
+            result,
+            {"alpha": "first", "missing": "fallback", "beta|key": "second"},
+        )
+        self.assertEqual(
+            from_oop.call_args_list,
+            [mock.call(session, 101), mock.call(session, 202)],
+        )
+        session.eval.assert_called_once()
+        source = session.eval.call_args.args[0]
+        self.assertIn("mapping := Object _objectForOop: 123.", source)
+        self.assertIn("keys at: 1 put: 'alpha'.", source)
+
+    def test_update_many_delegates_to_update(self):
+        gs_dict, _session = _make_gs_dict()
+
+        with mock.patch.object(mod.GsDict, "update", autospec=True) as update:
+            gs_dict.update_many({"alpha": 1}, beta=2)
+
+        update.assert_called_once_with(gs_dict, {"alpha": 1}, beta=2)
+
     def test_len_uses_size_directly(self):
         gs_dict, session = _make_gs_dict()
         session.perform_value.return_value = 7
@@ -284,6 +312,35 @@ class PersistentRootMappingTests(unittest.TestCase):
             [mock.call(session, 401), mock.call(session, 402)],
         )
         session.eval.assert_called_once()
+
+    def test_get_many_fetches_selected_root_values_in_one_eval(self):
+        root, session = _make_persistent_root()
+        session.eval.return_value = "Alpha|1|301\nMissing|0|\nBeta\\pPipe|1|302\n"
+
+        with mock.patch.object(mod, "_from_oop", side_effect=["value-a", "value-b"]) as from_oop:
+            result = root.get_many(["Alpha", "Missing", "Beta|Pipe"])
+
+        self.assertEqual(
+            result,
+            {"Alpha": "value-a", "Missing": None, "Beta|Pipe": "value-b"},
+        )
+        self.assertEqual(
+            from_oop.call_args_list,
+            [mock.call(session, 301), mock.call(session, 302)],
+        )
+        session.eval.assert_called_once()
+        source = session.eval.call_args.args[0]
+        self.assertIn("mapping := Object _objectForOop: 456.", source)
+        self.assertIn("keys at: 1 put: 'Alpha'.", source)
+        self.assertIn("lookupKey := key asSymbol.", source)
+
+    def test_update_many_delegates_to_update(self):
+        root, _session = _make_persistent_root()
+
+        with mock.patch.object(mod.PersistentRoot, "update", autospec=True) as update:
+            root.update_many({"Alpha": 1}, Beta=2)
+
+        update.assert_called_once_with(root, {"Alpha": 1}, Beta=2)
 
     def test_len_uses_size_directly(self):
         root, session = _make_persistent_root()

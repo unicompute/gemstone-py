@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from gemstone_py import TypedOop
+from gemstone_py import OOP_FALSE, OOP_NIL, OOP_TRUE, TypedOop
 
 
 def _smalltalk_literal(value: Any) -> str:
@@ -28,9 +28,39 @@ def _smalltalk_literal(value: Any) -> str:
     raise TypeError(f"cannot convert {type(value).__name__} to a Smalltalk literal")
 
 
-def _argument_to_oop(value: Any) -> int:
+def _argument_to_oop(session: Any, value: Any) -> int:
     if hasattr(value, "oop"):
         return int(getattr(value, "oop"))
+    if value is None:
+        return int(OOP_NIL)
+    if value is True:
+        return int(OOP_TRUE)
+    if value is False:
+        return int(OOP_FALSE)
+    if isinstance(value, int):
+        return int(session.int_oop(value))
+    if isinstance(value, float):
+        return int(session.float_oop(value))
+    if isinstance(value, str):
+        return int(session.new_string(value))
+    return int(value)
+
+
+async def _argument_to_oop_async(session: Any, value: Any) -> int:
+    if hasattr(value, "oop"):
+        return int(getattr(value, "oop"))
+    if value is None:
+        return int(OOP_NIL)
+    if value is True:
+        return int(OOP_TRUE)
+    if value is False:
+        return int(OOP_FALSE)
+    if isinstance(value, int):
+        return int(session.int_oop(value))
+    if isinstance(value, float):
+        return int(await session.float_oop(value))
+    if isinstance(value, str):
+        return int(await session.new_string(value))
     return int(value)
 
 
@@ -50,32 +80,43 @@ def _build_smalltalk_source(receiver: str, selector: str, args: tuple[Any, ...])
 
 
 class OkzCustomer(TypedOop[Any]):
+    """Typed wrapper for the GemStone class 'OkzCustomer'."""
+
     __gemstone_class_name__ = 'OkzCustomer'
 
     @property
     def name(self) -> str:
+        """Send the 'name' selector to this GemStone object."""
         return self.send('name')
 
     def yourself(self) -> OkzCustomer:
-        oop = self.send_oop('yourself')
+        """Send the 'yourself' selector to this GemStone object."""
+        session = self.session
+        if session is None:
+            raise RuntimeError("TypedOop has no associated GemStoneSession")
+        oop = session.perform_oop(int(self), 'yourself')
         return type(self)(
             oop,
-            session=self.session,
+            session=session,
             wrapper_type=type(self),
             gemstone_class_name=type(self).__gemstone_class_name__,
         )
 
 
 class AsyncOkzCustomer(TypedOop[Any]):
+    """Typed wrapper for the GemStone class 'OkzCustomer'."""
+
     __gemstone_class_name__ = 'OkzCustomer'
 
     async def name(self) -> str:
+        """Send the 'name' selector to this GemStone object."""
         session = self.session
         if session is None:
             raise RuntimeError("TypedOop has no associated GemStoneSession")
         return await session.perform_value(int(self), 'name')
 
     async def yourself(self) -> AsyncOkzCustomer:
+        """Send the 'yourself' selector to this GemStone object."""
         session = self.session
         if session is None:
             raise RuntimeError("TypedOop has no associated GemStoneSession")

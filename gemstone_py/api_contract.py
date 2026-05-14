@@ -31,6 +31,11 @@ CORE_EXPORTS: dict[str, tuple[str, str]] = {
     "gemstone_selector": ("gemstone_py.codegen", "gemstone_selector"),
     "registered_gemstone_classes": ("gemstone_py.oop", "registered_gemstone_classes"),
     "typed_oop": ("gemstone_py.oop", "typed_oop"),
+    "retrying_transaction": ("gemstone_py.transactions", "retrying_transaction"),
+    "run_transaction_with_retry": (
+        "gemstone_py.transactions",
+        "run_transaction_with_retry",
+    ),
     "ClassDescription": ("gemstone_py.inspection", "ClassDescription"),
     "InspectedReference": ("gemstone_py.inspection", "InspectedReference"),
     "InspectedSlot": ("gemstone_py.inspection", "InspectedSlot"),
@@ -112,6 +117,7 @@ MODULE_EXPORTS: dict[str, str] = {
     "release_metadata": "gemstone_py.release_metadata",
     "session_providers": "gemstone_py.session_providers",
     "session_facade": "gemstone_py.session_facade",
+    "transactions": "gemstone_py.transactions",
     "web_core": "gemstone_py.web_core",
 }
 

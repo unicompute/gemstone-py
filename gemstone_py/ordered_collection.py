@@ -40,7 +40,7 @@ Usage
 PORTING_STATUS = "plain_gemstone_port"
 RUNTIME_REQUIREMENT = "Works on plain GemStone images over GCI"
 
-from typing import Any, Iterator
+from typing import Any, Iterable, Iterator, cast
 
 import gemstone_py as _gs
 from gemstone_py._smalltalk_batch import object_for_oop_expr
@@ -75,26 +75,26 @@ class OrderedCollection:
         object.__setattr__(self, '_oop',     oop)
 
     def _s(self) -> _gs.GemStoneSession:
-        return object.__getattribute__(self, '_session')
+        return cast(_gs.GemStoneSession, object.__getattribute__(self, '_session'))
 
     def _o(self) -> int:
-        return object.__getattribute__(self, '_oop')
+        return cast(int, object.__getattribute__(self, '_oop'))
 
-    def _call(self, selector: str, *args) -> Any:
+    def _call(self, selector: str, *args: Any) -> Any:
         raw = [_to_oop(self._s(), a) for a in args]
         return self._s().perform_value(self._o(), selector, *raw)
 
-    def _call_oop(self, selector: str, *args) -> int:
+    def _call_oop(self, selector: str, *args: Any) -> int:
         raw = [_to_oop(self._s(), a) for a in args]
-        return self._s().perform_oop(self._o(), selector, *raw)
+        return cast(int, self._s().perform_oop(self._o(), selector, *raw))
 
-    def send(self, selector: str, *args) -> Any:
+    def send(self, selector: str, *args: Any) -> Any:
         return _from_oop(self._s(), self._call_oop(selector, *args))
 
-    def send_oop(self, selector: str, *args) -> int:
+    def send_oop(self, selector: str, *args: Any) -> int:
         return self._call_oop(selector, *args)
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> Any:
         selector = _python_name_to_selector(name)
 
         def dispatcher(*args: Any) -> Any:
@@ -115,6 +115,15 @@ class OrderedCollection:
     def append(self, value: Any) -> 'OrderedCollection':
         """Add value to the end of the collection (GS: add:)."""
         self._call('add:', value)
+        return self
+
+    def extend(self, values: Iterable[Any]) -> 'OrderedCollection':
+        """Add all values to the end of the collection with one addAll: send."""
+        items = list(values)
+        if not items:
+            return self
+        values_oop = _to_oop(self._s(), items)
+        self._s().perform_value(self._o(), 'addAll:', values_oop)
         return self
 
     def __lshift__(self, value: Any) -> 'OrderedCollection':
@@ -201,7 +210,7 @@ class OrderedCollection:
     # ------------------------------------------------------------------
 
     def __len__(self) -> int:
-        return self._call('size')
+        return cast(int, self._call('size'))
 
     def __contains__(self, value: Any) -> bool:
         return bool(self._call('includes:', value))
@@ -210,14 +219,14 @@ class OrderedCollection:
     # Iteration
     # ------------------------------------------------------------------
 
-    def __iter__(self) -> Iterator:
+    def __iter__(self) -> Iterator[Any]:
         """Iterate by fetching elements one at a time via at:."""
         size = len(self)
         for i in range(1, size + 1):
             v_oop = self._call_oop('at:', i)
             yield _from_oop(self._s(), v_oop)
 
-    def reverse_iter(self) -> Iterator:
+    def reverse_iter(self) -> Iterator[Any]:
         """
         Iterate from last to first.
 
@@ -234,7 +243,7 @@ class OrderedCollection:
             v_oop = s.perform_oop(array_oop, 'at:', _gs._python_to_smallint(i))
             yield _from_oop(s, v_oop)
 
-    def reverse_iter_with_index(self) -> Iterator:
+    def reverse_iter_with_index(self) -> Iterator[tuple[Any, int]]:
         """
         Iterate from last to first, yielding (item, 0-based-index) pairs.
 
@@ -252,7 +261,7 @@ class OrderedCollection:
     # Conversion
     # ------------------------------------------------------------------
 
-    def to_list(self) -> list:
+    def to_list(self) -> list[Any]:
         """Return a plain Python list of all elements."""
         return list(self)
 

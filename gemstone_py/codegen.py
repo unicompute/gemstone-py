@@ -552,7 +552,7 @@ def _render_source(
         "",
         typing_import,
         "",
-        "from gemstone_py import TypedOop",
+        "from gemstone_py import OOP_FALSE, OOP_NIL, OOP_TRUE, TypedOop",
         "",
     ]
     if type_checking_imports:
@@ -752,9 +752,39 @@ def _literal_helpers() -> list[str]:
         "    raise TypeError(f\"cannot convert {type(value).__name__} to a Smalltalk literal\")",
         "",
         "",
-        "def _argument_to_oop(value: Any) -> int:",
+        "def _argument_to_oop(session: Any, value: Any) -> int:",
         "    if hasattr(value, \"oop\"):",
         "        return int(getattr(value, \"oop\"))",
+        "    if value is None:",
+        "        return int(OOP_NIL)",
+        "    if value is True:",
+        "        return int(OOP_TRUE)",
+        "    if value is False:",
+        "        return int(OOP_FALSE)",
+        "    if isinstance(value, int):",
+        "        return int(session.int_oop(value))",
+        "    if isinstance(value, float):",
+        "        return int(session.float_oop(value))",
+        "    if isinstance(value, str):",
+        "        return int(session.new_string(value))",
+        "    return int(value)",
+        "",
+        "",
+        "async def _argument_to_oop_async(session: Any, value: Any) -> int:",
+        "    if hasattr(value, \"oop\"):",
+        "        return int(getattr(value, \"oop\"))",
+        "    if value is None:",
+        "        return int(OOP_NIL)",
+        "    if value is True:",
+        "        return int(OOP_TRUE)",
+        "    if value is False:",
+        "        return int(OOP_FALSE)",
+        "    if isinstance(value, int):",
+        "        return int(session.int_oop(value))",
+        "    if isinstance(value, float):",
+        "        return int(await session.float_oop(value))",
+        "    if isinstance(value, str):",
+        "        return int(await session.new_string(value))",
         "    return int(value)",
         "",
         "",
@@ -785,6 +815,8 @@ def _render_class(
     base_name = "TypedOop[Any]"
     lines = [
         f"class {class_name}({base_name}):",
+        f"    \"\"\"Typed wrapper for the GemStone class {gs_name!r}.\"\"\"",
+        "",
         f"    __gemstone_class_name__ = {gs_name!r}",
         "",
     ]
@@ -806,6 +838,7 @@ def _render_property(prop: _PropertySpec, *, async_class: bool) -> list[str]:
     if async_class:
         return [
             f"    async def {prop.python_name}(self) -> {prop.annotation}:",
+            f"        \"\"\"Send the {prop.selector!r} selector to this GemStone object.\"\"\"",
             "        session = self.session",
             "        if session is None:",
             "            raise RuntimeError(\"TypedOop has no associated GemStoneSession\")",
@@ -814,6 +847,7 @@ def _render_property(prop: _PropertySpec, *, async_class: bool) -> list[str]:
     return [
         "    @property",
         f"    def {prop.python_name}(self) -> {prop.annotation}:",
+        f"        \"\"\"Send the {prop.selector!r} selector to this GemStone object.\"\"\"",
         f"        return self.send({prop.selector!r})",
     ]
 
@@ -841,6 +875,7 @@ def _render_method(
         lines = [
             "    @classmethod",
             signature,
+            f"        \"\"\"Evaluate the class-side {method.selector!r} selector.\"\"\"",
             "        source = _build_smalltalk_source(",
             "            cls.__gemstone_class_name__,",
             f"            {method.selector!r},",
@@ -866,7 +901,7 @@ def _render_method(
         return lines
     if async_class:
         signature_args = f"{', ' if args else ''}{args}"
-        raw_args = _oop_tuple_expression(method.arg_names)
+        raw_args = _oop_tuple_expression(method.arg_names, async_class=True)
         call_suffix = ", *raw_args" if call_args else ""
         signature = (
             f"    async def {method.python_name}(self{signature_args}) "
@@ -874,6 +909,7 @@ def _render_method(
         )
         lines = [
             signature,
+            f"        \"\"\"Send the {method.selector!r} selector to this GemStone object.\"\"\"",
             "        session = self.session",
             "        if session is None:",
             "            raise RuntimeError(\"TypedOop has no associated GemStoneSession\")",
@@ -912,24 +948,37 @@ def _render_method(
             )
         return lines
     signature_args = f"{', ' if args else ''}{args}"
-    call_suffix = f", {call_args}" if call_args else ""
-    lines = [f"    def {method.python_name}(self{signature_args}) -> {return_annotation}:"]
+    raw_args = _oop_tuple_expression(method.arg_names, async_class=False)
+    call_suffix = ", *raw_args" if call_args else ""
+    lines = [
+        f"    def {method.python_name}(self{signature_args}) -> {return_annotation}:",
+        f"        \"\"\"Send the {method.selector!r} selector to this GemStone object.\"\"\"",
+        "        session = self.session",
+        "        if session is None:",
+        "            raise RuntimeError(\"TypedOop has no associated GemStoneSession\")",
+    ]
+    if call_args:
+        lines.append(f"        raw_args = {raw_args}")
     if method.return_kind == "oop_wrapper":
         target = _wrapper_target(method, class_name, async_class=False, cls_expr="type(self)")
         lines.extend(_lazy_import_lines(method, class_name, async_class=False))
-        lines.append(f"        oop = self.send_oop({method.selector!r}{call_suffix})")
+        lines.append(
+            f"        oop = session.perform_oop(int(self), {method.selector!r}{call_suffix})"
+        )
         lines.extend(
             _construct_wrapper_lines(
                 target,
                 oop_expr="oop",
-                session_expr="self.session",
+                session_expr="session",
                 indent="        ",
             )
         )
     elif method.return_kind == "none":
-        lines.append(f"        self.send({method.selector!r}{call_suffix})")
+        lines.append(f"        session.perform_value(int(self), {method.selector!r}{call_suffix})")
     else:
-        lines.append(f"        return self.send({method.selector!r}{call_suffix})")
+        lines.append(
+            f"        return session.perform_value(int(self), {method.selector!r}{call_suffix})"
+        )
     return lines
 
 
@@ -1188,10 +1237,16 @@ def _tuple_expression(arg_names: Sequence[str]) -> str:
     return "(" + ", ".join(arg_names) + ")"
 
 
-def _oop_tuple_expression(arg_names: Sequence[str]) -> str:
+def _oop_tuple_expression(arg_names: Sequence[str], *, async_class: bool) -> str:
     if not arg_names:
         return "()"
-    calls = [f"_argument_to_oop({arg_name})" for arg_name in arg_names]
+    if async_class:
+        calls = [
+            f"await _argument_to_oop_async(session, {arg_name})"
+            for arg_name in arg_names
+        ]
+    else:
+        calls = [f"_argument_to_oop(session, {arg_name})" for arg_name in arg_names]
     if len(calls) == 1:
         return f"({calls[0]},)"
     return "(" + ", ".join(calls) + ")"

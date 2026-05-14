@@ -30,6 +30,10 @@ class CodegenBookingProto(Protocol):
     def mark_paid(self, at: int) -> None:
         ...
 
+    @gemstone.gemstone_selector("renameTo:")
+    def rename_to(self, name: str) -> None:
+        ...
+
     def yourself(self) -> "CodegenBookingProto":
         ...
 
@@ -44,6 +48,15 @@ class FakeSyncSession:
         self.value_sources: list[str] = []
         self.performed: list[tuple[int, str, tuple[int, ...]]] = []
         self.performed_oops: list[tuple[int, str, tuple[int, ...]]] = []
+
+    def int_oop(self, value: int) -> int:
+        return gemstone._python_to_smallint(value)
+
+    def float_oop(self, value: float) -> int:
+        return int(value * 100)
+
+    def new_string(self, value: str) -> int:
+        return len(value) + 1000
 
     def execute_oop(self, source: str) -> int:
         self.sources.append(source)
@@ -68,6 +81,15 @@ class FakeAsyncSession:
         self.value_sources: list[str] = []
         self.performed: list[tuple[int, str, tuple[int, ...]]] = []
         self.performed_oops: list[tuple[int, str, tuple[int, ...]]] = []
+
+    def int_oop(self, value: int) -> int:
+        return gemstone._python_to_smallint(value)
+
+    async def float_oop(self, value: float) -> int:
+        return int(value * 100)
+
+    async def new_string(self, value: str) -> int:
+        return len(value) + 2000
 
     async def execute_oop(self, source: str) -> int:
         self.sources.append(source)
@@ -112,11 +134,15 @@ class CodegenTests(unittest.TestCase):
         self.assertIn("class AsyncCodegenBooking(TypedOop[Any]):", source)
         self.assertIn("def status(self) -> str:", source)
         self.assertIn("def mark_paid(self, at: int) -> None:", source)
+        self.assertIn("def rename_to(self, name: str) -> None:", source)
         self.assertIn("def yourself(self) -> CodegenBooking:", source)
         self.assertIn("async def yourself(self) -> AsyncCodegenBooking:", source)
-        self.assertIn("self.send('markPaid:', at)", source)
-        self.assertIn("oop = self.send_oop('yourself')", source)
-        self.assertIn("self.send('transferTo:byUserId:', user_id, by_user_id)", source)
+        self.assertIn("raw_args = (_argument_to_oop(session, at),)", source)
+        self.assertIn("oop = session.perform_oop(int(self), 'yourself')", source)
+        self.assertIn(
+            "session.perform_value(int(self), 'transferTo:byUserId:', *raw_args)",
+            source,
+        )
 
     def test_generated_sync_wrapper_builds_smalltalk_sources(self) -> None:
         namespace: dict[str, Any] = {}
@@ -128,6 +154,7 @@ class CodegenTests(unittest.TestCase):
         count = booking_cls.count_all(session)
         status = booking.status
         paid_result = booking.mark_paid(123)
+        booking.rename_to("paid")
         refreshed = booking.yourself()
         booking.transfer(456, 789)
 
@@ -143,8 +170,16 @@ class CodegenTests(unittest.TestCase):
             session.performed,
             [
                 (0xB00, "status", ()),
-                (0xB00, "markPaid:", (123,)),
-                (0xB00, "transferTo:byUserId:", (456, 789)),
+                (0xB00, "markPaid:", (gemstone._python_to_smallint(123),)),
+                (0xB00, "renameTo:", (1004,)),
+                (
+                    0xB00,
+                    "transferTo:byUserId:",
+                    (
+                        gemstone._python_to_smallint(456),
+                        gemstone._python_to_smallint(789),
+                    ),
+                ),
             ],
         )
         self.assertEqual(session.performed_oops, [(0xB00, "yourself", ())])
@@ -160,6 +195,7 @@ class CodegenTests(unittest.TestCase):
             count = await booking_cls.count_all(session)
             status = await booking.status()
             paid_result = await booking.mark_paid(321)
+            await booking.rename_to("held")
             refreshed = await booking.yourself()
             await booking.transfer(654, 987)
             self.assertEqual(count, 84)
@@ -176,8 +212,16 @@ class CodegenTests(unittest.TestCase):
             session.performed,
             [
                 (0xC00, "status", ()),
-                (0xC00, "markPaid:", (321,)),
-                (0xC00, "transferTo:byUserId:", (654, 987)),
+                (0xC00, "markPaid:", (gemstone._python_to_smallint(321),)),
+                (0xC00, "renameTo:", (2004,)),
+                (
+                    0xC00,
+                    "transferTo:byUserId:",
+                    (
+                        gemstone._python_to_smallint(654),
+                        gemstone._python_to_smallint(987),
+                    ),
+                ),
             ],
         )
         self.assertEqual(session.performed_oops, [(0xC00, "yourself", ())])

@@ -45,6 +45,24 @@ class OrderedCollectionBridgeTests(unittest.TestCase):
         self.assertEqual(result, "wrapped")
         send.assert_called_once_with(col, "at:put:", 1, "alpha")
 
+    def test_extend_converts_values_once_and_uses_add_all(self):
+        col, session = _make_ordered_collection()
+
+        with mock.patch.object(ordered_collection_mod, "_to_oop", return_value=888) as to_oop:
+            result = col.extend(["alpha", "beta"])
+
+        self.assertIs(result, col)
+        to_oop.assert_called_once_with(session, ["alpha", "beta"])
+        session.perform_value.assert_called_once_with(111, "addAll:", 888)
+
+    def test_extend_empty_values_is_noop(self):
+        col, session = _make_ordered_collection()
+
+        result = col.extend([])
+
+        self.assertIs(result, col)
+        session.perform_value.assert_not_called()
+
     def test_reverse_iter_uses_array_snapshot_without_eval_string_oops(self):
         col, session = _make_ordered_collection()
         session.perform_oop.side_effect = [500, 703, 702, 701]

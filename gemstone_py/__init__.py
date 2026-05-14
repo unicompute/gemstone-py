@@ -109,6 +109,9 @@ _LAZY_EXPORTS = {
     "session_providers": "gemstone_py.session_providers",
     "session_facade": "gemstone_py.session_facade",
     "smalltalk_bridge": "gemstone_py.smalltalk_bridge",
+    "transactions": "gemstone_py.transactions",
+    "retrying_transaction": "gemstone_py.transactions",
+    "run_transaction_with_retry": "gemstone_py.transactions",
     "web_core": "gemstone_py.web_core",
 }
 
@@ -118,7 +121,13 @@ def __getattr__(name: str) -> object:
     if target is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     module = import_module(target)
-    if name in {"GemStoneSessionFacade", "PersistentRoot", "gemstone_selector"}:
+    if name in {
+        "GemStoneSessionFacade",
+        "PersistentRoot",
+        "gemstone_selector",
+        "retrying_transaction",
+        "run_transaction_with_retry",
+    }:
         value = getattr(module, name)
     else:
         value = module
@@ -202,10 +211,13 @@ __all__ = [
     "observability",
     "release_metadata",
     "registered_gemstone_classes",
+    "retrying_transaction",
+    "run_transaction_with_retry",
     "session_facade",
     "session_providers",
     "session_scope",
     "typed_oop",
+    "transactions",
     "warm_flask_request_session_provider",
     "web_core",
     "request_failed",
