@@ -44,6 +44,13 @@ focused `AsyncSession`, `TypedOop[T]`, and managed-lifetime examples.
 
 Read Parts II, VI, and VII first.
 
+### Lightweight-client user
+
+Read Parts III, IV, and VI with the User Manual nearby for the concrete
+`get_many(...)`, `bulk_perform_*`, `retrying_transaction(...)`, and converter
+examples. The book explains the design temperament; the manual gives the exact
+API calls.
+
 ### Person who enjoys complete narratives
 
 Read the whole thing in order and accept that you are now the office historian.

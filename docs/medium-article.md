@@ -189,6 +189,19 @@ with gemstone.GemStoneSession(
 
 This table is about automatic conversion. If a value comes back as `OopRef` or `GsObject`, you can still work with it by sending Smalltalk messages through `send()`, `perform_value()`, or `perform_oop()`.
 
+For values that should not become global magic, use explicit converters. The
+built-in registry handles `datetime`, exact `date`, `Decimal`, and `UUID`, and
+returns `Oop` markers you can pass into normal session or wrapper calls:
+
+```python
+from datetime import date
+from decimal import Decimal
+
+registry = gemstone.scalar_value_converter_registry()
+due_on, amount = registry.to_oops(session, [date(2026, 5, 15), Decimal("19.95")])
+session.perform_oop(invoice_oop, "dueOn:amount:", due_on, amount)
+```
+
 ```python
 session.eval("'Hello' , ' world'")   # 'Hello world'
 session.eval("42 factorial")          # 1405006117752879898543142606244...
@@ -305,6 +318,11 @@ print(booking.status)
 booking.mark_paid(1_779_912_000)
 ```
 
+The generated package includes `.pyi` stubs, optional async wrappers, and
+runtime metadata such as `OkzBooking.__gemstone_protocol__` and
+`OkzBooking.__gemstone_selectors__`. That gives editors and tooling more
+information without adding a runtime identity map.
+
 ---
 
 ## Persistent Storage with PersistentRoot
@@ -345,6 +363,17 @@ globals_ = PersistentRoot.globals(session)    # Globals — system classes
 pub      = PersistentRoot.published(session)  # Published — shared objects
 sm       = PersistentRoot.session_methods(session)  # SessionMethods — transient
 ```
+
+For request handlers, maintenance scripts, and migrations that need several
+keys at once, use the explicit batch helpers:
+
+```python
+values = root.get_many(["MyApp", "VisitCount"], default=None)
+root.update_many({"VisitCount": int(values["VisitCount"] or 0) + 1})
+```
+
+Nested `GsDict` values have the same `get_many(...)` and `update_many(...)`
+shape, using string keys rather than top-level symbol keys.
 
 ---
 
@@ -464,6 +493,22 @@ with gemstone.GemStoneSession(config=config) as session:
     session.commit()
 ```
 
+When a commit conflict does happen, keep the retry explicit and bounded:
+
+```python
+from gemstone_py import retrying_transaction
+
+def increment_visits(session):
+    root = PersistentRoot(session)
+    root["Visits"] = int(root.get("Visits", 0)) + 1
+
+retrying_transaction(increment_visits, config=config, attempts=5)
+```
+
+For logs or CLI tools, `CommitConflictError.format(session)` and
+`format_commit_conflict(...)` produce readable reports that can include class
+names and optional object summaries.
+
 ### Object Locking
 
 ```python
@@ -522,7 +567,12 @@ def health():
 
 ## Batched GCI Evaluation
 
-The most important performance pattern in gemstone-py is **batching**: instead of making one GCI call per field, write a single Smalltalk script that serialises everything you need as a delimited string and decode it in Python. This turns ~80 round-trips into 1.
+The most important performance pattern in gemstone-py is **batching**. The
+client now exposes common batch shapes directly: `get_many(...)`,
+`update_many(...)`, `bulk_perform_*`, and `perform_many_*`. For custom object
+views, you can still write a single Smalltalk script that serialises everything
+you need as a delimited string and decode it in Python. This turns many
+round-trips into one.
 
 ```python
 script = """
@@ -540,6 +590,9 @@ for line in raw.strip().splitlines():
 ```
 
 The `_smalltalk_batch` module provides helpers (`escaped_field_encoder_source`, `decode_escaped_field`) for building robust pipe-delimited serialisers that handle special characters in object printStrings.
+
+This is still a thin-client model. There is no hidden object mapper deciding
+what to fetch or when to flush changes.
 
 ---
 
@@ -731,16 +784,21 @@ Here is everything gemstone-py gives you in one diagram:
 ```
 gemstone-py
 ├── GemStoneSession          core session, eval, perform, commit/abort
+│   └── bulk_perform_*       explicit batched selector sends
 ├── GemStoneConfig           connection settings + from_env()
 ├── TransactionPolicy        MANUAL | COMMIT_ON_SUCCESS | ABORT_ON_EXIT
+├── transactions             bounded retry helpers for commit conflicts
 ├── OopRef                   wraps a GemStone OOP; .send(), .print_string()
 ├── TypedOop / ManagedOop    typed OOPs and export-set lifetime handles
 ├── codegen                  Protocol-to-TypedOop wrapper generation
+├── converters               opt-in scalar value adapters
+├── inspection               inspect/dump/describe-class helpers
 ├── aio                      AsyncSession, AsyncPersistentRoot, AsyncGSCollection
 ├── native                   optional PyO3 backend discovery
 │
 ├── persistent_root
 │   ├── PersistentRoot       dict-like wrapper for a SymbolDictionary
+│   ├── get_many/update_many batch root and dictionary access
 │   ├── GsDict               proxy for StringKeyValueDictionary
 │   └── GsObject             generic GemStone object proxy
 │
@@ -763,6 +821,8 @@ gemstone-py
 ├── frameworks.django        Django request-session middleware
 ├── aio.fastapi              FastAPI dependency and middleware helpers
 ├── aio.litestar             Litestar dependency and ASGI middleware helpers
+├── migrations               module migrations and schema fingerprinting
+├── observability            tracing, metrics, and slow-operation hooks
 │
 └── benchmarks               benchmark CLIs + GitHub workflow tooling
 ```
@@ -788,9 +848,12 @@ The broader plan landed around that center:
 | Pool + health | Sync and async pool surfaces expose validation, idle cleanup, and stable stats. | `gemstone_py.session_providers`, `gemstone_py.aio.pool` |
 | Streaming results | Collection and query iteration can stream results instead of forcing every caller through list materialization. | `GSCollection.search_iter(...)`, `Query.iter(...)`, `AsyncGSCollection.search_iter(...)` |
 | Codegen | Protocol-to-wrapper generation now supports typed methods, async wrappers, stubs, cleanup, and drift checks. | `gemstone_py.codegen`, `examples/typed_access/codegen_demo/`, `docs/codegen.md` |
+| Bulk operations | Root, dictionary, and selector-send helpers reduce round trips without adding object mapping. | `PersistentRoot.get_many(...)`, `GemStoneSession.bulk_perform_*` |
+| Retry diagnostics | Transaction retries can replay a whole unit of work and format conflict reports for logs. | `gemstone_py.transactions`, `format_commit_conflict(...)` |
+| Value converters | Scalar-ish Python values can be converted explicitly and locally. | `gemstone_py.converters`, `gemstone-examples value-converters` |
 | Observability | Sessions and providers can emit metrics and tracing data without hard dependencies. | `gemstone_py.observability`, `docs/observability.md` |
-| Migrations | The migration CLI now has planning, dry runs, recorded dry runs, locking, status, rollback, and class-diff helpers. | `gemstone_py.migrations`, `gemstone-migrations` |
-| Inspect/debug | Python exposes object/class inspection helpers that are useful outside VS Code. | `GemStoneSession.inspect(...)`, `dump(...)`, `describe_class(...)` |
+| Migrations | The migration CLI now has planning, dry runs, recorded dry runs, locking, status, rollback, class-diff, and schema-fingerprint helpers. | `gemstone_py.migrations`, `gemstone-migrations` |
+| Inspect/debug | Python exposes bounded object/class inspection helpers that are useful outside VS Code. | `GemStoneSession.inspect(...)`, `dump(...)`, `describe_class(...)` |
 | Web adapters | Request lifecycle logic is shared through `web_core`, with Flask, Django, FastAPI, and Litestar adapters on top. | `docs/framework-adapters.md`, `examples/fastapi/`, `examples/litestar/` |
 | Examples | The quickstart, realistic app, cookbook index, and CLI map make it clear where to begin. | `examples/quickstart.py`, `examples/webstack/`, `examples/cookbook/`, `gemstone-examples list` |
 | Performance | Benchmark tooling is surfaced through a public performance page and release workflow. | `docs/performance.md`, `gemstone-benchmarks` |

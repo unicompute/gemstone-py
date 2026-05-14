@@ -17,6 +17,10 @@ area but not the module, example, or doc page.
 | 9 | Performance docs | `gemstone_py.benchmarks`, `gemstone_py.benchmark_compare` | `examples/native_backend/` | `docs/performance.md` |
 | 10 | Native wheels | `gemstone_py.native`, `gemstone-py-native/` | `examples/native_backend/` | `README.md`, `RELEASE_CHECKLIST.md` |
 | 11 | Bootstrap | `gemstone_py.bootstrap`, `gemstone_py/_gemstone_side/` | `examples/quickstart.py`, `examples/cookbook/` | `docs/setup-guide.md` |
+| 12 | Bulk operations | `GemStoneSession.bulk_perform_*`, `PersistentRoot.get_many`, `GsDict.update_many`, `OrderedCollection.extend` | `examples/example.py`, cookbook snippets | `docs/user-manual.md`, `docs/performance.md`, `docs/cookbook.md` |
+| 13 | Retry and diagnostics | `gemstone_py.transactions`, `gemstone_py.concurrency` | conflict examples and tests | `docs/user-manual.md`, `docs/cookbook.md`, `docs/observability.md` |
+| 14 | Explicit value conversion | `gemstone_py.converters` | `examples/cookbook/value_converters.py` | `docs/cookbook.md`, `docs/user-manual.md` |
+| 15 | Schema fingerprinting | `gemstone_py.migrations.schema_fingerprint`, `gemstone-migrations fingerprint` | migration examples | `docs/user-manual.md`, `docs/cookbook.md` |
 
 ## Commands
 
@@ -24,6 +28,7 @@ From an installed package:
 
 ```bash
 gemstone-examples plan3-map
+gemstone-examples value-converters
 ```
 
 From a source checkout:

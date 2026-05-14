@@ -1,4 +1,7 @@
-External SVG assets used in `docs/assets`:
+# Asset Attribution
+
+Most documentation images under `docs/assets` are repository-native SVG or PNG
+assets created for this project. External SVG assets used in `docs/assets`:
 
 - `cartoons/openmoji-man-office-worker.svg`
   Source: OpenMoji, "man office worker" emoji SVG

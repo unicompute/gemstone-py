@@ -5,6 +5,10 @@ Adapters should stay thin: translate the framework's request hooks into
 `RequestScope` or `AsyncRequestScope`, then expose one helper that returns the
 current request session.
 
+Keep retry policy in the application service layer. The adapter should own
+session acquisition and final commit/abort behaviour; it should not silently
+replay request handlers.
+
 ## Sync Framework Shape
 
 ```python
@@ -29,6 +33,22 @@ def end_request(request, exc=None, response_status=None):
 The scope commits on successful responses, aborts on exceptions or server-error
 status codes, and releases pooled sessions with the correct `clean`/`discard`
 flags.
+
+When a specific write workflow needs bounded conflict replay, wrap that
+workflow with `retrying_transaction(...)` outside the request scope or in a
+service function that can safely rerun the whole unit of work:
+
+```python
+from gemstone_py import retrying_transaction
+
+def save_booking(session):
+    ...
+
+retrying_transaction(save_booking, config=GemStoneConfig.from_env(), attempts=5)
+```
+
+Do not retry an already-running request scope unless the whole request body can
+be safely replayed after aborting and reloading state.
 
 ## Async Framework Shape
 
@@ -61,3 +81,7 @@ async def end_request(scope, exc=None, response_status=None):
 Keep optional framework imports inside app/example code or function bodies, not
 at package import time. The adapter module should remain importable in a plain
 `gemstone-py` installation.
+
+One GemStone session belongs to one active execution path. Framework adapters
+should make session sharing explicit through a pool or request-local provider,
+not by storing a session in a global variable.

@@ -37,6 +37,8 @@ If you are already productive and only need answers:
 - "Which plan3 stream maps to which code?" → [Plan3 Feature Map](plan3-feature-map.md)
 - "How do I do X quickly?" → [Cookbook](cookbook.md)
 - "How do I generate typed wrappers from Protocols?" → [Type-Safe Smalltalk Codegen](codegen.md)
+- "How do I reduce round trips without adding an ORM?" → [User Manual](user-manual.md)
+- "How do I retry commit conflicts deliberately?" → [Cookbook](cookbook.md)
 - "How do I add another web framework?" → [Framework Adapters](framework-adapters.md)
 - "How do I trace or measure GemStone calls?" → [Observability](observability.md)
 - "Can a Rust application talk to GemStone directly?" → [Rust Client](rust-client.md)
@@ -54,6 +56,11 @@ If you are already productive and only need answers:
 - async sessions and FastAPI/Litestar request integration
 - typed OOPs, typed `GSCollection` queries, and managed OOP lifetimes
 - Protocol-to-Smalltalk code generation with checked-in typed wrappers
+- generated wrapper metadata, `.pyi` stubs, async wrappers, and CI drift checks
+- bulk selector sends, persistent-root batch reads/writes, and collection batch updates
+- explicit transaction retry helpers and user-facing conflict diagnostics
+- opt-in scalar value converters for `datetime`, `date`, `Decimal`, `UUID`, and dataclass payloads
+- schema fingerprinting for expected roots, GemStone classes, and migration state
 - OOP/class inspection and recursive debug dumps
 - optional native PyO3 backend installation and backend selection
 - a direct Rust client foundation in the separate `gemstone-rs` workspace
@@ -70,6 +77,32 @@ If you are already productive and only need answers:
 - the companion VS Code workbench for running examples, opening docs, checking
   backends, launching the Python database explorer, and handing Smalltalk IDE
   work to Jasper
+
+## Current Lightweight Improvements
+
+The recent improvements deliberately keep `gemstone-py` as a thin GemStone
+client rather than an object mapper. The main additions are explicit helpers
+that reduce repeated boilerplate or repeated round trips:
+
+- `PersistentRoot.get_many(...)`, `PersistentRoot.update_many(...)`,
+  `GsDict.get_many(...)`, and `GsDict.update_many(...)` for batch dictionary
+  access.
+- `GemStoneSession.bulk_perform_*`, `perform_many_*`, and `PerformCall` for
+  sending one or more selectors across raw OOPs in one evaluated batch.
+- `run_transaction_with_retry(...)` and `retrying_transaction(...)` for bounded
+  replay of a whole unit of work after `CommitConflictError`.
+- `format_commit_conflict(...)` and structured conflict diagnostics for logs,
+  CLI output, and incident reports.
+- `scalar_value_converter_registry()` and `dataclass_to_dict(...)` for explicit
+  value conversion when a GemStone API expects scalar OOP arguments or plain
+  mapping payloads.
+- `schema_fingerprint(...)`, `assert_schema_fingerprint(...)`, and
+  `gemstone-migrations fingerprint` for deployment-time checks that a stone has
+  the expected roots, classes, and migration state.
+
+These are intentionally not a hidden identity map. If an application wants a
+domain model, it can build one on top of these primitives without the client
+guessing object identity, lifetime, or persistence semantics behind its back.
 
 ## Visuals
 

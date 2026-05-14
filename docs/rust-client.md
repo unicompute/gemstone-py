@@ -15,6 +15,12 @@ The split is:
 The public Cargo package is `gemstone-rs`. In Rust source code, import it as
 `gemstone_rs`.
 
+The Rust client intentionally does not mirror every Python convenience. Recent
+Python helpers such as generated wrappers, explicit value converters, bulk root
+helpers, and conflict-formatting reports remain Python-side ergonomics. The
+Rust workspace keeps its surface smaller: raw GCI access, conservative value
+conversion, OOP handles, and explicit transaction control.
+
 ## Environment
 
 Set the same GemStone environment used by `gemstone-py`:

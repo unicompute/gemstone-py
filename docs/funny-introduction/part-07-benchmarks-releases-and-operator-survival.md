@@ -28,6 +28,8 @@ The benchmark system now includes:
 - baseline manifests
 - environment-aware baseline selection
 - threshold enforcement in GitHub Actions
+- documentation for the batch APIs that are meant to reduce ordinary
+  round-trip costs
 
 That is what it looks like when performance work becomes policy rather than lore.
 
@@ -189,6 +191,8 @@ The package now maintains:
 - a changelog
 - release metadata checks
 - version/tag validation
+- a next-release draft that calls out lightweight client improvements, not just
+  packaging chores
 
 This sounds bureaucratic until the first moment you need to answer:
 

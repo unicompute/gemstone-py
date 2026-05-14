@@ -14,6 +14,7 @@ This guide is organized around what you are trying to learn:
 - async sessions and FastAPI request integration
 - typed OOPs, typed queries, and export-set lifetime handles
 - persistence helpers
+- bulk root/dictionary access and explicit value conversion
 - indexed collections and query-style access
 - concurrency primitives
 - Flask integration
@@ -131,6 +132,7 @@ For a compact map of the broader example set:
 ```bash
 gemstone-examples list
 gemstone-examples plan3-map
+gemstone-examples value-converters
 ```
 
 ## Running Examples From VS Code
@@ -200,10 +202,16 @@ right script, package, or installed command.
 ```bash
 gemstone-examples list
 gemstone-examples plan3-map
+gemstone-examples value-converters
 ```
 
 Use it when you know the kind of task you want but do not yet know which example
 directory owns it.
+
+The `value-converters` entry point is intentionally offline. It previews the
+explicit converter registry and dataclass-to-dict helper without opening a live
+GemStone session, which makes it a useful first check for teams deciding how
+much conversion they want at application boundaries.
 
 ## `examples/example.py`: The Grand Tour
 
@@ -220,6 +228,7 @@ It covers:
 - `SmalltalkBridge`
 - `GemStoneSessionFacade`
 - `PersistentRoot`
+- bulk `PersistentRoot` and selector-send helpers
 - `GStore`
 - `ObjectLog`
 - `RCCounter`
@@ -373,6 +382,7 @@ Use it when you want to understand:
 - typed `GSCollection.query(Protocol)` predicates
 - chunked `Query.iter(...)` result handling
 - `gemstone-codegen` generated wrappers for method-shaped Smalltalk access
+- generated wrapper `.pyi` stubs and lightweight runtime metadata
 
 `simple_blog_queries.py` contains importable helper functions for the blog data
 shape. `typed_oops_and_queries.py` is the runnable live example.
@@ -457,6 +467,10 @@ with GemStoneSession(config=GemStoneConfig.from_env()) as session:
 
 Use `@gemstone_selector(...)` for selectors that do not map cleanly from Python
 snake_case to Smalltalk camelCase keywords.
+
+Generated wrappers expose `__gemstone_protocol__` and
+`__gemstone_selectors__`, so examples and tools can explain which Protocol and
+selector mapping produced a Python method without adding a runtime mapper.
 
 The offline preview example is the safest place to start. It generates the
 `OkzBooking` and `OkzCustomer` wrappers in a temporary directory, shows the
@@ -569,6 +583,7 @@ Major themes in this tree:
 
 - indexed collections
 - stores
+- ordered collections and batch updates
 - data migration
 - persistent data structures
 - translation of old MagLev-era ideas into plain GemStone use
@@ -794,6 +809,17 @@ gemstone-migrations diff-class OkzBooking \
 
 The command prints missing and extra instance variables plus advisory
 `session.eval(...)` lines that can be copied into a reviewed migration.
+
+For startup or release checks, fingerprint the expected roots, classes, and
+migration state:
+
+```bash
+gemstone-migrations fingerprint \
+  --root Bookings \
+  --class OkzBooking \
+  --manifest my_app.migrations.manifest \
+  --json
+```
 
 The key habit is to keep migration units explicit:
 

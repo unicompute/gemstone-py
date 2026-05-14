@@ -29,6 +29,9 @@ Use a minor release for the next larger feature milestone:
   definitions, and indexes.
 - Generated wrapper metadata through `__gemstone_protocol__` and
   `__gemstone_selectors__` for diagnostics and tooling.
+- Documentation refreshed across the main guides, cookbook, examples guide,
+  performance notes, observability notes, framework adapter notes, and printable
+  docs.
 
 ## Install
 

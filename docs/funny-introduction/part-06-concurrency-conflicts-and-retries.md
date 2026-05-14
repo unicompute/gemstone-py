@@ -141,6 +141,21 @@ The wrong retry shape is:
 - rerun half the application
 - hope the world has changed enough to make this count as architecture
 
+The package now gives that shape a name:
+
+```python
+retrying_transaction(work, config=config, attempts=5, on_conflict=log_retry)
+```
+
+The callable form matters. It gives the helper permission to abort, open a fresh
+transaction view, and run the work again. A context manager cannot safely invent
+that replay for you after the body has already run.
+
+Conflict reports are also structured. `CommitConflictError.diagnostics(...)`
+can include the conflicting OOPs, GemStone class names, and optional object
+summaries; `format_commit_conflict(...)` turns the same data into a readable
+operator report.
+
 
 ## Locks Are Tools, Not Decorations
 

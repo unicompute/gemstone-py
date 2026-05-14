@@ -190,11 +190,17 @@ it resents the network is difficult to recommend with a straight face.
 The package now has:
 
 - batched mapping fetches
+- explicit `get_many(...)` and `update_many(...)` helpers
+- bulk selector sends for raw OOP workflows
 - benchmark reports
 - comparison tooling
 - environment-specific baselines
 
 That makes the performance story concrete instead of ceremonial.
+
+The important design line is that batching is not object mapping. The client is
+reducing unnecessary calls, not secretly tracking every repository object you
+have ever touched.
 
 
 ## The Main Example Ties Them Together

@@ -81,6 +81,10 @@ treat the checked-in wrapper package as typed. `--clean` removes stale
 generated wrapper modules and stale wrapper stubs when a Protocol is renamed or
 deleted.
 
+The generator keeps runtime code lightweight. It emits ordinary Python wrapper
+classes that call the existing session API; it does not add a registry,
+identity map, object cache, or global mapper.
+
 Each generated wrapper class also exposes lightweight runtime metadata:
 
 ```python
@@ -258,6 +262,20 @@ def mark_paid(self, at_posix_seconds: int) -> None:
     ...
 ```
 
+## Argument Conversion
+
+Generated class-side wrappers turn simple Python literals into Smalltalk source
+only for the small supported set: strings, integers, floats, booleans, and
+`None`. Instance-side generated wrappers send raw OOP arguments through
+`perform_*`, so pass an existing raw OOP, `Oop` marker, or wrapper-managed OOP
+when the selector expects an object reference.
+
+Keep complex query expressions, dynamic Smalltalk, and application-specific
+value conversion outside generated source. For scalar-ish Python values such as
+`datetime`, `date`, `Decimal`, or `UUID`, use the explicit converter registry
+described in the User Manual before passing the resulting `Oop` marker to the
+wrapper or session call.
+
 ## Sync Usage
 
 Generated class-side methods take a session and build the Smalltalk source:
@@ -338,6 +356,8 @@ The first generator pass handles:
 - self-returning class and instance methods as wrapped `TypedOop` results
 - same-module cross-Protocol returns as lazily imported generated wrappers
 - string, integer, float, boolean, and `None` literals in class-side calls
+- conservative argument conversion that rejects unsupported source literals
+  instead of guessing
 - explicit selector overrides with `@gemstone_selector(...)`
 - checked-in sync and async generated modules with `.pyi` stubs, `py.typed`,
   stale-file cleanup, and CI/pre-commit drift checks

@@ -527,24 +527,17 @@ When multiple sessions modify overlapping state, conflicts are normal. The right
 pattern:
 
 ```python
-from gemstone_py import GemStoneConfig, GemStoneSession, TransactionPolicy
-from gemstone_py.concurrency import CommitConflictError
+from gemstone_py import GemStoneConfig, PersistentRoot, retrying_transaction
 
 config = GemStoneConfig.from_env()
 
-for attempt in range(3):
-    with GemStoneSession(config=config,
-                         transaction_policy=TransactionPolicy.MANUAL) as session:
-        try:
-            # reload data each attempt — previous read is stale after abort
-            root = PersistentRoot(session)
-            root["counter"] = (root.get("counter") or 0) + 1
-            session.commit()
-            break
-        except CommitConflictError:
-            session.abort()
-            if attempt == 2:
-                raise
+def increment_counter(session):
+    # reload data each attempt; previous reads are stale after abort
+    root = PersistentRoot(session)
+    root["counter"] = (root.get("counter") or 0) + 1
+    return root["counter"]
+
+value = retrying_transaction(increment_counter, config=config, attempts=5)
 ```
 
 Rules:
@@ -553,6 +546,20 @@ Rules:
 - reload data after every abort — the previous read is stale
 - bound the retry count — do not loop forever
 - log conflicts — frequent conflicts signal a design smell, not bad luck
+
+Add `on_conflict=` when you want a readable report for each retry:
+
+```python
+def log_retry(retry):
+    print(retry.format(include_summaries=False))
+
+retrying_transaction(
+    increment_counter,
+    config=config,
+    attempts=5,
+    on_conflict=log_retry,
+)
+```
 
 ## Recipe 29: Learn a Queue With a Hat
 
@@ -607,3 +614,90 @@ Run the offline preview without a live stone:
 gemstone-examples value-converters
 python -m examples.cookbook.value_converters
 ```
+
+## Recipe 32: Batch Root and Dictionary Access
+
+```python
+from gemstone_py import GemStoneConfig, PersistentRoot, session_scope
+
+config = GemStoneConfig.from_env()
+
+with session_scope(config=config) as session:
+    root = PersistentRoot(session)
+
+    values = root.get_many(["Settings", "VisitCount"], default=None)
+    root.update_many({
+        "VisitCount": int(values["VisitCount"] or 0) + 1,
+        "LastMaintenance": "2026-05-14T22:00:00Z",
+    })
+
+    if "Settings" not in root:
+        root["Settings"] = {}
+    settings = root["Settings"]
+    settings.update_many({"theme": "dark", "page_size": 50})
+```
+
+Use this when the operation is naturally a batch. It is still explicit
+repository access, just less chatty.
+
+For persistent ordered lists:
+
+```python
+from gemstone_py import PersistentRoot, session_scope
+from gemstone_py.ordered_collection import OrderedCollection
+
+with session_scope(config=config) as session:
+    states = OrderedCollection(session)
+    states.extend(["draft", "review", "paid"])
+    PersistentRoot(session)["InvoiceStates"] = states
+```
+
+## Recipe 33: Send Selectors in Bulk
+
+```python
+from gemstone_py import GemStoneConfig, GemStoneSession, PerformCall
+
+with GemStoneSession(config=GemStoneConfig.from_env()) as session:
+    orders = [
+        session.global_get("OrderA"),
+        session.global_get("OrderB"),
+    ]
+
+    statuses = session.perform_many_value(orders, "status")
+    labels = session.bulk_perform_calls_value([
+        PerformCall(orders[0], "printString"),
+        (orders[1], "status"),
+    ])
+```
+
+Use `perform_many_*` for one selector across many receivers. Use
+`bulk_perform_calls_*` when the receivers, selectors, or arguments differ.
+
+## Recipe 34: Fingerprint Expected Schema
+
+```bash
+gemstone-migrations fingerprint \
+  --root Bookings \
+  --root BookingIndexes \
+  --class OkzBooking \
+  --manifest my_app.migrations.manifest \
+  --json
+```
+
+For startup checks:
+
+```python
+from gemstone_py.migrations import assert_schema_fingerprint, load_manifest
+
+steps = load_manifest("my_app.migrations.manifest")
+assert_schema_fingerprint(
+    session,
+    expected_digest="...",
+    root_keys=["Bookings", "BookingIndexes"],
+    class_names=["OkzBooking"],
+    migration_steps=steps,
+)
+```
+
+Fingerprinting is for deployment confidence. It does not apply migrations or
+infer Python object mappings.

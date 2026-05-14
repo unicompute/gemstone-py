@@ -35,6 +35,8 @@ Each observed operation creates a span named like:
 ```text
 gemstone.session.execute_oop
 gemstone.session.perform_oop
+gemstone.session.bulk_perform_oop
+gemstone.session.bulk_perform_calls_oop
 gemstone.session.commit
 gemstone.session.abort
 ```
@@ -50,10 +52,33 @@ Common span attributes include:
 | `duration_ms` | Wall-clock duration for the operation. |
 | `selector` | Smalltalk selector for `perform_*` calls. |
 | `argc` | Argument count for `perform_*` calls. |
+| `receiver_count` | Receiver count for `bulk_perform_*` calls. |
+| `call_count` | Call count for `bulk_perform_calls_*` calls. |
 | `source_length` | Source string length for eval/execute calls. |
 
 The instrumentation deliberately records source length rather than full
 Smalltalk source, so normal traces do not expose application data or secrets.
+
+## Conflict And Retry Reports
+
+Transaction retry helpers do not emit logs by themselves. Pass an
+`on_conflict=` listener so application code decides where retry diagnostics go:
+
+```python
+import logging
+from gemstone_py import retrying_transaction
+
+logger = logging.getLogger("my-app.gemstone")
+
+def log_conflict(retry):
+    logger.warning("gemstone commit conflict\n%s", retry.format(include_summaries=False))
+
+retrying_transaction(work, config=config, attempts=5, on_conflict=log_conflict)
+```
+
+Use `retry.to_dict(...)` when a structured logger should receive JSON-friendly
+fields. Use `include_summaries=False` if object summaries may contain
+application data that should not be copied into logs.
 
 ## Record Metrics
 

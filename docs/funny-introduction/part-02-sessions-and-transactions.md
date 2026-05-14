@@ -192,6 +192,24 @@ parts to deserve tests and a pager.
 The important rule is to keep the retryable section as small and concrete as
 possible. Retrying half a business workflow is a confession, not a design.
 
+The reusable helper for ordinary application code is
+`retrying_transaction(...)`. It takes a callable rather than a context manager
+because a genuine retry has to abort, reload state, and replay the whole unit of
+work:
+
+```python
+from gemstone_py import PersistentRoot, retrying_transaction
+
+def update_counter(session):
+    root = PersistentRoot(session)
+    root["Counter"] = int(root.get("Counter", 0)) + 1
+
+retrying_transaction(update_counter, config=config, attempts=5)
+```
+
+That shape is slightly less decorative than a `with` block and much more honest
+about what retrying means.
+
 
 ## Aborts Are Not Shameful
 

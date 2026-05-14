@@ -304,7 +304,7 @@ def main() -> int:
     funny_dir = DOCS_DIR / "funny-introduction"
     core_targets = (
         BuildTarget("setup-guide", "gemstone-py Setup Guide", "Installation, environment, and first successful login", (DOCS_DIR / "setup-guide.md",)),
-        BuildTarget("user-manual", "gemstone-py User Manual", "Core APIs, transaction model, persistence helpers, and web integration", (DOCS_DIR / "user-manual.md",)),
+        BuildTarget("user-manual", "gemstone-py User Manual", "Core APIs, transactions, bulk helpers, inspection, migrations, and web integration", (DOCS_DIR / "user-manual.md",)),
         BuildTarget("examples-guide", "gemstone-py Examples Guide", "A tour of the examples tree with diagrams and screenshots", (DOCS_DIR / "examples-guide.md",)),
         BuildTarget("cookbook", "gemstone-py Cookbook", "Task-focused recipes for daily use", (DOCS_DIR / "cookbook.md",)),
         BuildTarget("plan3-feature-map", "gemstone-py Plan3 Feature Map", "Mapping plan3 streams to modules, examples, and docs", (DOCS_DIR / "plan3-feature-map.md",)),
@@ -316,7 +316,7 @@ def main() -> int:
         BuildTarget(
             "core-guides-companion",
             "gemstone-py Companion Manual",
-            "Setup guide, user manual, examples guide, cookbook, and performance notes in one volume",
+            "Setup guide, user manual, examples guide, cookbook, codegen, observability, and performance notes",
             (
                 DOCS_DIR / "README.md",
                 DOCS_DIR / "setup-guide.md",

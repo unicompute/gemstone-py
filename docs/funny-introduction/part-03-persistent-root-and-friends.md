@@ -231,12 +231,36 @@ One of the quieter improvements in the package is that `PersistentRoot` mapping
 operations like `keys()`, `items()`, and `values()` have been optimized to use
 batched repository fetches rather than unnecessarily chatty per-entry patterns.
 
+The next step is explicit batch access when you already know the keys:
+
+```python
+values = root.get_many(["Settings", "VisitCount"], default=None)
+root.update_many({"VisitCount": int(values["VisitCount"] or 0) + 1})
+```
+
+Nested `GsDict` objects use the same shape. This gives you the practical
+benefit people often reach for in an ORM, without pretending the client has a
+complete identity map of repository objects.
+
 That matters because persistence APIs are not only judged by correctness. They
 are also judged by whether they behave like they respect the user's time.
 
 A helper that is simple but slow on normal operations becomes difficult to love.
 
 The package has put real effort into preventing that.
+
+
+## Explicit Conversion Is Better Than Surprise Conversion
+
+Some Python values need deliberate handling before they become GemStone
+arguments. The package now has an opt-in converter registry for scalar-ish
+values such as `datetime`, exact `date`, `Decimal`, and `UUID`.
+
+That sentence is important because it includes "opt-in."
+
+The client will not silently decide that every Python dataclass is now a
+persistent object. Convert values at the boundary, call the GemStone API you
+mean to call, and leave domain object lifecycle decisions in application code.
 
 
 ## Naming Strategies That Age Well

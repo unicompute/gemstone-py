@@ -69,12 +69,40 @@ Useful methods include:
   Abort the current transaction.
 - `global_get(...)`
   Resolve named objects from the repository.
+- `bulk_perform_value(...)` / `bulk_perform_oop(...)`
+  Send one selector to many raw OOP receivers in one evaluated batch.
+- `bulk_perform_calls_value(...)` / `bulk_perform_calls_oop(...)`
+  Send mixed selector calls in one batch when each receiver or selector differs.
 
 When to use it:
 
 - scripts
 - lower-level tooling
 - integration code that must control failure behaviour precisely
+
+### Bulk Selector Sends
+
+Bulk sends are for the cases where you already have raw OOPs and would
+otherwise call `perform_*` repeatedly in a loop. They keep the API explicit:
+you still choose selectors and raw OOP arguments, but the package evaluates the
+batch in one GemStone round trip.
+
+```python
+from gemstone_py import PerformCall
+
+with GemStoneSession(config=config) as session:
+    order_oops = [session.global_get("OrderA"), session.global_get("OrderB")]
+    statuses = session.bulk_perform_value(order_oops, "status")
+
+    labels = session.bulk_perform_calls_value([
+        PerformCall(order_oops[0], "printString"),
+        (order_oops[1], "status"),
+    ])
+```
+
+Use `perform_many_value(...)` and `perform_many_oop(...)` when that reads more
+naturally in application code. They are aliases for the bulk selector helpers.
+`AsyncSession` exposes the same bulk and perform-many names as `async` methods.
 
 ### `session_scope(...)`
 
@@ -202,6 +230,48 @@ Use something more specialized when:
 - use descriptive names
 - group related data under one top-level bucket when it makes sense
 - do not turn `UserGlobals` into a junk drawer with no naming discipline
+
+### Batch Reads And Writes
+
+Use `get_many(...)` and `update_many(...)` when a request, migration, or
+maintenance script needs several keys at once. The helpers avoid a Python loop
+of individual repository sends while keeping the operation visible in code.
+
+```python
+with session_scope(config=config) as session:
+    root = PersistentRoot(session)
+
+    values = root.get_many(["CustomerCount", "Settings"], default=None)
+    root.update_many({
+        "CustomerCount": int(values["CustomerCount"] or 0) + 1,
+        "LastSweepAt": "2026-05-14T22:00:00Z",
+    })
+
+    if "Settings" not in root:
+        root["Settings"] = {}
+    settings = root["Settings"]
+    settings.update_many({"theme": "dark", "page_size": 50})
+```
+
+`PersistentRoot` uses symbol keys for top-level `UserGlobals` access. Nested
+`GsDict` values use string keys. That distinction mirrors the GemStone objects
+being wrapped rather than hiding them behind object mapping.
+`AsyncPersistentRoot` exposes async `get_many(...)` and `update_many(...)`
+counterparts for async applications.
+
+For persistent ordered lists, `OrderedCollection.extend(...)` adds several
+values with one `addAll:` send:
+
+```python
+from gemstone_py import session_scope
+from gemstone_py.ordered_collection import OrderedCollection
+
+with session_scope(config=config) as session:
+    collection = OrderedCollection(session)
+    collection.extend(["draft", "review", "paid"])
+    root = PersistentRoot(session)
+    root["InvoiceStates"] = collection
+```
 
 ## `GSCollection`
 
@@ -332,7 +402,9 @@ with GemStoneSession(config=config) as session:
 ```
 
 See `docs/codegen.md` for selector rules, async wrappers, and CI `--check`
-usage.
+usage. Generated classes also expose `__gemstone_protocol__` and
+`__gemstone_selectors__` so diagnostics, admin UI, and code review tooling can
+identify where a wrapper came from without parsing generated source files.
 
 For object lifetime, use `execute_managed(...)` when a raw OOP should stay in
 GemStone's export set while Python holds a handle:
@@ -357,6 +429,45 @@ with session.handle(raw_oop) as handle:
 are additive and make lifetime intent visible.
 
 The runnable repository example is `examples/lifetime/managed_oop_handles.py`.
+
+## Explicit Value Converters
+
+`gemstone-py` does not globally convert every Python object it sees. When a
+GemStone API expects scalar-ish OOP arguments, opt into a small converter
+registry at the call site:
+
+```python
+from datetime import date
+from decimal import Decimal
+from gemstone_py import scalar_value_converter_registry
+
+registry = scalar_value_converter_registry()
+
+with GemStoneSession(config=config) as session:
+    invoice_oop = session.global_get("CurrentInvoice")
+    due_on, amount = registry.to_oops(session, [
+        date(2026, 5, 15),
+        Decimal("19.95"),
+    ])
+    session.perform_oop(invoice_oop, "dueOn:amount:", due_on, amount)
+```
+
+The built-in registry covers `datetime`, exact `date`, `Decimal`, and `UUID`.
+Use `registry.copy()` and `registry.extend(...)` when an application needs its
+own explicit adapters.
+
+For dataclasses, convert to a plain payload before persisting or sending it:
+
+```python
+from gemstone_py import dataclass_to_dict
+
+payload = dataclass_to_dict(booking_patch, recurse=False)
+root["PendingBookingPatch"] = payload
+```
+
+This is deliberately value conversion, not object mapping. It does not create
+an identity map, track dirty fields, or decide when domain objects should be
+written.
 
 ## `GStore`
 
@@ -458,7 +569,22 @@ gemstone-inspect --class OkzBooking --json
 
 `inspect()` returns a one-level `InspectionResult`; slot values are
 `InspectedReference` objects with OOP, class name, and summary. `dump()` follows
-those references recursively and marks cycles.
+those references recursively and marks cycles. Use `slots=...`, `classes=...`,
+and `max_slots=...` when the object graph is large or when a CLI report should
+stay readable:
+
+```python
+dump = session.dump(
+    booking,
+    depth=3,
+    slots=["status", "customer"],
+    classes=["OkzBooking", "OkzCustomer"],
+    max_slots=20,
+)
+```
+
+The equivalent CLI flags are `--slot`, `--include-class`, `--max-slots`, and
+`--json`.
 
 ## Migrations
 
@@ -516,6 +642,34 @@ gemstone-migrations diff-class OkzBooking \
 The output is advisory: review the suggested instance-variable changes before
 copying them into a migration.
 
+For deployment checks, fingerprint the expected repository shape without
+mutating the stone:
+
+```bash
+gemstone-migrations fingerprint \
+  --root Bookings \
+  --root BookingIndexes \
+  --class OkzBooking \
+  --manifest my_app.migrations.manifest \
+  --json
+```
+
+Application startup or release automation can use the Python API when it needs
+to compare against a known digest:
+
+```python
+from gemstone_py.migrations import assert_schema_fingerprint, load_manifest
+
+steps = load_manifest("my_app.migrations.manifest")
+assert_schema_fingerprint(
+    session,
+    expected_digest="...",
+    root_keys=["Bookings", "BookingIndexes"],
+    class_names=["OkzBooking"],
+    migration_steps=steps,
+)
+```
+
 The live test lane includes a module migration round trip:
 
 ```bash
@@ -541,22 +695,38 @@ object, that is a signal the write pattern needs rethinking — not that the
 concurrency model is wrong.
 
 ```python
-from gemstone_py import GemStoneSession, TransactionPolicy
-from gemstone_py.concurrency import CommitConflictError
+from gemstone_py import GemStoneConfig, PersistentRoot, retrying_transaction
 
-for attempt in range(3):
-    with GemStoneSession(config=config,
-                         transaction_policy=TransactionPolicy.MANUAL) as session:
-        try:
-            counter = session.global_get("Visits")
-            session.eval(f"Visits := {counter + 1}")
-            session.commit()
-            break
-        except CommitConflictError:
-            session.abort()
-            if attempt == 2:
-                raise
+config = GemStoneConfig.from_env()
+
+def increment_visits(session):
+    root = PersistentRoot(session)
+    root["Visits"] = int(root.get("Visits", 0)) + 1
+    return root["Visits"]
+
+new_value = retrying_transaction(increment_visits, config=config, attempts=5)
 ```
+
+The retry helper takes a callable rather than a context manager because a real
+retry must replay the whole unit of work after aborting and reloading state.
+Use `on_conflict=` when you want structured logging:
+
+```python
+def log_conflict(retry):
+    print(retry.format(include_summaries=False))
+
+retrying_transaction(
+    increment_visits,
+    config=config,
+    attempts=5,
+    on_conflict=log_conflict,
+)
+```
+
+For lower-level handlers, `CommitConflictError` exposes
+`diagnostics(session)` and `format(session)`. The top-level
+`format_commit_conflict(...)` helper renders the same report when you already
+have the exception object.
 
 ## Web Integration
 

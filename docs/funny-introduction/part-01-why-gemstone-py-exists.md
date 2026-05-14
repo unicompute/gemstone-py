@@ -127,12 +127,16 @@ At the highest level, the package gives you:
 - `TransactionPolicy`
 - `session_scope(...)`
 - `PersistentRoot`
+- bulk root and selector-send helpers
 - `GSCollection`
 - `GStore`
 - `ObjectLog`
 - `TypedOop[T]` and managed OOP handles
 - `AsyncSession` and FastAPI helpers
 - concurrency helpers
+- explicit retry and conflict diagnostics
+- opt-in scalar value converters
+- migration and schema fingerprinting helpers
 - Flask request-session providers
 - optional native backend discovery
 - benchmarks and release utilities

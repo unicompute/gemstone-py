@@ -173,6 +173,7 @@ gemstone-hello
 gemstone-smalltalk-demo
 gemstone-examples hello
 gemstone-examples smalltalk-demo
+gemstone-examples value-converters
 gemstone-bootstrap --status
 gemstone-benchmarks --help
 ```
@@ -191,6 +192,8 @@ What they are good for:
   Basic bridge demo that is easy to reason about.
 - `gemstone-examples ...`
   A stable wrapper for the example entry points.
+- `gemstone-examples value-converters`
+  Offline preview of opt-in scalar converters and dataclass payload conversion.
 - `gemstone-bootstrap --status`
   Checks whether the GemStone-side helper roots are already present.
 - `gemstone-benchmarks`
@@ -386,11 +389,21 @@ The standard local verification lane:
 ./scripts/run_ci_checks.sh
 ```
 
+Generated wrapper drift check:
+
+```bash
+./scripts/check_codegen.sh
+```
+
 Live GemStone tests:
 
 ```bash
 GS_RUN_LIVE=1 ./scripts/run_live_checks.sh
 ```
+
+The live script prints the module coverage list before running. That makes it
+easier to notice when a new live integration module was added but not wired
+into the maintained lane.
 
 Longer live soak tests:
 
@@ -450,3 +463,4 @@ fallback.
 - [User Manual](user-manual.md) for the main abstractions
 - [Examples Guide](examples-guide.md) for the runnable demos
 - [Cookbook](cookbook.md) for copy-paste-friendly recipes
+- [Codegen](codegen.md) for generated typed wrappers

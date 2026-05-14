@@ -63,6 +63,26 @@ streaming path:
 Use a larger entry count, such as `--entries 50000`, when you want to compare
 large-result memory behavior rather than smoke-test latency.
 
+## Round-Trip Reduction APIs
+
+The lightweight performance direction is to reduce avoidable GCI round trips
+without adding a client-side identity map. The main helpers are:
+
+- `PersistentRoot.get_many(...)` and `PersistentRoot.update_many(...)` for
+  top-level `UserGlobals` batches.
+- `GsDict.get_many(...)` and `GsDict.update_many(...)` for nested
+  `StringKeyValueDictionary` batches.
+- `GemStoneSession.bulk_perform_value(...)` and `bulk_perform_oop(...)` for one
+  selector across many receivers.
+- `GemStoneSession.bulk_perform_calls_value(...)` and
+  `bulk_perform_calls_oop(...)` for mixed receiver/selector calls.
+- `perform_many_value(...)`, `perform_many_oop(...)`, `perform_calls_value(...)`,
+  and `perform_calls_oop(...)` as readability aliases.
+
+Use these when the unit of work is already a batch. They are not a substitute
+for good repository-side indexing or a reason to pull large object graphs into
+Python.
+
 Compare two saved reports:
 
 ```bash

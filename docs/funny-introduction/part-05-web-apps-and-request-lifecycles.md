@@ -218,6 +218,11 @@ If you are using FastAPI or Litestar:
 5. run `examples/fastapi/app.py` or `examples/litestar/app.py` before adapting
    it to a larger app
 
+Keep retries in service code that can safely replay the whole operation. A
+framework adapter should not quietly rerun an HTTP request because one commit
+conflicted. That sounds convenient until the request sent an email, charged a
+card, or otherwise did something the universe cannot politely rewind.
+
 
 ## The "Handled 500" Story
 
