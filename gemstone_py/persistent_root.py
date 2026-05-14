@@ -144,18 +144,19 @@ class GsDict:
         Return string keys for StringKeyValueDictionary objects.
         Batch them into one Smalltalk eval instead of per-entry RPCs.
         """
-        s = object.__getattribute__(self, '_session')
-        oop = object.__getattribute__(self, '_oop')
-        return _fetch_mapping_string_keys(s, oop)
+        s = cast(_gs.GemStoneSession, object.__getattribute__(self, '_session'))
+        oop = cast(int, object.__getattribute__(self, '_oop'))
+        keys: list[str] = _fetch_mapping_string_keys(s, oop)
+        return keys
 
     def items(self) -> list[tuple[str, Any]]:
-        s = object.__getattribute__(self, '_session')
-        oop = object.__getattribute__(self, '_oop')
+        s = cast(_gs.GemStoneSession, object.__getattribute__(self, '_session'))
+        oop = cast(int, object.__getattribute__(self, '_oop'))
         return _batched_mapping_items(s, oop)
 
     def values(self) -> list[Any]:
-        s = object.__getattribute__(self, '_session')
-        oop = object.__getattribute__(self, '_oop')
+        s = cast(_gs.GemStoneSession, object.__getattribute__(self, '_session'))
+        oop = cast(int, object.__getattribute__(self, '_oop'))
         return _batched_mapping_values(s, oop)
 
     def get_many(
@@ -169,16 +170,18 @@ class GsDict:
         Missing keys are included with ``default``. Duplicate input keys follow
         normal dict semantics: the last fetched value wins.
         """
-        s = object.__getattribute__(self, '_session')
-        oop = object.__getattribute__(self, '_oop')
+        s = cast(_gs.GemStoneSession, object.__getattribute__(self, '_session'))
+        oop = cast(int, object.__getattribute__(self, '_oop'))
         return {
             key: default if value_oop is None else _from_oop(s, value_oop)
             for key, value_oop in _batched_mapping_selected_value_oops(s, oop, keys)
         }
 
     def update_many(self, other: Any = None, /, **kwargs: Any) -> None:
-        """Apply several writes through the same live GemStone dictionary."""
-        self.update(other, **kwargs)
+        """Apply several writes to the live GemStone dictionary in one eval."""
+        s = cast(_gs.GemStoneSession, object.__getattribute__(self, '_session'))
+        oop = cast(int, object.__getattribute__(self, '_oop'))
+        _batched_mapping_update(s, oop, _mapping_update_items(other, kwargs))
 
     def pop(self, key: str, default: Any = ...) -> Any:
         if key in self:
@@ -426,18 +429,19 @@ class PersistentRoot:
         The batch serializer keeps quoting isolated to one fixed helper while
         avoiding a per-entry GCI call sequence.
         """
-        s = object.__getattribute__(self, '_session')
-        ug = object.__getattribute__(self, '_ug')
-        return _fetch_mapping_string_keys(s, ug)
+        s = cast(_gs.GemStoneSession, object.__getattribute__(self, '_session'))
+        ug = cast(int, object.__getattribute__(self, '_ug'))
+        keys: list[str] = _fetch_mapping_string_keys(s, ug)
+        return keys
 
     def items(self) -> list[tuple[str, Any]]:
-        s = object.__getattribute__(self, '_session')
-        ug = object.__getattribute__(self, '_ug')
+        s = cast(_gs.GemStoneSession, object.__getattribute__(self, '_session'))
+        ug = cast(int, object.__getattribute__(self, '_ug'))
         return _batched_mapping_items(s, ug)
 
     def values(self) -> list[Any]:
-        s = object.__getattribute__(self, '_session')
-        ug = object.__getattribute__(self, '_ug')
+        s = cast(_gs.GemStoneSession, object.__getattribute__(self, '_session'))
+        ug = cast(int, object.__getattribute__(self, '_ug'))
         return _batched_mapping_values(s, ug)
 
     def get_many(
@@ -451,8 +455,8 @@ class PersistentRoot:
         Missing keys are included with ``default``. Duplicate input keys follow
         normal dict semantics: the last fetched value wins.
         """
-        s = object.__getattribute__(self, '_session')
-        ug = object.__getattribute__(self, '_ug')
+        s = cast(_gs.GemStoneSession, object.__getattribute__(self, '_session'))
+        ug = cast(int, object.__getattribute__(self, '_ug'))
         return {
             key: default if value_oop is None else _from_oop(s, value_oop)
             for key, value_oop in _batched_mapping_selected_value_oops(
@@ -464,8 +468,15 @@ class PersistentRoot:
         }
 
     def update_many(self, other: Any = None, /, **kwargs: Any) -> None:
-        """Apply several writes through the same live GemStone symbol dictionary."""
-        self.update(other, **kwargs)
+        """Apply several writes to the live GemStone symbol dictionary in one eval."""
+        s = cast(_gs.GemStoneSession, object.__getattribute__(self, '_session'))
+        ug = cast(int, object.__getattribute__(self, '_ug'))
+        _batched_mapping_update(
+            s,
+            ug,
+            _mapping_update_items(other, kwargs),
+            symbol_keys=True,
+        )
 
     def pop(self, key: str, default: Any = ...) -> Any:
         if key in self:
@@ -567,6 +578,57 @@ def _batched_mapping_selected_value_oops(
     return _parse_selected_value_oops(raw)
 
 
+def _mapping_update_items(
+    other: Any,
+    kwargs: dict[str, Any],
+) -> list[tuple[str, Any]]:
+    items: list[tuple[str, Any]] = []
+    if other is not None:
+        if hasattr(other, 'items'):
+            iterable = other.items()
+        else:
+            iterable = other
+        items.extend((str(key), value) for key, value in iterable)
+    items.extend((str(key), value) for key, value in kwargs.items())
+    return items
+
+
+def _batched_mapping_update(
+    s: _gs.GemStoneSession,
+    oop: int,
+    items: Iterable[tuple[str, Any]],
+    *,
+    symbol_keys: bool = False,
+) -> None:
+    """Write selected mapping keys in one eval after converting values to OOPs."""
+    entry_list = [(str(key), _to_oop(s, value)) for key, value in items]
+    if not entry_list:
+        return
+    key_assignments = "\n".join(
+        f"keys at: {index} put: {_smalltalk_string_literal(key)}."
+        for index, (key, _value_oop) in enumerate(entry_list, start=1)
+    )
+    value_assignments = "\n".join(
+        f"values at: {index} put: ({_object_for_oop_expr(value_oop)})."
+        for index, (_key, value_oop) in enumerate(entry_list, start=1)
+    )
+    lookup_expr = "key asSymbol" if symbol_keys else "key"
+    s.eval(
+        f"| mapping keys values |\n"
+        f"mapping := {_object_for_oop_expr(oop)}.\n"
+        f"keys := Array new: {len(entry_list)}.\n"
+        f"values := Array new: {len(entry_list)}.\n"
+        f"{key_assignments}\n"
+        f"{value_assignments}\n"
+        "1 to: keys size do: [:index | | key lookupKey |\n"
+        "  key := keys at: index.\n"
+        f"  lookupKey := {lookup_expr}.\n"
+        "  mapping at: lookupKey put: (values at: index)\n"
+        "].\n"
+        "nil"
+    )
+
+
 def _parse_selected_value_oops(raw: str | None) -> list[tuple[str, int | None]]:
     if not raw:
         return []
@@ -604,9 +666,9 @@ def _to_oop(s: _gs.GemStoneSession, value: Any) -> int:
     if isinstance(value, int):
         return cast(int, _gs._python_to_smallint(value))
     if isinstance(value, float):
-        return s.float_oop(value)
+        return int(s.float_oop(value))
     if isinstance(value, str):
-        return s.new_string(value)
+        return int(s.new_string(value))
     if isinstance(value, (dict, GsDict)):
         return _dict_to_gs(s, value)
     if isinstance(value, (list, tuple)):
@@ -700,7 +762,7 @@ def _dict_to_gs(s: _gs.GemStoneSession, d: Any) -> int:
             str(k).encode('utf-8'),
             ctypes.c_uint64(v_oop),
         )
-    return oop
+    return int(oop)
 
 
 def _list_to_gs(s: _gs.GemStoneSession, lst: list[Any] | tuple[Any, ...]) -> int:
@@ -712,4 +774,4 @@ def _list_to_gs(s: _gs.GemStoneSession, lst: list[Any] | tuple[Any, ...]) -> int
         v_oop   = _to_oop(s, v)
         idx_oop = _gs._python_to_smallint(i)
         s.perform_oop(arr_oop, 'at:put:', idx_oop, v_oop)
-    return arr_oop
+    return int(arr_oop)

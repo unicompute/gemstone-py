@@ -154,13 +154,26 @@ class GsDictMappingTests(unittest.TestCase):
         self.assertIn("mapping := Object _objectForOop: 123.", source)
         self.assertIn("keys at: 1 put: 'alpha'.", source)
 
-    def test_update_many_delegates_to_update(self):
-        gs_dict, _session = _make_gs_dict()
+    def test_update_many_writes_entries_in_one_eval(self):
+        gs_dict, session = _make_gs_dict()
 
-        with mock.patch.object(mod.GsDict, "update", autospec=True) as update:
-            gs_dict.update_many({"alpha": 1}, beta=2)
+        gs_dict.update_many({"alpha": 1}, beta=2)
 
-        update.assert_called_once_with(gs_dict, {"alpha": 1}, beta=2)
+        session.eval.assert_called_once()
+        source = session.eval.call_args.args[0]
+        self.assertIn("mapping := Object _objectForOop: 123.", source)
+        self.assertIn("keys at: 1 put: 'alpha'.", source)
+        self.assertIn("keys at: 2 put: 'beta'.", source)
+        self.assertIn("values at: 1 put: (Object _objectForOop:", source)
+        self.assertIn("lookupKey := key.", source)
+        self.assertIn("mapping at: lookupKey put: (values at: index)", source)
+
+    def test_update_many_empty_does_not_eval(self):
+        gs_dict, session = _make_gs_dict()
+
+        gs_dict.update_many()
+
+        session.eval.assert_not_called()
 
     def test_len_uses_size_directly(self):
         gs_dict, session = _make_gs_dict()
@@ -334,13 +347,18 @@ class PersistentRootMappingTests(unittest.TestCase):
         self.assertIn("keys at: 1 put: 'Alpha'.", source)
         self.assertIn("lookupKey := key asSymbol.", source)
 
-    def test_update_many_delegates_to_update(self):
-        root, _session = _make_persistent_root()
+    def test_update_many_writes_root_entries_in_one_eval(self):
+        root, session = _make_persistent_root()
 
-        with mock.patch.object(mod.PersistentRoot, "update", autospec=True) as update:
-            root.update_many({"Alpha": 1}, Beta=2)
+        root.update_many({"Alpha": 1}, Beta=2)
 
-        update.assert_called_once_with(root, {"Alpha": 1}, Beta=2)
+        session.eval.assert_called_once()
+        source = session.eval.call_args.args[0]
+        self.assertIn("mapping := Object _objectForOop: 456.", source)
+        self.assertIn("keys at: 1 put: 'Alpha'.", source)
+        self.assertIn("keys at: 2 put: 'Beta'.", source)
+        self.assertIn("lookupKey := key asSymbol.", source)
+        self.assertIn("mapping at: lookupKey put: (values at: index)", source)
 
     def test_len_uses_size_directly(self):
         root, session = _make_persistent_root()

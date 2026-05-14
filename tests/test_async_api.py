@@ -4,7 +4,13 @@ import unittest
 from unittest import mock
 
 import gemstone_py as gemstone
-from gemstone_py.aio import AsyncGSCollection, AsyncManagedOop, AsyncSession, AsyncSessionPool
+from gemstone_py.aio import (
+    AsyncGSCollection,
+    AsyncManagedOop,
+    AsyncPersistentRoot,
+    AsyncSession,
+    AsyncSessionPool,
+)
 from gemstone_py.aio.fastapi import pool_session_dependency, session_dependency
 
 
@@ -251,6 +257,46 @@ class AsyncSessionTests(unittest.IsolatedAsyncioTestCase):
 
         await session.logout()
         session.close()
+
+    async def test_async_persistent_root_delegates_batch_helpers(self):
+        class FakeRoot:
+            instances = []
+
+            def __init__(self, sync_session, name):
+                self.sync_session = sync_session
+                self.name = name
+                self.calls = []
+                self.instances.append(self)
+
+            def get_many(self, keys, default=None):
+                key_list = list(keys)
+                self.calls.append(("get_many", key_list, default))
+                return {key: default for key in key_list}
+
+            def update_many(self, other=None, /, **kwargs):
+                self.calls.append(("update_many", other, kwargs))
+
+        sync_session = FakeGemStoneSession()
+        session = AsyncSession(session=sync_session)
+
+        with mock.patch("gemstone_py.aio.persistent_root.PersistentRoot", FakeRoot):
+            root = AsyncPersistentRoot(session, "UserGlobals")
+            result = await root.get_many((key for key in ["Alpha", "Beta"]), default="missing")
+            await root.update_many({"Alpha": 1}, Beta=2)
+
+        session.close()
+
+        self.assertEqual(result, {"Alpha": "missing", "Beta": "missing"})
+        fake_root = FakeRoot.instances[0]
+        self.assertIs(fake_root.sync_session, sync_session)
+        self.assertEqual(fake_root.name, "UserGlobals")
+        self.assertEqual(
+            fake_root.calls,
+            [
+                ("get_many", ["Alpha", "Beta"], "missing"),
+                ("update_many", {"Alpha": 1}, {"Beta": 2}),
+            ],
+        )
 
 
 class AsyncSessionPoolTests(unittest.IsolatedAsyncioTestCase):

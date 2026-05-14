@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable
-from typing import Any
+from collections.abc import Awaitable, Iterable
+from typing import Any, cast
 
 from gemstone_py.aio import AsyncSession
 from gemstone_py.persistent_root import PersistentRoot
@@ -52,23 +52,51 @@ class AsyncPersistentRoot:
         )
 
     async def contains(self, key: str) -> bool:
-        return await self._session.run_sync(
-            lambda sync_session: key in self._for_session(sync_session)
+        return cast(
+            bool,
+            await self._session.run_sync(
+                lambda sync_session: key in self._for_session(sync_session)
+            ),
         )
 
     async def keys(self) -> list[str]:
-        return await self._session.run_sync(
-            lambda sync_session: self._for_session(sync_session).keys()
+        return cast(
+            list[str],
+            await self._session.run_sync(
+                lambda sync_session: self._for_session(sync_session).keys()
+            ),
         )
 
     async def items(self) -> list[tuple[str, Any]]:
-        return await self._session.run_sync(
-            lambda sync_session: self._for_session(sync_session).items()
+        return cast(
+            list[tuple[str, Any]],
+            await self._session.run_sync(
+                lambda sync_session: self._for_session(sync_session).items()
+            ),
         )
 
     async def values(self) -> list[Any]:
-        return await self._session.run_sync(
-            lambda sync_session: self._for_session(sync_session).values()
+        return cast(
+            list[Any],
+            await self._session.run_sync(
+                lambda sync_session: self._for_session(sync_session).values()
+            ),
+        )
+
+    async def get_many(
+        self,
+        keys: Iterable[str],
+        default: Any = None,
+    ) -> dict[str, Any]:
+        key_list = [str(key) for key in keys]
+        return cast(
+            dict[str, Any],
+            await self._session.run_sync(
+                lambda sync_session: self._for_session(sync_session).get_many(
+                    key_list,
+                    default=default,
+                )
+            ),
         )
 
     async def pop(self, key: str, default: Any = ...) -> Any:
@@ -90,9 +118,20 @@ class AsyncPersistentRoot:
             lambda sync_session: self._for_session(sync_session).update(other, **kwargs)
         )
 
+    async def update_many(self, other: Any = None, /, **kwargs: Any) -> None:
+        await self._session.run_sync(
+            lambda sync_session: self._for_session(sync_session).update_many(
+                other,
+                **kwargs,
+            )
+        )
+
     async def length(self) -> int:
-        return await self._session.run_sync(
-            lambda sync_session: len(self._for_session(sync_session))
+        return cast(
+            int,
+            await self._session.run_sync(
+                lambda sync_session: len(self._for_session(sync_session))
+            ),
         )
 
     def _for_session(self, sync_session: Any) -> PersistentRoot:
