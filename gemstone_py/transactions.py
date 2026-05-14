@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any, TypeVar
 
 from .client import GemStoneConfig, GemStoneSession, TransactionPolicy
-from .concurrency import CommitConflictError
+from .concurrency import CommitConflictError, ConflictDiagnostics
 from .concurrency import commit as _commit
 
 T = TypeVar("T")
@@ -20,6 +20,70 @@ class TransactionRetry:
     attempt: int
     attempts: int
     conflict: CommitConflictError
+
+    @property
+    def remaining(self) -> int:
+        """Return the number of attempts left after this conflict."""
+        return max(self.attempts - self.attempt, 0)
+
+    @property
+    def will_retry(self) -> bool:
+        """Return true when the retry helper will attempt the work again."""
+        return self.attempt < self.attempts
+
+    @property
+    def exhausted(self) -> bool:
+        """Return true when this conflict used the final configured attempt."""
+        return not self.will_retry
+
+    def diagnostics(
+        self,
+        session: GemStoneSession | None = None,
+        *,
+        include_summaries: bool = True,
+    ) -> ConflictDiagnostics:
+        """Return structured diagnostics for this retry's commit conflict."""
+        return self.conflict.diagnostics(
+            session=session,
+            include_summaries=include_summaries,
+        )
+
+    def format(
+        self,
+        session: GemStoneSession | None = None,
+        *,
+        include_summaries: bool = True,
+    ) -> str:
+        """Return a readable retry report for logging or CLI output."""
+        state = "will retry" if self.will_retry else "no attempts remaining"
+        lines = [f"Commit conflict on attempt {self.attempt}/{self.attempts} ({state})"]
+        lines.extend(
+            f"  {line}"
+            for line in self.conflict.format(
+                session=session,
+                include_summaries=include_summaries,
+            ).splitlines()
+        )
+        return "\n".join(lines)
+
+    def to_dict(
+        self,
+        session: GemStoneSession | None = None,
+        *,
+        include_summaries: bool = True,
+    ) -> dict[str, Any]:
+        """Return a JSON-friendly retry report."""
+        return {
+            "attempt": self.attempt,
+            "attempts": self.attempts,
+            "remaining": self.remaining,
+            "will_retry": self.will_retry,
+            "exhausted": self.exhausted,
+            "conflict": self.diagnostics(
+                session=session,
+                include_summaries=include_summaries,
+            ).to_dict(),
+        }
 
 
 ConflictListener = Callable[[TransactionRetry], None]

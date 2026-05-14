@@ -340,7 +340,7 @@ class GSCollection:
 
     def _set_oop(self, s: gemstone.GemStoneSession) -> int:
         self._ensure_root(s)
-        return s.eval_oop(self._set_expr())
+        return int(s.eval_oop(self._set_expr()))
 
     @staticmethod
     def _collection_member_oops(
@@ -365,7 +365,7 @@ class GSCollection:
             idx_oop = cast(int, gemstone._python_to_smallint(i))
             segment_oop = s.new_string(segment)
             s.perform_oop(array_oop, 'at:put:', idx_oop, segment_oop)
-        return array_oop
+        return int(array_oop)
 
     @staticmethod
     def _keys_from_dict_oop(s: gemstone.GemStoneSession, dict_oop: int) -> List[str]:
@@ -553,7 +553,7 @@ class GSCollection:
             key_oop = s.new_string(str(k))
             val_oop = _to_oop(s, v)
             s.perform_oop(dict_oop, 'at:put:', key_oop, val_oop)
-        return dict_oop
+        return int(dict_oop)
 
     def _insert_into_set_oop(
         self,
@@ -612,7 +612,7 @@ class GSCollection:
                 f"result"
             )
 
-        return result_oop
+        return int(result_oop)
 
     def _search_oops(
         self,

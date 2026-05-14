@@ -112,7 +112,7 @@ def _oop(s: _gs.GemStoneSession, v: Any) -> int:
     if isinstance(v, int):
         return cast(int, _gs._python_to_smallint(v))
     if isinstance(v, str):
-        return s.new_string(v)
+        return int(s.new_string(v))
     if isinstance(v, _GsProxy):
         return cast(int, object.__getattribute__(v, '_oop'))
     raise TypeError(f"Cannot pass {type(v).__name__!r} as a GemStone argument")
@@ -164,7 +164,7 @@ class _GsProxy:
 
     def _call_oop(self, selector: str, *args: Any) -> int:
         raw = [_oop(self._s(), a) for a in args]
-        return self._s().perform_oop(self._o(), selector, *raw)
+        return int(self._s().perform_oop(self._o(), selector, *raw))
 
     def send(self, selector: str, *args: Any) -> Any:
         return _py(self._s(), self._call_oop(selector, *args))
@@ -582,6 +582,16 @@ class ConflictObject:
     summary: str | None = None
     inspection_error: str | None = None
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-friendly representation of this conflict object."""
+        return {
+            "oop": self.oop,
+            "kind": self.kind,
+            "class_name": self.class_name,
+            "summary": self.summary,
+            "inspection_error": self.inspection_error,
+        }
+
 
 @dataclass(frozen=True)
 class ConflictDiagnostics:
@@ -594,6 +604,14 @@ class ConflictDiagnostics:
     def format(self) -> str:
         """Return a readable conflict report."""
         return format_conflict_diagnostics(self)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-friendly representation of these diagnostics."""
+        return {
+            "report": self.report,
+            "write_write": [obj.to_dict() for obj in self.write_write],
+            "write_dependency": [obj.to_dict() for obj in self.write_dependency],
+        }
 
 
 def describe_commit_conflict(
@@ -741,7 +759,8 @@ def commit(session: _gs.GemStoneSession) -> None:
 def _collect_conflict_oops(session: _gs.GemStoneSession, selector: str) -> list[int]:
     try:
         conflicts_oop = session.eval_oop(f"System {selector}")
-        return fetch_collection_oops(session, conflicts_oop)
+        oops: list[int] = fetch_collection_oops(session, conflicts_oop)
+        return oops
     except Exception:
         return []
 
@@ -812,7 +831,7 @@ def datetime_to_gs(session: _gs.GemStoneSession, dt: datetime) -> int:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     posix = dt.timestamp()
-    return session.eval_oop(f'DateAndTime posixSeconds: {posix} offsetSeconds: 0')
+    return int(session.eval_oop(f'DateAndTime posixSeconds: {posix} offsetSeconds: 0'))
 
 
 # ---------------------------------------------------------------------------

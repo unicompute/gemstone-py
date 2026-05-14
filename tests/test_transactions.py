@@ -3,7 +3,11 @@ from unittest import mock
 
 import gemstone_py as gemstone
 from gemstone_py.concurrency import CommitConflictError
-from gemstone_py.transactions import retrying_transaction, run_transaction_with_retry
+from gemstone_py.transactions import (
+    TransactionRetry,
+    retrying_transaction,
+    run_transaction_with_retry,
+)
 
 
 class FakeSession:
@@ -48,6 +52,9 @@ class TransactionRetryTests(unittest.TestCase):
         session.abort.assert_called_once_with()
         self.assertEqual(seen_conflicts[0].attempt, 1)
         self.assertEqual(seen_conflicts[0].attempts, 2)
+        self.assertEqual(seen_conflicts[0].remaining, 1)
+        self.assertTrue(seen_conflicts[0].will_retry)
+        self.assertFalse(seen_conflicts[0].exhausted)
         self.assertIs(seen_conflicts[0].conflict, conflict)
 
     def test_existing_session_raises_last_conflict_after_exhaustion(self):
@@ -101,6 +108,23 @@ class TransactionRetryTests(unittest.TestCase):
     def test_rejects_existing_session_with_creation_options(self):
         with self.assertRaises(ValueError):
             run_transaction_with_retry(lambda _session: None, session=mock.Mock(), stone="demo")
+
+    def test_transaction_retry_formats_and_serializes_conflict(self):
+        conflict = CommitConflictError("raw conflict report", [101], [])
+        retry = TransactionRetry(attempt=2, attempts=2, conflict=conflict)
+
+        text = retry.format()
+        payload = retry.to_dict()
+
+        self.assertIn("attempt 2/2", text)
+        self.assertIn("no attempts remaining", text)
+        self.assertIn("0x65 (101)", text)
+        self.assertEqual(payload["attempt"], 2)
+        self.assertEqual(payload["attempts"], 2)
+        self.assertEqual(payload["remaining"], 0)
+        self.assertFalse(payload["will_retry"])
+        self.assertTrue(payload["exhausted"])
+        self.assertEqual(payload["conflict"]["write_write"][0]["oop"], 101)
 
 
 if __name__ == "__main__":

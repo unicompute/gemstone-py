@@ -32,6 +32,22 @@ CORE_EXPORTS: dict[str, tuple[str, str]] = {
     "gemstone_selector": ("gemstone_py.codegen", "gemstone_selector"),
     "registered_gemstone_classes": ("gemstone_py.oop", "registered_gemstone_classes"),
     "typed_oop": ("gemstone_py.oop", "typed_oop"),
+    "CommitConflictError": ("gemstone_py.concurrency", "CommitConflictError"),
+    "ConflictDiagnostics": ("gemstone_py.concurrency", "ConflictDiagnostics"),
+    "ConflictObject": ("gemstone_py.concurrency", "ConflictObject"),
+    "describe_commit_conflict": (
+        "gemstone_py.concurrency",
+        "describe_commit_conflict",
+    ),
+    "format_commit_conflict": (
+        "gemstone_py.concurrency",
+        "format_commit_conflict",
+    ),
+    "format_conflict_diagnostics": (
+        "gemstone_py.concurrency",
+        "format_conflict_diagnostics",
+    ),
+    "TransactionRetry": ("gemstone_py.transactions", "TransactionRetry"),
     "retrying_transaction": ("gemstone_py.transactions", "retrying_transaction"),
     "run_transaction_with_retry": (
         "gemstone_py.transactions",

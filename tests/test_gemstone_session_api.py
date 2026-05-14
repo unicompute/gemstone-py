@@ -145,6 +145,7 @@ class PackagingSmokeTests(unittest.TestCase):
     def test_canonical_package_exports_core_api(self):
         pkg = importlib.import_module("gemstone_py")
         client_mod = importlib.import_module("gemstone_py.client")
+        concurrency_mod = importlib.import_module("gemstone_py.concurrency")
         gci_mod = importlib.import_module("gemstone_py._gci")
         provider_mod = importlib.import_module("gemstone_py.session_providers")
         facade_mod = importlib.import_module("gemstone_py.session_facade")
@@ -182,6 +183,18 @@ class PackagingSmokeTests(unittest.TestCase):
         self.assertEqual(pkg.OOP_ILLEGAL, gci_mod.OOP_ILLEGAL)
         self.assertIs(pkg.GemStoneSession, client_mod.GemStoneSession)
         self.assertIs(pkg.PerformCall, client_mod.PerformCall)
+        self.assertIs(pkg.CommitConflictError, concurrency_mod.CommitConflictError)
+        self.assertIs(pkg.ConflictDiagnostics, concurrency_mod.ConflictDiagnostics)
+        self.assertIs(pkg.ConflictObject, concurrency_mod.ConflictObject)
+        self.assertIs(
+            pkg.describe_commit_conflict,
+            concurrency_mod.describe_commit_conflict,
+        )
+        self.assertIs(pkg.format_commit_conflict, concurrency_mod.format_commit_conflict)
+        self.assertIs(
+            pkg.format_conflict_diagnostics,
+            concurrency_mod.format_conflict_diagnostics,
+        )
         self.assertIs(pkg.session_scope, web_mod.session_scope)
         self.assertIs(
             pkg.close_flask_request_session_provider,
@@ -197,6 +210,7 @@ class PackagingSmokeTests(unittest.TestCase):
         )
         self.assertIs(pkg.GemStoneSessionFacade, facade_mod.GemStoneSessionFacade)
         self.assertIs(pkg.retrying_transaction, transactions_mod.retrying_transaction)
+        self.assertIs(pkg.TransactionRetry, transactions_mod.TransactionRetry)
         self.assertIs(
             pkg.run_transaction_with_retry,
             transactions_mod.run_transaction_with_retry,

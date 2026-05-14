@@ -88,6 +88,51 @@ class CommitConflictDiagnosticsTests(unittest.TestCase):
 
         self.assertIn("0x65 (101) Booking: booking 1", text)
 
+    def test_conflict_diagnostics_are_json_friendly(self):
+        diagnostics = ConflictDiagnostics(
+            report="raw",
+            write_write=[
+                ConflictObject(
+                    oop=101,
+                    kind="write/write",
+                    class_name="Booking",
+                    summary="booking 1",
+                )
+            ],
+            write_dependency=[
+                ConflictObject(
+                    oop=202,
+                    kind="write/dependency",
+                    inspection_error="cannot inspect",
+                )
+            ],
+        )
+
+        self.assertEqual(
+            diagnostics.to_dict(),
+            {
+                "report": "raw",
+                "write_write": [
+                    {
+                        "oop": 101,
+                        "kind": "write/write",
+                        "class_name": "Booking",
+                        "summary": "booking 1",
+                        "inspection_error": None,
+                    }
+                ],
+                "write_dependency": [
+                    {
+                        "oop": 202,
+                        "kind": "write/dependency",
+                        "class_name": None,
+                        "summary": None,
+                        "inspection_error": "cannot inspect",
+                    }
+                ],
+            },
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
