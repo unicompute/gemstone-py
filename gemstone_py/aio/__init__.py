@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
 from concurrent.futures import ThreadPoolExecutor
 from importlib import import_module
 from types import TracebackType
@@ -25,9 +25,9 @@ def _argument_to_oop(arg: Any) -> int:
     if isinstance(arg, AsyncOopHandle):
         return arg.oop
     if isinstance(arg, ManagedOop):
-        return arg.oop
+        return int(arg.oop)
     if isinstance(arg, OopHandle):
-        return arg.oop
+        return int(arg.oop)
     if hasattr(arg, "oop"):
         return int(getattr(arg, "oop"))
     return int(arg)
@@ -42,7 +42,7 @@ class AsyncManagedOop:
 
     @property
     def oop(self) -> int:
-        return self._managed.oop
+        return int(self._managed.oop)
 
     async def close(self) -> None:
         await self._session.run_sync(lambda _session: self._managed.close())
@@ -295,6 +295,44 @@ class AsyncSession:
 
     async def perform_oop(self, receiver: int, selector: str, *args: int) -> int:
         return await self.run_sync(lambda session: session.perform_oop(receiver, selector, *args))
+
+    async def bulk_perform_oop(
+        self,
+        receivers: Iterable[int],
+        selector: str,
+        *args: int,
+    ) -> list[int]:
+        receiver_oops = [int(receiver) for receiver in receivers]
+        return await self.run_sync(
+            lambda session: session.bulk_perform_oop(receiver_oops, selector, *args)
+        )
+
+    async def bulk_perform_value(
+        self,
+        receivers: Iterable[int],
+        selector: str,
+        *args: int,
+    ) -> list[Any]:
+        receiver_oops = [int(receiver) for receiver in receivers]
+        return await self.run_sync(
+            lambda session: session.bulk_perform_value(receiver_oops, selector, *args)
+        )
+
+    async def perform_many_oop(
+        self,
+        receivers: Iterable[int],
+        selector: str,
+        *args: int,
+    ) -> list[int]:
+        return await self.bulk_perform_oop(receivers, selector, *args)
+
+    async def perform_many_value(
+        self,
+        receivers: Iterable[int],
+        selector: str,
+        *args: int,
+    ) -> list[Any]:
+        return await self.bulk_perform_value(receivers, selector, *args)
 
     async def perform_typed(
         self,

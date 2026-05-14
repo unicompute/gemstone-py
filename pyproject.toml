@@ -113,6 +113,7 @@ files = [
   "gemstone_py/benchmark_compare.py",
   "gemstone_py/bootstrap.py",
   "gemstone_py/codegen.py",
+  "gemstone_py/converters.py",
   "gemstone_py/release_metadata.py",
   "gemstone_py/session_providers.py",
   "gemstone_py/_smalltalk_batch.py",

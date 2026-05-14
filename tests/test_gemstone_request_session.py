@@ -81,6 +81,19 @@ class _ValidationSession(_PoolSession):
         return 2
 
 
+class _ThreadAwarePoolSession(_PoolSession):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.claim_thread_calls = 0
+        self.release_thread_calls = []
+
+    def _claim_thread_ownership(self):
+        self.claim_thread_calls += 1
+
+    def _release_thread_ownership(self, *, force=False):
+        self.release_thread_calls.append(force)
+
+
 class _RecordingSpan:
     def __init__(self):
         self.attributes = {}
@@ -443,6 +456,24 @@ class GemStoneSessionPoolTests(unittest.TestCase):
         self.assertEqual(first.logout_calls, 1)
         self.assertEqual(first.kwargs["stone"], "demo")
         self.assertIs(first.kwargs["transaction_policy"], gemstone.TransactionPolicy.MANUAL)
+
+    def test_pool_unbinds_idle_sessions_and_reclaims_on_checkout(self):
+        pool = gemstone.GemStoneSessionPool(
+            maxsize=1,
+            session_factory=_ThreadAwarePoolSession,
+            stone="demo",
+            username="alice",
+            password="secret",
+        )
+
+        pool.warm(1)
+        session = pool.acquire()
+        pool.release(session, clean=True)
+        pool.close()
+
+        self.assertEqual(session.claim_thread_calls, 1)
+        self.assertEqual(session.release_thread_calls, [False, False])
+        self.assertEqual(session.logout_calls, 1)
 
     def test_pool_snapshot_tracks_capacity_and_operations(self):
         pool = gemstone.GemStoneSessionPool(

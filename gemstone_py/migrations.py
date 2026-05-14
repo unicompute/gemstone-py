@@ -42,13 +42,14 @@ import argparse
 import hashlib
 import importlib
 import inspect
+import json
 import os
 import re
 import socket
 import textwrap
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from types import ModuleType
@@ -203,6 +204,43 @@ class ClassDiff:
     def is_current(self) -> bool:
         """Return ``True`` when local and remote instance variables match."""
         return not self.missing_instvars and not self.extra_instvars
+
+
+@dataclass(frozen=True)
+class RootFingerprint:
+    """Presence of one expected GemStone root key."""
+
+    key: str
+    present: bool
+
+
+@dataclass(frozen=True)
+class ClassFingerprint:
+    """Shape of one expected GemStone class."""
+
+    name: str
+    present: bool
+    superclasses: tuple[str, ...] = ()
+    instvars: tuple[str, ...] = ()
+    class_instvars: tuple[str, ...] = ()
+    instance_count: int | None = None
+    error: str | None = None
+
+
+@dataclass(frozen=True)
+class SchemaFingerprint:
+    """Stable summary of the GemStone-side shape an application expects."""
+
+    root_keys: tuple[RootFingerprint, ...]
+    classes: tuple[ClassFingerprint, ...]
+    current_migration: str | None
+    applied_migrations: tuple[str, ...]
+    pending_migrations: tuple[str, ...]
+    digest: str
+
+    def as_dict(self) -> dict[str, Any]:
+        """Return a JSON-friendly representation."""
+        return asdict(self)
 
 
 MigrationInput: TypeAlias = MigrationStep | ModuleType | str
@@ -479,6 +517,82 @@ def diff_class(
             for name in reversed(missing)
         ),
     )
+
+
+def schema_fingerprint(
+    session: gemstone.GemStoneSession,
+    *,
+    root_keys: Sequence[str] = (),
+    class_names: Sequence[str] = (),
+    migration_steps: Sequence[MigrationInput] | None = None,
+    migration_root_key: str = DEFAULT_VERSION_ROOT,
+) -> SchemaFingerprint:
+    """
+    Return a stable fingerprint of expected roots, classes, and migrations.
+
+    The fingerprint is intentionally descriptive. It does not mutate the stone
+    and does not infer Python object mappings.
+    """
+    from gemstone_py.persistent_root import PersistentRoot
+
+    root = PersistentRoot(session)
+    root_fingerprints = tuple(
+        RootFingerprint(key=str(key), present=_root_key_present(root, str(key)))
+        for key in root_keys
+    )
+    class_fingerprints = tuple(
+        _class_fingerprint(session, str(class_name)) for class_name in class_names
+    )
+    applied = applied_migrations(session, root_key=migration_root_key)
+    if migration_steps is None:
+        pending: tuple[str, ...] = ()
+    else:
+        ordered = validate_migration_state(migration_steps, applied)
+        pending = tuple(step.id for step in plan_upgrade(ordered, applied))
+    current = _current_version_from_applied(applied)
+    applied_ids = tuple(sorted(_applied_id_set(applied)))
+
+    payload = {
+        "root_keys": [asdict(item) for item in root_fingerprints],
+        "classes": [asdict(item) for item in class_fingerprints],
+        "current_migration": current,
+        "applied_migrations": applied_ids,
+        "pending_migrations": pending,
+    }
+    digest = _schema_digest(payload)
+    return SchemaFingerprint(
+        root_keys=root_fingerprints,
+        classes=class_fingerprints,
+        current_migration=current,
+        applied_migrations=applied_ids,
+        pending_migrations=pending,
+        digest=digest,
+    )
+
+
+def assert_schema_fingerprint(
+    session: gemstone.GemStoneSession,
+    expected_digest: str,
+    *,
+    root_keys: Sequence[str] = (),
+    class_names: Sequence[str] = (),
+    migration_steps: Sequence[MigrationInput] | None = None,
+    migration_root_key: str = DEFAULT_VERSION_ROOT,
+) -> SchemaFingerprint:
+    """Return the current fingerprint or raise when its digest differs."""
+    fingerprint = schema_fingerprint(
+        session,
+        root_keys=root_keys,
+        class_names=class_names,
+        migration_steps=migration_steps,
+        migration_root_key=migration_root_key,
+    )
+    if fingerprint.digest != expected_digest:
+        raise MigrationError(
+            "GemStone schema fingerprint mismatch: "
+            f"expected {expected_digest}, got {fingerprint.digest}"
+        )
+    return fingerprint
 
 
 def upgrade(
@@ -890,6 +1004,40 @@ def _print_class_diff(class_diff: ClassDiff) -> None:
         print("suggested downgrade:")
         for line in class_diff.suggested_downgrade:
             print(f"  {line}")
+
+
+def _root_key_present(root: object, key: str) -> bool:
+    try:
+        return key in root  # type: ignore[operator]
+    except Exception:
+        sentinel = object()
+        get = getattr(root, "get", None)
+        if not callable(get):
+            raise
+        return get(key, sentinel) is not sentinel
+
+
+def _class_fingerprint(
+    session: gemstone.GemStoneSession,
+    class_name: str,
+) -> ClassFingerprint:
+    try:
+        description = session.describe_class(class_name)
+    except Exception as exc:
+        return ClassFingerprint(name=class_name, present=False, error=str(exc))
+    return ClassFingerprint(
+        name=description.name,
+        present=True,
+        superclasses=tuple(description.superclasses),
+        instvars=tuple(description.instvars),
+        class_instvars=tuple(description.class_instvars),
+        instance_count=description.instance_count,
+    )
+
+
+def _schema_digest(payload: Mapping[str, Any]) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
 def _coerce_steps(entries: Iterable[MigrationInput]) -> tuple[MigrationStep, ...]:

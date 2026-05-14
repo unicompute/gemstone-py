@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from typing import Any, Sequence
 
@@ -56,8 +57,14 @@ class ClassDescription:
     instance_count: int | None
 
 
-def inspect_oop(session: GemStoneSession, oop: int) -> InspectionResult:
+def inspect_oop(
+    session: GemStoneSession,
+    oop: int,
+    *,
+    slots: Sequence[str] | None = None,
+) -> InspectionResult:
     """Return a one-level inspection of ``oop``."""
+    slot_filter = _name_filter(slots)
     rows = _rows(session.eval(_inspect_source(oop)))
     if not rows:
         raise RuntimeError(f"GemStone inspection returned no rows for OOP {oop}")
@@ -65,16 +72,18 @@ def inspect_oop(session: GemStoneSession, oop: int) -> InspectionResult:
     header = rows[0]
     class_name = header[0] if len(header) > 0 else "Object"
     summary = header[1] if len(header) > 1 else ""
-    slots: list[InspectedSlot] = []
+    inspected_slots: list[InspectedSlot] = []
     for row in rows[1:]:
         if len(row) < 4:
             continue
         name, raw_oop, slot_class, slot_summary = row[:4]
+        if slot_filter is not None and name not in slot_filter:
+            continue
         try:
             slot_oop = int(raw_oop)
         except ValueError:
             continue
-        slots.append(
+        inspected_slots.append(
             InspectedSlot(
                 name=name,
                 value=InspectedReference(
@@ -88,7 +97,7 @@ def inspect_oop(session: GemStoneSession, oop: int) -> InspectionResult:
         oop=int(oop),
         class_name=class_name,
         summary=summary,
-        slots=slots,
+        slots=inspected_slots,
     )
 
 
@@ -97,40 +106,66 @@ def dump_oop(
     oop: int,
     *,
     depth: int = 2,
+    slots: Sequence[str] | None = None,
+    classes: Sequence[str] | None = None,
     _seen: set[int] | None = None,
 ) -> dict[str, Any]:
     """Return a recursive, JSON-serialisable structure dump for ``oop``."""
     if depth < 0:
         raise ValueError("depth must be at least 0")
+    class_filter = _name_filter(classes)
     seen = set(_seen or set())
     ref_oop = int(oop)
     if ref_oop in seen:
         return {"oop": ref_oop, "cycle": True}
     seen.add(ref_oop)
 
-    inspected = inspect_oop(session, ref_oop)
+    inspected = inspect_oop(session, ref_oop, slots=slots)
     payload: dict[str, Any] = {
         "oop": inspected.oop,
         "class_name": inspected.class_name,
         "summary": inspected.summary,
     }
+    if class_filter is not None and inspected.class_name not in class_filter:
+        payload["filtered"] = True
+        return payload
     if depth == 0:
         return payload
 
-    slots: dict[str, Any] = {}
+    slot_payload: dict[str, Any] = {}
     for slot in inspected.slots:
         value = slot.value
         if depth <= 1:
-            slots[slot.name] = asdict(value)
+            slot_payload[slot.name] = asdict(value)
         else:
-            slots[slot.name] = dump_oop(
+            slot_payload[slot.name] = dump_oop(
                 session,
                 value.oop,
                 depth=depth - 1,
+                slots=slots,
+                classes=classes,
                 _seen=seen,
             )
-    payload["slots"] = slots
+    payload["slots"] = slot_payload
     return payload
+
+
+def format_inspection(result: InspectionResult) -> str:
+    """Return a compact terminal rendering of a one-level inspection."""
+    lines = [f"{result.class_name}  oop=0x{result.oop:X}", f"  {result.summary}"]
+    for slot in result.slots:
+        lines.append(
+            f"  {slot.name}: {slot.value.class_name} "
+            f"oop=0x{slot.value.oop:X} {slot.value.summary}"
+        )
+    return "\n".join(lines)
+
+
+def format_dump(payload: Mapping[str, Any]) -> str:
+    """Return a compact terminal rendering of ``dump_oop`` output."""
+    lines: list[str] = []
+    _format_dump_into(payload, lines, indent=0, slot_name=None)
+    return "\n".join(lines)
 
 
 def describe_class(session: GemStoneSession, name: str) -> ClassDescription:
@@ -176,6 +211,54 @@ def _rows(raw: Any) -> list[list[str]]:
             continue
         rows.append([decode_escaped_field(part) for part in line.split("|")])
     return rows
+
+
+def _name_filter(names: Sequence[str] | None) -> set[str] | None:
+    if names is None:
+        return None
+    return {name for name in names if name}
+
+
+def _format_dump_into(
+    payload: Mapping[str, Any],
+    lines: list[str],
+    *,
+    indent: int,
+    slot_name: str | None,
+) -> None:
+    prefix = "  " * indent
+    label = f"{slot_name}: " if slot_name else ""
+    oop = payload.get("oop", "?")
+    if payload.get("cycle"):
+        lines.append(f"{prefix}{label}<cycle oop={_format_oop(oop)}>")
+        return
+
+    class_name = payload.get("class_name", "Object")
+    summary = str(payload.get("summary", ""))
+    filtered = " [filtered]" if payload.get("filtered") else ""
+    suffix = f" {summary}" if summary else ""
+    lines.append(f"{prefix}{label}{class_name} oop={_format_oop(oop)}{filtered}{suffix}")
+
+    slots = payload.get("slots")
+    if not isinstance(slots, Mapping):
+        return
+    for child_name, child in slots.items():
+        if isinstance(child, Mapping):
+            _format_dump_into(
+                child,
+                lines,
+                indent=indent + 1,
+                slot_name=str(child_name),
+            )
+        else:
+            lines.append(f"{prefix}  {child_name}: {child!r}")
+
+
+def _format_oop(oop: Any) -> str:
+    try:
+        return f"0x{int(oop):X}"
+    except (TypeError, ValueError):
+        return str(oop)
 
 
 def _inspect_source(oop: int) -> str:
@@ -228,13 +311,7 @@ def _describe_class_source(class_oop: int) -> str:
 
 
 def _print_inspection(result: InspectionResult) -> None:
-    print(f"{result.class_name}  oop=0x{result.oop:X}")
-    print(f"  {result.summary}")
-    for slot in result.slots:
-        print(
-            f"  {slot.name}: {slot.value.class_name} "
-            f"oop=0x{slot.value.oop:X} {slot.value.summary}"
-        )
+    print(format_inspection(result))
 
 
 def _print_class_description(description: ClassDescription) -> None:
@@ -263,6 +340,18 @@ def build_parser() -> argparse.ArgumentParser:
     target.add_argument("--class", dest="class_name", help="GemStone class name to describe.")
     parser.add_argument("--dump", action="store_true", help="Recursively dump an OOP.")
     parser.add_argument("--depth", type=int, default=2, help="Recursive dump depth.")
+    parser.add_argument(
+        "--slot",
+        dest="slots",
+        action="append",
+        help="Only include this slot name.",
+    )
+    parser.add_argument(
+        "--include-class",
+        dest="classes",
+        action="append",
+        help="Only recurse through this GemStone class name.",
+    )
     parser.add_argument("--json", action="store_true", help="Emit JSON.")
     return parser
 
@@ -281,11 +370,20 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
 
         if args.dump:
-            payload = dump_oop(session, args.oop, depth=args.depth)
-            print(json.dumps(payload, indent=2, sort_keys=True))
+            payload = dump_oop(
+                session,
+                args.oop,
+                depth=args.depth,
+                slots=args.slots,
+                classes=args.classes,
+            )
+            if args.json:
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            else:
+                print(format_dump(payload))
             return 0
 
-        result = inspect_oop(session, args.oop)
+        result = inspect_oop(session, args.oop, slots=args.slots)
         if args.json:
             print(json.dumps(asdict(result), indent=2, sort_keys=True))
         else:
@@ -299,6 +397,8 @@ def main_entry() -> None:
 
 __all__ = [
     "ClassDescription",
+    "format_dump",
+    "format_inspection",
     "InspectedReference",
     "InspectedSlot",
     "InspectionResult",

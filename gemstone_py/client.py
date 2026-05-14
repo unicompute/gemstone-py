@@ -8,11 +8,12 @@ import os
 import threading
 import time
 from collections import Counter
+from collections.abc import Iterable
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
 from types import TracebackType
-from typing import Any, Iterator, Literal, Optional, TypeVar, cast
+from typing import Any, Iterator, Literal, Optional, Sequence, TypeVar, cast
 
 from ._gci import (
     GCI_ENCRYPT_BUF_SIZE,
@@ -38,7 +39,7 @@ from .observability import (
     Span,
     Tracer,
 )
-from .oop import ManagedOop, OopHandle, TypedOop
+from .oop import ManagedOop, Oop, OopHandle, TypedOop
 
 __all__ = [
     "GemStoneError",
@@ -178,6 +179,36 @@ def _safe_record_exception(span: Span, exc: BaseException) -> None:
         pass
 
 
+def _smalltalk_string_literal(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+
+def _bulk_perform_source(receivers: Sequence[int], selector: str, args: Sequence[int]) -> str:
+    receiver_puts = "".join(
+        f"receivers at: {index} put: (Object _objectForOop: {receiver}).\n"
+        for index, receiver in enumerate(receivers, 1)
+    )
+    arg_puts = "".join(
+        f"args at: {index} put: (Object _objectForOop: {arg}).\n"
+        for index, arg in enumerate(args, 1)
+    )
+    selector_literal = _smalltalk_string_literal(selector)
+    return (
+        "| receivers args selector stream |\n"
+        f"receivers := Array new: {len(receivers)}.\n"
+        f"{receiver_puts}"
+        f"args := Array new: {len(args)}.\n"
+        f"{arg_puts}"
+        f"selector := {selector_literal} asSymbol.\n"
+        "stream := ''.\n"
+        "1 to: receivers size do: [:index | | result |\n"
+        "  result := (receivers at: index) perform: selector withArguments: args.\n"
+        "  stream := stream, result asOop asString, String lf asString\n"
+        "].\n"
+        "stream"
+    )
+
+
 class GemStoneSession:
     """A GemStone GCI session."""
 
@@ -233,6 +264,11 @@ class GemStoneSession:
         self._managed_oop_lock = threading.RLock()
         self._managed_oop_draining = False
         self._owner_thread_id: int | None = None
+
+    @property
+    def owner_thread_id(self) -> int | None:
+        """Return the Python thread currently allowed to use this session."""
+        return self._owner_thread_id
 
     def __enter__(self) -> "GemStoneSession":
         self.login()
@@ -484,6 +520,47 @@ class GemStoneSession:
         with self._observe_operation("perform_oop", {"selector": selector, "argc": len(args)}):
             return self._perform_oop_raw(receiver, selector, *args)
 
+    def bulk_perform_oop(
+        self,
+        receivers: Iterable[int],
+        selector: str,
+        *args: int,
+    ) -> list[int]:
+        """Perform one selector across several receiver OOPs in one eval."""
+        receiver_oops = [int(receiver) for receiver in receivers]
+        if not receiver_oops:
+            return []
+        with self._observe_operation(
+            "bulk_perform_oop",
+            {"selector": selector, "argc": len(args), "receiver_count": len(receiver_oops)},
+        ):
+            raw = self.eval(_bulk_perform_source(receiver_oops, selector, args))
+        if raw is None:
+            return []
+        return [int(line) for line in str(raw).splitlines() if line]
+
+    def bulk_perform_value(
+        self,
+        receivers: Iterable[int],
+        selector: str,
+        *args: int,
+    ) -> list[Any]:
+        """Perform one selector across several receiver OOPs and marshal results."""
+        return [self._marshal(oop) for oop in self.bulk_perform_oop(receivers, selector, *args)]
+
+    def perform_many_oop(self, receivers: Iterable[int], selector: str, *args: int) -> list[int]:
+        """Alias for ``bulk_perform_oop``."""
+        return self.bulk_perform_oop(receivers, selector, *args)
+
+    def perform_many_value(
+        self,
+        receivers: Iterable[int],
+        selector: str,
+        *args: int,
+    ) -> list[Any]:
+        """Alias for ``bulk_perform_value``."""
+        return self.bulk_perform_value(receivers, selector, *args)
+
     def _perform_oop_raw(self, receiver: int, selector: str, *args: int) -> int:
         lib = self._require_login()
         arg_arr = (ctypes.c_uint64 * len(args))(*args)
@@ -643,7 +720,7 @@ class GemStoneSession:
 
     def _can_call_gci_on_current_thread(self) -> bool:
         owner = self._owner_thread_id
-        return self._logged_in and (owner is None or owner == threading.get_ident())
+        return self._logged_in and owner == threading.get_ident()
 
     def _drain_pending_managed_oop_removals(self) -> None:
         if self._managed_oop_draining or not self._can_call_gci_on_current_thread():
@@ -689,6 +766,10 @@ class GemStoneSession:
             return int(OOP_NIL)
         if isinstance(value, bool):
             return int(OOP_TRUE if value else OOP_FALSE)
+        if isinstance(value, (ManagedOop, Oop, OopHandle)):
+            return int(value.oop)
+        if hasattr(value, "oop"):
+            return int(getattr(value, "oop"))
         if isinstance(value, int):
             return self.int_oop(value)
         if isinstance(value, float):
@@ -721,17 +802,32 @@ class GemStoneSession:
             lib = self._require_login()
             return int(lib.GciFetchClass(ctypes.c_uint64(oop)))
 
-    def inspect(self, oop: int) -> Any:
+    def inspect(self, oop: int, *, slots: Sequence[str] | None = None) -> Any:
         """Return a one-level inspection result for a GemStone OOP."""
         from gemstone_py.inspection import inspect_oop
 
-        return inspect_oop(self, oop)
+        if slots is None:
+            return inspect_oop(self, oop)
+        return inspect_oop(self, oop, slots=slots)
 
-    def dump(self, oop: int, *, depth: int = 2) -> dict[str, Any]:
+    def dump(
+        self,
+        oop: int,
+        *,
+        depth: int = 2,
+        slots: Sequence[str] | None = None,
+        classes: Sequence[str] | None = None,
+    ) -> dict[str, Any]:
         """Return a recursive JSON-serialisable structure dump for a GemStone OOP."""
         from gemstone_py.inspection import dump_oop
 
-        return dump_oop(self, oop, depth=depth)
+        kwargs: dict[str, Any] = {"depth": depth}
+        if slots is not None:
+            kwargs["slots"] = slots
+        if classes is not None:
+            kwargs["classes"] = classes
+        payload: dict[str, Any] = dump_oop(self, oop, **kwargs)
+        return payload
 
     def describe_class(self, name: str) -> Any:
         """Return superclass and instance-variable details for a GemStone class."""
@@ -744,13 +840,43 @@ class GemStoneSession:
             raise GemStoneError("Not logged in. Call login() first.")
         return self._activate_session()
 
+    def _claim_thread_ownership(self) -> None:
+        """Bind this logged-in session to the current thread."""
+        if not self._logged_in:
+            return
+        current_thread_id = threading.get_ident()
+        owner_thread_id = self._owner_thread_id
+        if owner_thread_id is None:
+            self._owner_thread_id = current_thread_id
+            return
+        if owner_thread_id != current_thread_id:
+            raise GemStoneError(
+                "GemStoneSession is bound to a different Python thread "
+                f"(owner={owner_thread_id}, current={current_thread_id}). "
+                "Sessions are not safe to share across threads; acquire a "
+                "session per thread or use GemStoneSessionPool."
+            )
+
+    def _release_thread_ownership(self, *, force: bool = False) -> None:
+        """Unbind this session so a provider can safely hand it to another thread."""
+        owner_thread_id = self._owner_thread_id
+        if owner_thread_id is None:
+            return
+        current_thread_id = threading.get_ident()
+        if not force and owner_thread_id != current_thread_id:
+            raise GemStoneError(
+                "Cannot release GemStoneSession thread ownership from a "
+                f"different Python thread (owner={owner_thread_id}, "
+                f"current={current_thread_id})."
+            )
+        self._owner_thread_id = None
+
     def _activate_session(self, *, drain_pending: bool = True) -> ctypes.CDLL:
         lib = self._require_lib()
         if self._session_id == GCI_INVALID_SESSION:
             raise GemStoneError("Not logged in. Call login() first.")
+        self._claim_thread_ownership()
         lib.GciSetSessionId(self._session_id)
-        if self._owner_thread_id is None:
-            self._owner_thread_id = threading.get_ident()
         if drain_pending:
             self._drain_pending_managed_oop_removals()
         return lib

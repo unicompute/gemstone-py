@@ -101,6 +101,16 @@ class FakeGemStoneSession:
         self._record(f"eval:{source}")
         return "value"
 
+    def bulk_perform_oop(self, receivers, selector, *args):
+        receiver_list = list(receivers)
+        self._record(f"bulk_perform_oop:{receiver_list}:{selector}:{args}")
+        return [700 + index for index, _receiver in enumerate(receiver_list, 1)]
+
+    def bulk_perform_value(self, receivers, selector, *args):
+        receiver_list = list(receivers)
+        self._record(f"bulk_perform_value:{receiver_list}:{selector}:{args}")
+        return [f"value-{index}" for index, _receiver in enumerate(receiver_list, 1)]
+
     def commit(self):
         self._record("commit")
 
@@ -145,6 +155,30 @@ class AsyncSessionTests(unittest.IsolatedAsyncioTestCase):
         await session.logout()
         session.close()
         self.assertEqual(str(ctx.exception), "boom")
+
+    async def test_async_session_delegates_bulk_perform(self):
+        created = []
+
+        def factory(**kwargs):
+            session = FakeGemStoneSession(**kwargs)
+            created.append(session)
+            return session
+
+        session = AsyncSession(session_factory=factory)
+
+        oops = await session.bulk_perform_oop([101, 202], "size")
+        values = await session.perform_many_value([101, 202], "name")
+        session.close()
+
+        self.assertEqual(oops, [701, 702])
+        self.assertEqual(values, ["value-1", "value-2"])
+        self.assertEqual(
+            created[0].calls,
+            [
+                "bulk_perform_oop:[101, 202]:size:()",
+                "bulk_perform_value:[101, 202]:name:()",
+            ],
+        )
 
     async def test_transaction_context_commits_or_aborts(self):
         fake = FakeGemStoneSession()

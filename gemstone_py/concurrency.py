@@ -73,6 +73,7 @@ Usage
 import ctypes
 import json
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Iterator, cast
 
@@ -543,6 +544,169 @@ class CommitConflictError(Exception):
         self.report       = report
         self.ww_conflicts = ww
         self.wd_conflicts = wd
+
+    def diagnostics(
+        self,
+        session: _gs.GemStoneSession | None = None,
+        *,
+        include_summaries: bool = True,
+    ) -> "ConflictDiagnostics":
+        """Return structured diagnostics for this commit conflict."""
+        return describe_commit_conflict(
+            self,
+            session=session,
+            include_summaries=include_summaries,
+        )
+
+    def format(
+        self,
+        session: _gs.GemStoneSession | None = None,
+        *,
+        include_summaries: bool = True,
+    ) -> str:
+        """Return a readable conflict report, optionally enriched by inspection."""
+        return format_commit_conflict(
+            self,
+            session=session,
+            include_summaries=include_summaries,
+        )
+
+
+@dataclass(frozen=True)
+class ConflictObject:
+    """One object reported by GemStone commit-conflict diagnostics."""
+
+    oop: int
+    kind: str
+    class_name: str | None = None
+    summary: str | None = None
+    inspection_error: str | None = None
+
+
+@dataclass(frozen=True)
+class ConflictDiagnostics:
+    """Structured commit-conflict diagnostics."""
+
+    report: str
+    write_write: list[ConflictObject]
+    write_dependency: list[ConflictObject]
+
+    def format(self) -> str:
+        """Return a readable conflict report."""
+        return format_conflict_diagnostics(self)
+
+
+def describe_commit_conflict(
+    conflict: CommitConflictError,
+    session: _gs.GemStoneSession | None = None,
+    *,
+    include_summaries: bool = True,
+) -> ConflictDiagnostics:
+    """Return structured conflict diagnostics, enriching OOPs when possible."""
+    return ConflictDiagnostics(
+        report=conflict.report,
+        write_write=_describe_conflict_oops(
+            conflict.ww_conflicts,
+            kind="write/write",
+            session=session,
+            include_summaries=include_summaries,
+        ),
+        write_dependency=_describe_conflict_oops(
+            conflict.wd_conflicts,
+            kind="write/dependency",
+            session=session,
+            include_summaries=include_summaries,
+        ),
+    )
+
+
+def format_commit_conflict(
+    conflict: CommitConflictError,
+    session: _gs.GemStoneSession | None = None,
+    *,
+    include_summaries: bool = True,
+) -> str:
+    """Return a readable commit-conflict report."""
+    return describe_commit_conflict(
+        conflict,
+        session=session,
+        include_summaries=include_summaries,
+    ).format()
+
+
+def format_conflict_diagnostics(diagnostics: ConflictDiagnostics) -> str:
+    """Return a readable report for structured conflict diagnostics."""
+    lines = ["Commit conflict"]
+    _append_conflict_group(lines, "Write/write conflicts", diagnostics.write_write)
+    _append_conflict_group(lines, "Write/dependency conflicts", diagnostics.write_dependency)
+
+    report = diagnostics.report.strip()
+    if report:
+        lines.append("GemStone report:")
+        lines.extend(f"  {line}" for line in report.splitlines())
+    return "\n".join(lines)
+
+
+def _describe_conflict_oops(
+    oops: list[int],
+    *,
+    kind: str,
+    session: _gs.GemStoneSession | None,
+    include_summaries: bool,
+) -> list[ConflictObject]:
+    objects: list[ConflictObject] = []
+    for oop in oops:
+        objects.append(
+            _describe_conflict_oop(
+                int(oop),
+                kind=kind,
+                session=session,
+                include_summaries=include_summaries,
+            )
+        )
+    return objects
+
+
+def _describe_conflict_oop(
+    oop: int,
+    *,
+    kind: str,
+    session: _gs.GemStoneSession | None,
+    include_summaries: bool,
+) -> ConflictObject:
+    if session is None:
+        return ConflictObject(oop=oop, kind=kind)
+    try:
+        from gemstone_py.inspection import inspect_oop
+
+        inspected = inspect_oop(session, oop)
+    except Exception as exc:
+        return ConflictObject(oop=oop, kind=kind, inspection_error=str(exc))
+    return ConflictObject(
+        oop=oop,
+        kind=kind,
+        class_name=inspected.class_name,
+        summary=inspected.summary if include_summaries else None,
+    )
+
+
+def _append_conflict_group(
+    lines: list[str],
+    title: str,
+    objects: list[ConflictObject],
+) -> None:
+    if not objects:
+        return
+    lines.append(f"{title}:")
+    for obj in objects:
+        line = f"  - 0x{obj.oop:X} ({obj.oop})"
+        if obj.class_name:
+            line += f" {obj.class_name}"
+        if obj.summary:
+            line += f": {obj.summary}"
+        if obj.inspection_error:
+            line += f" [inspect failed: {obj.inspection_error}]"
+        lines.append(line)
 
 
 def commit(session: _gs.GemStoneSession) -> None:

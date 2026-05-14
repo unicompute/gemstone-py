@@ -28,6 +28,18 @@ class InspectionParsingTests(unittest.TestCase):
         self.assertIn("Object _objectForOop: 123", session.eval.call_args.args[0])
         self.assertIn("allInstVarNames", session.eval.call_args.args[0])
 
+    def test_inspect_oop_filters_slots(self):
+        session = mock.Mock()
+        session.eval.return_value = (
+            "Person|a Person\n"
+            "name|101|String|Alice\n"
+            "address|202|Address|10 High Street\n"
+        )
+
+        result = inspection.inspect_oop(session, 123, slots=["address"])
+
+        self.assertEqual([slot.name for slot in result.slots], ["address"])
+
     def test_dump_oop_recurses_and_marks_cycles(self):
         root = inspection.InspectionResult(
             oop=1,
@@ -60,6 +72,76 @@ class InspectionParsingTests(unittest.TestCase):
 
         self.assertEqual(payload["class_name"], "Node")
         self.assertEqual(payload["slots"]["child"]["slots"]["parent"], {"oop": 1, "cycle": True})
+
+    def test_dump_oop_filters_slots_and_classes(self):
+        root = inspection.InspectionResult(
+            oop=1,
+            class_name="Node",
+            summary="root",
+            slots=[
+                inspection.InspectedSlot(
+                    "child",
+                    inspection.InspectedReference(2, "Leaf", "child"),
+                )
+            ],
+        )
+        child = inspection.InspectionResult(
+            oop=2,
+            class_name="Leaf",
+            summary="child",
+            slots=[],
+        )
+
+        with mock.patch(
+            "gemstone_py.inspection.inspect_oop",
+            side_effect=[root, child],
+        ) as inspect_oop:
+            payload = inspection.dump_oop(
+                mock.Mock(),
+                1,
+                depth=3,
+                slots=["child"],
+                classes=["Node"],
+            )
+
+        self.assertEqual(payload["slots"]["child"]["class_name"], "Leaf")
+        self.assertTrue(payload["slots"]["child"]["filtered"])
+        self.assertNotIn("slots", payload["slots"]["child"])
+        self.assertEqual(inspect_oop.call_args_list[0].kwargs["slots"], ["child"])
+
+    def test_format_inspection_and_dump(self):
+        result = inspection.InspectionResult(
+            oop=1,
+            class_name="Node",
+            summary="root",
+            slots=[
+                inspection.InspectedSlot(
+                    "child",
+                    inspection.InspectedReference(2, "Node", "child"),
+                )
+            ],
+        )
+        self.assertIn("Node  oop=0x1", inspection.format_inspection(result))
+        self.assertIn("child: Node oop=0x2 child", inspection.format_inspection(result))
+
+        payload = {
+            "oop": 1,
+            "class_name": "Node",
+            "summary": "root",
+            "slots": {
+                "child": {
+                    "oop": 2,
+                    "class_name": "Node",
+                    "summary": "child",
+                    "slots": {"parent": {"oop": 1, "cycle": True}},
+                }
+            },
+        }
+        text = inspection.format_dump(payload)
+
+        self.assertIn("Node oop=0x1 root", text)
+        self.assertIn("child: Node oop=0x2 child", text)
+        self.assertIn("parent: <cycle oop=0x1>", text)
 
     def test_describe_class_parses_superclasses_and_instvars(self):
         session = mock.Mock()

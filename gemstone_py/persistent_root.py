@@ -597,6 +597,10 @@ def _to_oop(s: _gs.GemStoneSession, value: Any) -> int:
         return cast(int, _gs.OOP_NIL)
     if isinstance(value, bool):
         return cast(int, _gs.OOP_TRUE if value else _gs.OOP_FALSE)
+    if isinstance(value, _gs.Oop):
+        return int(value.oop)
+    if hasattr(value, 'oop'):
+        return int(getattr(value, 'oop'))
     if isinstance(value, int):
         return cast(int, _gs._python_to_smallint(value))
     if isinstance(value, float):

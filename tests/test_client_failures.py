@@ -158,6 +158,29 @@ class GemStoneClientFailureTests(unittest.TestCase):
 
         self.assertIn("Not logged in", str(ctx.exception))
 
+    def test_activate_session_rejects_cross_thread_use(self) -> None:
+        session, lib = self._logged_in_session()
+        session._owner_thread_id = 999999
+
+        with self.assertRaises(gemstone.GemStoneError) as ctx:
+            session._activate_session()
+
+        self.assertIn("bound to a different Python thread", str(ctx.exception))
+        lib.GciSetSessionId.assert_not_called()
+
+    def test_thread_ownership_can_be_released_and_reclaimed(self) -> None:
+        session, lib = self._logged_in_session()
+        session._owner_thread_id = None
+
+        session._activate_session()
+        first_owner = session.owner_thread_id
+        session._release_thread_ownership()
+        session._activate_session()
+
+        self.assertIsNotNone(first_owner)
+        self.assertEqual(session.owner_thread_id, first_owner)
+        self.assertEqual(lib.GciSetSessionId.call_count, 2)
+
     def test_resolve_raises_when_symbol_cannot_be_resolved(self) -> None:
         session, lib = self._logged_in_session()
         lib.GciResolveSymbol.return_value = gemstone.OOP_ILLEGAL

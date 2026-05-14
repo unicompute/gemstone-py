@@ -402,10 +402,27 @@ class GemStoneSessionProvider:
             setattr(session, "_gemstone_provider_validated_at", time.monotonic())
         return healthy
 
+    @staticmethod
+    def _claim_session_thread_ownership(session: GemStoneSession) -> None:
+        claim = getattr(session, "_claim_thread_ownership", None)
+        if callable(claim):
+            claim()
+
+    @staticmethod
+    def _release_session_thread_ownership(
+        session: GemStoneSession,
+        *,
+        force: bool = False,
+    ) -> None:
+        release = getattr(session, "_release_thread_ownership", None)
+        if callable(release):
+            release(force=force)
+
     def _prepare_session_for_checkout(
         self,
         session: GemStoneSession,
     ) -> tuple[bool, Optional[str]]:
+        self._claim_session_thread_ownership(session)
         idle_timeout_reason = self._session_idle_timeout_reason(session)
         if idle_timeout_reason is not None:
             return False, idle_timeout_reason
@@ -652,6 +669,7 @@ class GemStoneSessionPool(GemStoneSessionProvider):
             return
         try:
             self._mark_session_released(session)
+            self._release_session_thread_ownership(session)
             self._available.put_nowait(session)
             self._emit_observation("session_released", session=session)
         except queue.Full:
@@ -695,6 +713,7 @@ class GemStoneSessionPool(GemStoneSessionProvider):
             if not self._session_is_healthy(session):
                 self._discard_session(session, reason="unhealthy")
                 continue
+            self._release_session_thread_ownership(session)
             try:
                 self._available.put_nowait(session)
             except queue.Full:
@@ -944,6 +963,7 @@ class GemStoneThreadLocalSessionProvider(GemStoneSessionProvider):
             self._sessions_by_thread.clear()
         for session in sessions:
             try:
+                self._release_session_thread_ownership(session, force=True)
                 session.logout()
             except Exception:
                 pass

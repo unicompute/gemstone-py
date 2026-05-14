@@ -18,6 +18,7 @@ from gemstone_py.migrations import (
     MigrationStep,
     RecordingMigrationSession,
     acquire_migration_lock,
+    assert_schema_fingerprint,
     current_version,
     diff_class,
     downgrade,
@@ -29,6 +30,7 @@ from gemstone_py.migrations import (
     plan_upgrade,
     release_migration_lock,
     scaffold,
+    schema_fingerprint,
     upgrade,
     validate_migration_state,
 )
@@ -429,6 +431,78 @@ class ModuleMigrationTests(unittest.TestCase):
         self.assertEqual(status.current, "001_initial")
         self.assertEqual(status.applied, ("001_initial",))
         self.assertEqual(status.pending, ("002_add_total",))
+
+    def test_schema_fingerprint_records_roots_classes_and_migrations(self):
+        root = {
+            "ExpectedRoot": {"ok": True},
+            DEFAULT_VERSION_ROOT: {
+                "001_initial": {
+                    "id": "001_initial",
+                    "checksum": "abc",
+                    "applied_at": "2026-01-01T00:00:00Z",
+                }
+            },
+        }
+        session = mock.Mock()
+        session.describe_class.return_value = ClassDescription(
+            name="Booking",
+            superclasses=["Object"],
+            instvars=["status", "amount"],
+            class_instvars=["DefaultStatus"],
+            instance_count=3,
+        )
+        first = MigrationStep("001_initial", lambda current: None, checksum="abc")
+        second = MigrationStep(
+            "002_add_index",
+            lambda current: None,
+            dependencies=("001_initial",),
+        )
+
+        with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value=root):
+            fingerprint = schema_fingerprint(
+                session,
+                root_keys=["ExpectedRoot", "MissingRoot"],
+                class_names=["Booking"],
+                migration_steps=[first, second],
+            )
+            same_fingerprint = schema_fingerprint(
+                session,
+                root_keys=["ExpectedRoot", "MissingRoot"],
+                class_names=["Booking"],
+                migration_steps=[first, second],
+            )
+
+        self.assertEqual([item.present for item in fingerprint.root_keys], [True, False])
+        self.assertEqual(fingerprint.classes[0].instvars, ("status", "amount"))
+        self.assertEqual(fingerprint.current_migration, "001_initial")
+        self.assertEqual(fingerprint.applied_migrations, ("001_initial",))
+        self.assertEqual(fingerprint.pending_migrations, ("002_add_index",))
+        self.assertEqual(len(fingerprint.digest), 64)
+        self.assertEqual(fingerprint.digest, same_fingerprint.digest)
+        self.assertEqual(fingerprint.as_dict()["classes"][0]["name"], "Booking")
+
+    def test_schema_fingerprint_records_missing_class(self):
+        root = {}
+        session = mock.Mock()
+        session.describe_class.side_effect = RuntimeError("missing class")
+
+        with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value=root):
+            fingerprint = schema_fingerprint(session, class_names=["MissingClass"])
+
+        self.assertFalse(fingerprint.classes[0].present)
+        self.assertEqual(fingerprint.classes[0].error, "missing class")
+
+    def test_assert_schema_fingerprint_rejects_mismatch(self):
+        with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value={}):
+            current = schema_fingerprint(mock.Mock(), root_keys=["ExpectedRoot"])
+            with self.assertRaisesRegex(MigrationError, "fingerprint mismatch"):
+                assert_schema_fingerprint(
+                    mock.Mock(),
+                    "0" * 64,
+                    root_keys=["ExpectedRoot"],
+                )
+
+        self.assertNotEqual(current.digest, "0" * 64)
 
     def test_validate_migration_state_rejects_unknown_applied_version(self):
         step = MigrationStep("001_initial", lambda current: None)
