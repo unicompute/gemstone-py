@@ -205,6 +205,7 @@ gemstone-hello
 gemstone-smalltalk-demo
 gemstone-examples list
 gemstone-examples plan3-map
+gemstone-examples value-converters
 gemstone-examples hello
 gemstone-examples quickstart
 gemstone-examples smalltalk-demo

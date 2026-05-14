@@ -71,6 +71,7 @@ python3 -m build --sdist --wheel
 gemstone-benchmark-compare --help
 gemstone-hello
 gemstone-examples hello
+gemstone-examples value-converters
 gemstone-smalltalk-demo
 ```
 

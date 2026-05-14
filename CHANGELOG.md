@@ -4,6 +4,21 @@ All notable changes to `gemstone-py` should be recorded here.
 
 ## Unreleased
 
+- Added lightweight bulk send helpers, including mixed `PerformCall` batches
+  and persistent-root/GsDict batch get/update paths for lower round-trip count.
+- Added explicit transaction retry ergonomics and stronger conflict diagnostics,
+  including formatted conflict reports and retry helpers that keep application
+  retry loops visible instead of hiding them behind an ORM layer.
+- Expanded inspection tooling with bounded slot output for safer object dumps.
+- Added explicit, opt-in value converters for scalar-ish Python values, package
+  root exports for the converter API, batch converter registry helpers, and an
+  installed `gemstone-examples value-converters` preview.
+- Added generated-wrapper metadata, `__gemstone_protocol__` and
+  `__gemstone_selectors__`, so generated APIs can be audited by tools and logs
+  without parsing generated source.
+- Added schema fingerprinting helpers for checking expected GemStone-side roots,
+  class definitions, and indexes before application startup.
+
 ## 0.2.14 - 2026-05-11
 
 - Added concrete Codegen examples for offline wrapper preview, reusable

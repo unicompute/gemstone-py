@@ -48,6 +48,7 @@ fi
 "${wheel_venv}/bin/gemstone-publish-verify" --help >/dev/null
 "${wheel_venv}/bin/gemstone-hello"
 "${wheel_venv}/bin/gemstone-examples" hello
+"${wheel_venv}/bin/gemstone-examples" value-converters
 test -x "${wheel_venv}/bin/gemstone-smalltalk-demo"
 
 "${pybin}" -m venv --system-site-packages "${sdist_venv}"
@@ -60,4 +61,5 @@ test -x "${wheel_venv}/bin/gemstone-smalltalk-demo"
 "${sdist_venv}/bin/gemstone-publish-verify" --help >/dev/null
 "${sdist_venv}/bin/gemstone-hello"
 "${sdist_venv}/bin/gemstone-examples" hello
+"${sdist_venv}/bin/gemstone-examples" value-converters
 test -x "${sdist_venv}/bin/gemstone-smalltalk-demo"
