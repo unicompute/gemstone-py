@@ -25,6 +25,7 @@ From an installed package, use:
 
 ```bash
 gemstone-examples list
+gemstone-examples value-converters
 gemstone-examples plan3-map
 gemstone-examples quickstart
 gemstone-examples fastapi --reload

@@ -802,6 +802,7 @@ with GemStoneSession(config=GemStoneConfig.from_env()) as session:
 Built-in converter factories cover `datetime`, exact `date`, `Decimal`, and
 `UUID`. Use `dataclass_to_dict(...)` when you want an explicit plain payload
 instead of a persistent Python object graph. See
+`gemstone-examples value-converters` or
 `python -m examples.cookbook.value_converters` for an offline preview.
 
 ## Inspect And Debug

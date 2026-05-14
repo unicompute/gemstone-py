@@ -6,7 +6,14 @@ import argparse
 import platform
 import sys
 from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import date, datetime, timezone
+from decimal import Decimal
+from typing import cast
+from uuid import UUID
 
+from gemstone_py.client import GemStoneSession
+from gemstone_py.converters import dataclass_to_dict, scalar_value_converter_registry
 from gemstone_py.example_support import (
     MANUAL_POLICY,
     WRITE_POLICY,
@@ -164,6 +171,61 @@ def run_smalltalk_demo() -> None:
         print(f"  persistent_root['MiscDemo'] = {facade['MiscDemo']['status']!r}")
 
 
+class _ValueConverterPreviewSession:
+    """Tiny session-shaped object used only for the offline converter preview."""
+
+    def __init__(self) -> None:
+        self._next_oop = 4100
+        self.created_strings: list[str] = []
+        self.evaluated_sources: list[str] = []
+
+    def _allocate_oop(self) -> int:
+        self._next_oop += 1
+        return self._next_oop
+
+    def new_string(self, value: str) -> int:
+        self.created_strings.append(value)
+        return self._allocate_oop()
+
+    def eval_oop(self, source: str) -> int:
+        self.evaluated_sources.append(source)
+        return self._allocate_oop()
+
+
+@dataclass(frozen=True)
+class _BookingPatchPreview:
+    booking_id: str
+    due_on: date
+    total: Decimal
+
+
+def run_value_converters_preview() -> None:
+    """Run the offline explicit value-converter preview."""
+    session = _ValueConverterPreviewSession()
+    registry = scalar_value_converter_registry()
+
+    values = [
+        datetime(2026, 5, 14, 12, 30, tzinfo=timezone.utc),
+        date(2026, 5, 15),
+        Decimal("19.95"),
+        UUID("12345678-1234-5678-1234-567812345678"),
+    ]
+    oop_markers = registry.to_oops(cast(GemStoneSession, session), values)
+
+    patch = _BookingPatchPreview("B-1001", date(2026, 5, 15), Decimal("19.95"))
+    payload = dataclass_to_dict(patch, recurse=False)
+
+    print("gemstone-py lightweight value converter preview")
+    print(f"  Registered converters: {', '.join(registry.names())}")
+    print(f"  Converted OOP markers: {[marker.oop for marker in oop_markers]}")
+    print(f"  GemStone strings created: {session.created_strings}")
+    print(f"  GemStone expressions evaluated: {len(session.evaluated_sources)}")
+    print(f"  Plain payload: {payload}")
+    print("")
+    print("Use the OOP markers explicitly with perform calls, root updates, or proxy APIs.")
+    print("Keep domain objects in application code unless a real app proves it needs mapping.")
+
+
 def run_list_examples() -> None:
     """Print the curated example map for new users."""
     print("gemstone-py examples")
@@ -215,6 +277,10 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("plan3-map", help="List plan3 features by module, example, and doc.")
     subparsers.add_parser("hello", help="Print Python runtime information.")
     subparsers.add_parser(
+        "value-converters",
+        help="Run the offline explicit value-converter preview.",
+    )
+    subparsers.add_parser(
         "quickstart",
         help="Run the smallest live GemStone connection example.",
     )
@@ -248,6 +314,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "plan3-map":
         run_plan3_map()
+        return 0
+    if args.command == "value-converters":
+        run_value_converters_preview()
         return 0
     if args.command == "quickstart":
         run_quickstart()

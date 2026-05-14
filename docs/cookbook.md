@@ -604,5 +604,6 @@ root["PendingBookingPatch"] = payload
 Run the offline preview without a live stone:
 
 ```bash
+gemstone-examples value-converters
 python -m examples.cookbook.value_converters
 ```

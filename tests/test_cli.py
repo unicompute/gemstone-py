@@ -34,6 +34,19 @@ class AggregateCliTests(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertIn("Hello from:", stream.getvalue())
 
+    def test_main_dispatches_value_converters_preview(self):
+        stream = io.StringIO()
+
+        with redirect_stdout(stream):
+            result = cli.main(["value-converters"])
+
+        output = stream.getvalue()
+        self.assertEqual(result, 0)
+        self.assertIn("gemstone-py lightweight value converter preview", output)
+        self.assertIn("Registered converters:", output)
+        self.assertIn("Converted OOP markers:", output)
+        self.assertIn("Plain payload:", output)
+
     def test_main_lists_curated_examples(self):
         stream = io.StringIO()
 

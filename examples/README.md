@@ -24,6 +24,7 @@ package, use the packaged commands instead:
 
 ```bash
 gemstone-examples list
+gemstone-examples value-converters
 gemstone-examples quickstart
 gemstone-fastapi-example --reload
 gemstone-litestar-example --reload
@@ -111,6 +112,7 @@ python -m examples.cookbook.value_converters
 gemstone-smalltalk-demo
 gemstone-examples list
 gemstone-examples plan3-map
+gemstone-examples value-converters
 ```
 
 For Flask examples that install request-session handling, use
