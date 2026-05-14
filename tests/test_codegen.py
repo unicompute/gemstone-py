@@ -129,9 +129,13 @@ class CodegenTests(unittest.TestCase):
 
     def test_generate_wrapper_builds_sync_and_async_sources(self) -> None:
         source = generate_wrapper(CodegenBookingProto)
+        expected_protocol = f"{CodegenBookingProto.__module__}.CodegenBookingProto"
 
         self.assertIn("class CodegenBooking(TypedOop[Any]):", source)
         self.assertIn("class AsyncCodegenBooking(TypedOop[Any]):", source)
+        self.assertIn(f"__gemstone_protocol__ = {expected_protocol!r}", source)
+        self.assertIn("'find_by_id': 'findById:'", source)
+        self.assertIn("'transfer': 'transferTo:byUserId:'", source)
         self.assertIn("def status(self) -> str:", source)
         self.assertIn("def mark_paid(self, at: int) -> None:", source)
         self.assertIn("def rename_to(self, name: str) -> None:", source)
@@ -149,6 +153,16 @@ class CodegenTests(unittest.TestCase):
         exec(generate_wrapper(CodegenBookingProto), namespace)
         booking_cls = namespace["CodegenBooking"]
         session = FakeSyncSession()
+
+        self.assertEqual(
+            booking_cls.__gemstone_protocol__,
+            f"{CodegenBookingProto.__module__}.CodegenBookingProto",
+        )
+        self.assertEqual(booking_cls.__gemstone_selectors__["status"], "status")
+        self.assertEqual(
+            booking_cls.__gemstone_selectors__["find_by_id"],
+            "findById:",
+        )
 
         booking = booking_cls.find_by_id(session, "A'7")
         count = booking_cls.count_all(session)
@@ -281,6 +295,8 @@ class CodegenTests(unittest.TestCase):
                 buyer = invoice.buyer()
                 buyer_is_customer = isinstance(buyer, generated_package.Customer)
                 buyer_oop = int(buyer)
+                invoice_protocol = generated_package.Invoice.__gemstone_protocol__
+                buyer_selector = generated_package.Invoice.__gemstone_selectors__["buyer"]
             finally:
                 sys.path.remove(str(root))
                 for module_name in list(sys.modules):
@@ -299,6 +315,8 @@ class CodegenTests(unittest.TestCase):
         self.assertFalse(stale_stub.exists())
         self.assertTrue(buyer_is_customer)
         self.assertEqual(buyer_oop, 0xB01)
+        self.assertEqual(invoice_protocol, "models.InvoiceProto")
+        self.assertEqual(buyer_selector, "buyer")
 
     def test_repository_codegen_check_script_tracks_demo_wrapper(self) -> None:
         script = Path("scripts/check_codegen.sh").read_text(encoding="utf-8")

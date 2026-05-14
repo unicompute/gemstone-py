@@ -36,6 +36,9 @@ gemstone-codegen \
 
 The generated package includes runtime `.py` modules, matching `.pyi` stubs,
 and `py.typed` so editors and type checkers can read the wrapper contract.
+Wrapper classes also expose `__gemstone_protocol__` and
+`__gemstone_selectors__` metadata so tools and logs can report where a method
+came from without parsing generated source.
 
 The companion VS Code workbench can drive the same workflow visually. Open
 `GemStone: Open Codegen Explorer`, connect to the configured database explorer,

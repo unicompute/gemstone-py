@@ -83,6 +83,11 @@ class OkzCustomer(TypedOop[Any]):
     """Typed wrapper for the GemStone class 'OkzCustomer'."""
 
     __gemstone_class_name__ = 'OkzCustomer'
+    __gemstone_protocol__ = 'examples.typed_access.codegen_demo.models.OkzCustomerProto'
+    __gemstone_selectors__ = {
+        'name': 'name',
+        'yourself': 'yourself',
+    }
 
     @property
     def name(self) -> str:
@@ -107,6 +112,11 @@ class AsyncOkzCustomer(TypedOop[Any]):
     """Typed wrapper for the GemStone class 'OkzCustomer'."""
 
     __gemstone_class_name__ = 'OkzCustomer'
+    __gemstone_protocol__ = 'examples.typed_access.codegen_demo.models.OkzCustomerProto'
+    __gemstone_selectors__ = {
+        'name': 'name',
+        'yourself': 'yourself',
+    }
 
     async def name(self) -> str:
         """Send the 'name' selector to this GemStone object."""

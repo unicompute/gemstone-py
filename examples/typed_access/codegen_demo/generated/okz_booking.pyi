@@ -8,6 +8,8 @@ from .okz_customer import AsyncOkzCustomer, OkzCustomer
 
 class OkzBooking(TypedOop[Any]):
     __gemstone_class_name__: str
+    __gemstone_protocol__: str
+    __gemstone_selectors__: dict[str, str]
     @property
     def status(self) -> str: ...
     @classmethod
@@ -20,6 +22,8 @@ class OkzBooking(TypedOop[Any]):
 
 class AsyncOkzBooking(TypedOop[Any]):
     __gemstone_class_name__: str
+    __gemstone_protocol__: str
+    __gemstone_selectors__: dict[str, str]
     async def status(self) -> str: ...
     @classmethod
     async def find_by_id(cls, session: Any, booking_id: str) -> AsyncOkzBooking: ...

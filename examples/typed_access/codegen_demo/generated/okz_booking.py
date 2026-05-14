@@ -86,6 +86,15 @@ class OkzBooking(TypedOop[Any]):
     """Typed wrapper for the GemStone class 'OkzBooking'."""
 
     __gemstone_class_name__ = 'OkzBooking'
+    __gemstone_protocol__ = 'examples.typed_access.codegen_demo.models.OkzBookingProto'
+    __gemstone_selectors__ = {
+        'status': 'status',
+        'find_by_id': 'findById:',
+        'yourself': 'yourself',
+        'customer': 'customer',
+        'mark_paid': 'markPaid:',
+        'transfer': 'transferTo:byUserId:',
+    }
 
     @property
     def status(self) -> str:
@@ -156,6 +165,15 @@ class AsyncOkzBooking(TypedOop[Any]):
     """Typed wrapper for the GemStone class 'OkzBooking'."""
 
     __gemstone_class_name__ = 'OkzBooking'
+    __gemstone_protocol__ = 'examples.typed_access.codegen_demo.models.OkzBookingProto'
+    __gemstone_selectors__ = {
+        'status': 'status',
+        'find_by_id': 'findById:',
+        'yourself': 'yourself',
+        'customer': 'customer',
+        'mark_paid': 'markPaid:',
+        'transfer': 'transferTo:byUserId:',
+    }
 
     async def status(self) -> str:
         """Send the 'status' selector to this GemStone object."""

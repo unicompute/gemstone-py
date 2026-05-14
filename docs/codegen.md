@@ -81,6 +81,16 @@ treat the checked-in wrapper package as typed. `--clean` removes stale
 generated wrapper modules and stale wrapper stubs when a Protocol is renamed or
 deleted.
 
+Each generated wrapper class also exposes lightweight runtime metadata:
+
+```python
+print(OkzBooking.__gemstone_protocol__)
+print(OkzBooking.__gemstone_selectors__["find_by_id"])
+```
+
+Use that metadata for diagnostics, generated-wrapper audits, and UI tooling
+without parsing generated source files.
+
 Use package generation for protocols that return other generated protocols.
 Single-class `generate_wrapper(...)` only has enough context to resolve
 self-typed returns.
@@ -331,6 +341,7 @@ The first generator pass handles:
 - explicit selector overrides with `@gemstone_selector(...)`
 - checked-in sync and async generated modules with `.pyi` stubs, `py.typed`,
   stale-file cleanup, and CI/pre-commit drift checks
+- runtime source-Protocol and selector-map metadata on every generated wrapper
 - a runnable FastAPI demo route backed by the generated async wrapper
 - an opt-in live smoke test for generated wrappers against GemStone `Date`
 

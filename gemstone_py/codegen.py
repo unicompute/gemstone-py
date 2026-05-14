@@ -541,10 +541,11 @@ def _render_source(
         if type_checking_imports
         else "from typing import Any"
     )
+    protocol_path = f"{module_name}.{protocol_name}"
     lines = [
         '"""Generated GemStone wrappers.',
         "",
-        f"Source Protocol: {module_name}.{protocol_name}",
+        f"Source Protocol: {protocol_path}",
         'Regenerate with `gemstone-codegen`; do not edit by hand.',
         '"""',
         "",
@@ -557,8 +558,8 @@ def _render_source(
     ]
     if type_checking_imports:
         lines.append("if TYPE_CHECKING:")
-        for module_name, names in type_checking_imports:
-            lines.append(f"    from .{module_name} import {', '.join(names)}")
+        for import_module_name, names in type_checking_imports:
+            lines.append(f"    from .{import_module_name} import {', '.join(names)}")
         lines.append("")
         lines.append("")
     else:
@@ -571,7 +572,16 @@ def _render_source(
     lines.extend(_literal_helpers())
     lines.append("")
     lines.append("")
-    lines.extend(_render_class(wrapper_name, gs_name, properties, methods, async_class=False))
+    lines.extend(
+        _render_class(
+            wrapper_name,
+            gs_name,
+            protocol_path,
+            properties,
+            methods,
+            async_class=False,
+        )
+    )
     if include_async:
         lines.append("")
         lines.append("")
@@ -579,6 +589,7 @@ def _render_source(
             _render_class(
                 f"Async{wrapper_name}",
                 gs_name,
+                protocol_path,
                 properties,
                 methods,
                 async_class=True,
@@ -664,6 +675,8 @@ def _render_stub_class(
     lines = [
         f"class {class_name}(TypedOop[Any]):",
         "    __gemstone_class_name__: str",
+        "    __gemstone_protocol__: str",
+        "    __gemstone_selectors__: dict[str, str]",
     ]
     if not properties and not methods:
         lines.append("    ...")
@@ -807,6 +820,7 @@ def _literal_helpers() -> list[str]:
 def _render_class(
     class_name: str,
     gs_name: str,
+    protocol_path: str,
     properties: Sequence[_PropertySpec],
     methods: Sequence[_MethodSpec],
     *,
@@ -818,6 +832,8 @@ def _render_class(
         f"    \"\"\"Typed wrapper for the GemStone class {gs_name!r}.\"\"\"",
         "",
         f"    __gemstone_class_name__ = {gs_name!r}",
+        f"    __gemstone_protocol__ = {protocol_path!r}",
+        *_render_selector_map(properties, methods),
         "",
     ]
     if not properties and not methods:
@@ -831,6 +847,23 @@ def _render_class(
         lines.append("")
     if lines[-1] == "":
         lines.pop()
+    return lines
+
+
+def _render_selector_map(
+    properties: Sequence[_PropertySpec],
+    methods: Sequence[_MethodSpec],
+) -> list[str]:
+    items = [
+        *((prop.python_name, prop.selector) for prop in properties),
+        *((method.python_name, method.selector) for method in methods),
+    ]
+    if not items:
+        return ["    __gemstone_selectors__ = {}"]
+    lines = ["    __gemstone_selectors__ = {"]
+    for python_name, selector in items:
+        lines.append(f"        {python_name!r}: {selector!r},")
+    lines.append("    }")
     return lines
 
 
