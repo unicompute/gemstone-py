@@ -181,6 +181,7 @@ class PackagingSmokeTests(unittest.TestCase):
         self.assertEqual(pkg.OOP_FALSE, gci_mod.OOP_FALSE)
         self.assertEqual(pkg.OOP_ILLEGAL, gci_mod.OOP_ILLEGAL)
         self.assertIs(pkg.GemStoneSession, client_mod.GemStoneSession)
+        self.assertIs(pkg.PerformCall, client_mod.PerformCall)
         self.assertIs(pkg.session_scope, web_mod.session_scope)
         self.assertIs(
             pkg.close_flask_request_session_provider,

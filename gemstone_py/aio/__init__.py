@@ -9,7 +9,7 @@ from importlib import import_module
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
-from gemstone_py.client import GemStoneConfig, GemStoneSession, TransactionPolicy
+from gemstone_py.client import GemStoneConfig, GemStoneSession, PerformCallInput, TransactionPolicy
 from gemstone_py.oop import ManagedOop, OopHandle, TypedOop
 
 T = TypeVar("T")
@@ -318,6 +318,14 @@ class AsyncSession:
             lambda session: session.bulk_perform_value(receiver_oops, selector, *args)
         )
 
+    async def bulk_perform_calls_oop(self, calls: Iterable[PerformCallInput]) -> list[int]:
+        call_list = list(calls)
+        return await self.run_sync(lambda session: session.bulk_perform_calls_oop(call_list))
+
+    async def bulk_perform_calls_value(self, calls: Iterable[PerformCallInput]) -> list[Any]:
+        call_list = list(calls)
+        return await self.run_sync(lambda session: session.bulk_perform_calls_value(call_list))
+
     async def perform_many_oop(
         self,
         receivers: Iterable[int],
@@ -333,6 +341,12 @@ class AsyncSession:
         *args: int,
     ) -> list[Any]:
         return await self.bulk_perform_value(receivers, selector, *args)
+
+    async def perform_calls_oop(self, calls: Iterable[PerformCallInput]) -> list[int]:
+        return await self.bulk_perform_calls_oop(calls)
+
+    async def perform_calls_value(self, calls: Iterable[PerformCallInput]) -> list[Any]:
+        return await self.bulk_perform_calls_value(calls)
 
     async def perform_typed(
         self,

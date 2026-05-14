@@ -21,6 +21,7 @@ CORE_EXPORTS: dict[str, tuple[str, str]] = {
     "Oop": ("gemstone_py.oop", "Oop"),
     "OopHandle": ("gemstone_py.client", "OopHandle"),
     "OopRef": ("gemstone_py.client", "OopRef"),
+    "PerformCall": ("gemstone_py.client", "PerformCall"),
     "TypedOop": ("gemstone_py.client", "TypedOop"),
     "TransactionPolicy": ("gemstone_py.client", "TransactionPolicy"),
     "connect": ("gemstone_py.client", "connect"),

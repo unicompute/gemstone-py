@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
 from types import TracebackType
-from typing import Any, Iterator, Literal, Optional, Sequence, TypeVar, cast
+from typing import Any, Iterator, Literal, Optional, Sequence, TypeAlias, TypeVar, cast
 
 from ._gci import (
     GCI_ENCRYPT_BUF_SIZE,
@@ -50,6 +50,7 @@ __all__ = [
     "ManagedOop",
     "OopRef",
     "OopHandle",
+    "PerformCall",
     "TypedOop",
     "connect",
 ]
@@ -99,6 +100,18 @@ class TransactionPolicy(str, Enum):
             raise ValueError(
                 f"Unknown transaction policy {value!r}. Expected one of: {options}"
             ) from exc
+
+
+@dataclass(frozen=True)
+class PerformCall:
+    """One raw-OOP selector send used by ``bulk_perform_calls_*``."""
+
+    receiver: int
+    selector: str
+    args: tuple[int, ...] = ()
+
+
+PerformCallInput: TypeAlias = PerformCall | tuple[int, str] | tuple[int, str, Sequence[int]]
 
 
 @dataclass(frozen=True)
@@ -207,6 +220,61 @@ def _bulk_perform_source(receivers: Sequence[int], selector: str, args: Sequence
         "].\n"
         "stream"
     )
+
+
+def _bulk_perform_calls_source(calls: Sequence[PerformCall]) -> str:
+    receiver_puts: list[str] = []
+    selector_puts: list[str] = []
+    arg_list_puts: list[str] = []
+    for index, call in enumerate(calls, 1):
+        receiver_puts.append(
+            f"receivers at: {index} put: (Object _objectForOop: {call.receiver}).\n"
+        )
+        selector_puts.append(
+            f"selectors at: {index} put: {_smalltalk_string_literal(call.selector)} asSymbol.\n"
+        )
+        arg_puts = "".join(
+            f"  callArgs at: {arg_index} put: (Object _objectForOop: {arg}).\n"
+            for arg_index, arg in enumerate(call.args, 1)
+        )
+        arg_list_puts.append(
+            f"callArgs := Array new: {len(call.args)}.\n"
+            f"{arg_puts}"
+            f"argsList at: {index} put: callArgs.\n"
+        )
+    return (
+        "| receivers selectors argsList callArgs stream |\n"
+        f"receivers := Array new: {len(calls)}.\n"
+        f"selectors := Array new: {len(calls)}.\n"
+        f"argsList := Array new: {len(calls)}.\n"
+        f"{''.join(receiver_puts)}"
+        f"{''.join(selector_puts)}"
+        f"{''.join(arg_list_puts)}"
+        "stream := ''.\n"
+        "1 to: receivers size do: [:index | | result |\n"
+        "  result := (receivers at: index)\n"
+        "    perform: (selectors at: index)\n"
+        "    withArguments: (argsList at: index).\n"
+        "  stream := stream, result asOop asString, String lf asString\n"
+        "].\n"
+        "stream"
+    )
+
+
+def _coerce_perform_call(call: PerformCallInput) -> PerformCall:
+    if isinstance(call, PerformCall):
+        return PerformCall(
+            receiver=int(call.receiver),
+            selector=str(call.selector),
+            args=tuple(int(arg) for arg in call.args),
+        )
+    if len(call) == 2:
+        receiver, selector = call
+        return PerformCall(int(receiver), str(selector))
+    if len(call) == 3:
+        receiver, selector, args = call
+        return PerformCall(int(receiver), str(selector), tuple(int(arg) for arg in args))
+    raise ValueError("bulk perform calls must be (receiver, selector[, args])")
 
 
 class GemStoneSession:
@@ -548,6 +616,24 @@ class GemStoneSession:
         """Perform one selector across several receiver OOPs and marshal results."""
         return [self._marshal(oop) for oop in self.bulk_perform_oop(receivers, selector, *args)]
 
+    def bulk_perform_calls_oop(self, calls: Iterable[PerformCallInput]) -> list[int]:
+        """Perform mixed raw-OOP selector sends in one eval."""
+        perform_calls = [_coerce_perform_call(call) for call in calls]
+        if not perform_calls:
+            return []
+        with self._observe_operation(
+            "bulk_perform_calls_oop",
+            {"call_count": len(perform_calls)},
+        ):
+            raw = self.eval(_bulk_perform_calls_source(perform_calls))
+        if raw is None:
+            return []
+        return [int(line) for line in str(raw).splitlines() if line]
+
+    def bulk_perform_calls_value(self, calls: Iterable[PerformCallInput]) -> list[Any]:
+        """Perform mixed raw-OOP selector sends and marshal each result."""
+        return [self._marshal(oop) for oop in self.bulk_perform_calls_oop(calls)]
+
     def perform_many_oop(self, receivers: Iterable[int], selector: str, *args: int) -> list[int]:
         """Alias for ``bulk_perform_oop``."""
         return self.bulk_perform_oop(receivers, selector, *args)
@@ -560,6 +646,14 @@ class GemStoneSession:
     ) -> list[Any]:
         """Alias for ``bulk_perform_value``."""
         return self.bulk_perform_value(receivers, selector, *args)
+
+    def perform_calls_oop(self, calls: Iterable[PerformCallInput]) -> list[int]:
+        """Alias for ``bulk_perform_calls_oop``."""
+        return self.bulk_perform_calls_oop(calls)
+
+    def perform_calls_value(self, calls: Iterable[PerformCallInput]) -> list[Any]:
+        """Alias for ``bulk_perform_calls_value``."""
+        return self.bulk_perform_calls_value(calls)
 
     def _perform_oop_raw(self, receiver: int, selector: str, *args: int) -> int:
         lib = self._require_login()

@@ -111,6 +111,16 @@ class FakeGemStoneSession:
         self._record(f"bulk_perform_value:{receiver_list}:{selector}:{args}")
         return [f"value-{index}" for index, _receiver in enumerate(receiver_list, 1)]
 
+    def bulk_perform_calls_oop(self, calls):
+        call_list = list(calls)
+        self._record(f"bulk_perform_calls_oop:{call_list}")
+        return [800 + index for index, _call in enumerate(call_list, 1)]
+
+    def bulk_perform_calls_value(self, calls):
+        call_list = list(calls)
+        self._record(f"bulk_perform_calls_value:{call_list}")
+        return [f"call-value-{index}" for index, _call in enumerate(call_list, 1)]
+
     def commit(self):
         self._record("commit")
 
@@ -168,15 +178,21 @@ class AsyncSessionTests(unittest.IsolatedAsyncioTestCase):
 
         oops = await session.bulk_perform_oop([101, 202], "size")
         values = await session.perform_many_value([101, 202], "name")
+        call_oops = await session.perform_calls_oop([(101, "size"), (202, "name")])
+        call_values = await session.bulk_perform_calls_value([(101, "size"), (202, "name")])
         session.close()
 
         self.assertEqual(oops, [701, 702])
         self.assertEqual(values, ["value-1", "value-2"])
+        self.assertEqual(call_oops, [801, 802])
+        self.assertEqual(call_values, ["call-value-1", "call-value-2"])
         self.assertEqual(
             created[0].calls,
             [
                 "bulk_perform_oop:[101, 202]:size:()",
                 "bulk_perform_value:[101, 202]:name:()",
+                "bulk_perform_calls_oop:[(101, 'size'), (202, 'name')]",
+                "bulk_perform_calls_value:[(101, 'size'), (202, 'name')]",
             ],
         )
 
