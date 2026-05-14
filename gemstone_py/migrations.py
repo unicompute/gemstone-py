@@ -835,6 +835,38 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="Python class reference as module:qualname.",
     )
+    fingerprint_parser = subcommands.add_parser(
+        "fingerprint",
+        help="Print a stable schema fingerprint for deployment checks.",
+    )
+    fingerprint_parser.add_argument(
+        "--root",
+        dest="root_keys",
+        action="append",
+        default=[],
+        help="Expected UserGlobals root key. Can be passed more than once.",
+    )
+    fingerprint_parser.add_argument(
+        "--class",
+        dest="class_names",
+        action="append",
+        default=[],
+        help="Expected GemStone class name. Can be passed more than once.",
+    )
+    fingerprint_parser.add_argument(
+        "--manifest",
+        help="Optional Python module containing migrations or MIGRATIONS.",
+    )
+    fingerprint_parser.add_argument(
+        "--migration-root-key",
+        default=DEFAULT_VERSION_ROOT,
+        help="UserGlobals key that stores applied migration metadata.",
+    )
+    fingerprint_parser.add_argument(
+        "--expect-digest",
+        help="Raise an error unless the current fingerprint has this digest.",
+    )
+    fingerprint_parser.add_argument("--json", action="store_true", help="Emit JSON.")
     return parser
 
 
@@ -913,6 +945,31 @@ def main(argv: Sequence[str] | None = None) -> int:
         with _session_from_env() as session:
             class_diff = diff_class(session, args.class_name, local_class=local_class)
         _print_class_diff(class_diff)
+        return 0
+    if args.command == "fingerprint":
+        migration_steps = load_manifest(args.manifest) if args.manifest else None
+        with _session_from_env() as session:
+            if args.expect_digest:
+                fingerprint = assert_schema_fingerprint(
+                    session,
+                    args.expect_digest,
+                    root_keys=tuple(args.root_keys),
+                    class_names=tuple(args.class_names),
+                    migration_steps=migration_steps,
+                    migration_root_key=args.migration_root_key,
+                )
+            else:
+                fingerprint = schema_fingerprint(
+                    session,
+                    root_keys=tuple(args.root_keys),
+                    class_names=tuple(args.class_names),
+                    migration_steps=migration_steps,
+                    migration_root_key=args.migration_root_key,
+                )
+        if args.json:
+            print(json.dumps(fingerprint.as_dict(), indent=2, sort_keys=True))
+        else:
+            _print_schema_fingerprint(fingerprint)
         return 0
     parser.error(f"unknown command {args.command!r}")
     return 2
@@ -1004,6 +1061,28 @@ def _print_class_diff(class_diff: ClassDiff) -> None:
         print("suggested downgrade:")
         for line in class_diff.suggested_downgrade:
             print(f"  {line}")
+
+
+def _print_schema_fingerprint(fingerprint: SchemaFingerprint) -> None:
+    print(f"digest: {fingerprint.digest}")
+    print(f"current migration: {fingerprint.current_migration or 'base'}")
+    print(f"applied migrations: {len(fingerprint.applied_migrations)}")
+    for migration_id in fingerprint.applied_migrations:
+        print(f"  {migration_id}")
+    print(f"pending migrations: {len(fingerprint.pending_migrations)}")
+    for migration_id in fingerprint.pending_migrations:
+        print(f"  {migration_id}")
+    print(f"root keys: {len(fingerprint.root_keys)}")
+    for root in fingerprint.root_keys:
+        status = "present" if root.present else "missing"
+        print(f"  {root.key}: {status}")
+    print(f"classes: {len(fingerprint.classes)}")
+    for cls in fingerprint.classes:
+        status = "present" if cls.present else "missing"
+        details = f" ({cls.error})" if cls.error else ""
+        print(f"  {cls.name}: {status}{details}")
+        if cls.present:
+            print(f"    instvars: {', '.join(cls.instvars) or '(none)'}")
 
 
 def _root_key_present(root: object, key: str) -> bool:

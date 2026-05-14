@@ -1,4 +1,5 @@
 import io
+import json
 import sys
 import types
 import unittest
@@ -726,6 +727,69 @@ class ModuleMigrationTests(unittest.TestCase):
         self.assertIn("class: OkzBooking", output)
         self.assertIn("missing instvars: amount", output)
         self.assertIn("suggested upgrade:", output)
+
+    def test_fingerprint_cli_prints_json(self):
+        stream = io.StringIO()
+        session = mock.Mock()
+        session.describe_class.return_value = ClassDescription(
+            name="OkzBooking",
+            superclasses=["Object"],
+            instvars=["status"],
+            class_instvars=[],
+            instance_count=1,
+        )
+        session_cm = mock.Mock()
+        session_cm.__enter__ = mock.Mock(return_value=session)
+        session_cm.__exit__ = mock.Mock(return_value=False)
+        root = {"Bookings": {}}
+
+        with mock.patch("gemstone_py.migrations._session_from_env", return_value=session_cm):
+            with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value=root):
+                with redirect_stdout(stream):
+                    result = main(
+                        [
+                            "fingerprint",
+                            "--root",
+                            "Bookings",
+                            "--class",
+                            "OkzBooking",
+                            "--json",
+                        ]
+                    )
+
+        self.assertEqual(result, 0)
+        payload = json.loads(stream.getvalue())
+        self.assertEqual(payload["root_keys"][0]["key"], "Bookings")
+        self.assertTrue(payload["root_keys"][0]["present"])
+        self.assertEqual(payload["classes"][0]["name"], "OkzBooking")
+        self.assertEqual(len(payload["digest"]), 64)
+
+    def test_fingerprint_cli_checks_expected_digest(self):
+        root = {"Bookings": {}}
+        session = mock.Mock()
+        session_cm = mock.Mock()
+        session_cm.__enter__ = mock.Mock(return_value=session)
+        session_cm.__exit__ = mock.Mock(return_value=False)
+
+        with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value=root):
+            digest = schema_fingerprint(session, root_keys=["Bookings"]).digest
+
+        stream = io.StringIO()
+        with mock.patch("gemstone_py.migrations._session_from_env", return_value=session_cm):
+            with mock.patch("gemstone_py.persistent_root.PersistentRoot", return_value=root):
+                with redirect_stdout(stream):
+                    result = main(
+                        [
+                            "fingerprint",
+                            "--root",
+                            "Bookings",
+                            "--expect-digest",
+                            digest,
+                        ]
+                    )
+
+        self.assertEqual(result, 0)
+        self.assertIn(f"digest: {digest}", stream.getvalue())
 
     def test_manifest_can_import_migration_module_by_name(self):
         migration_module = types.ModuleType("temp_migration_001")
