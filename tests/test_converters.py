@@ -7,6 +7,8 @@ from uuid import UUID
 
 import gemstone_py as gemstone
 from gemstone_py.converters import (
+    ValueConverter,
+    ValueConverterRegistry,
     dataclass_to_dict,
     date_as_iso_string_converter,
     datetime_converter,
@@ -32,6 +34,31 @@ class ValueConverterTests(unittest.TestCase):
         self.assertIsInstance(converted, Oop)
         self.assertEqual(converted.oop, 9001)
         self.assertIn("DateAndTime posixSeconds:", session.eval_oop.call_args.args[0])
+
+    def test_registry_extends_copies_and_converts_batches(self):
+        converter = ValueConverter[int](
+            name="int_string",
+            python_type=int,
+            exact_type=True,
+            to_oop_fn=lambda session, value: session.new_string(str(value)),
+            from_oop_fn=lambda session, oop: int(session.fetch_string(oop)),
+        )
+        registry = ValueConverterRegistry()
+        registry.extend([converter])
+
+        copied = registry.copy()
+        copied.register(decimal_as_string_converter())
+
+        self.assertEqual(registry.names(), ("int_string",))
+        self.assertEqual(copied.names(), ("int_string", "decimal_string"))
+
+        session = mock.Mock()
+        session.new_string.side_effect = [101, 202]
+        self.assertEqual(registry.to_oops(session, [1, 2]), [Oop(101), Oop(202)])
+        session.new_string.assert_has_calls([mock.call("1"), mock.call("2")])
+
+        session.fetch_string.side_effect = ["10", "20"]
+        self.assertEqual(registry.from_oops("int_string", session, [101, Oop(202)]), [10, 20])
 
     def test_date_converter_uses_exact_date_type(self):
         converter = date_as_iso_string_converter()

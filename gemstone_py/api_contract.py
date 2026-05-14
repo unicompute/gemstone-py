@@ -53,6 +53,26 @@ CORE_EXPORTS: dict[str, tuple[str, str]] = {
         "gemstone_py.transactions",
         "run_transaction_with_retry",
     ),
+    "ValueConverter": ("gemstone_py.converters", "ValueConverter"),
+    "ValueConverterRegistry": ("gemstone_py.converters", "ValueConverterRegistry"),
+    "dataclass_to_dict": ("gemstone_py.converters", "dataclass_to_dict"),
+    "date_as_iso_string_converter": (
+        "gemstone_py.converters",
+        "date_as_iso_string_converter",
+    ),
+    "datetime_converter": ("gemstone_py.converters", "datetime_converter"),
+    "decimal_as_string_converter": (
+        "gemstone_py.converters",
+        "decimal_as_string_converter",
+    ),
+    "scalar_value_converter_registry": (
+        "gemstone_py.converters",
+        "scalar_value_converter_registry",
+    ),
+    "uuid_as_string_converter": (
+        "gemstone_py.converters",
+        "uuid_as_string_converter",
+    ),
     "ClassDescription": ("gemstone_py.inspection", "ClassDescription"),
     "InspectedReference": ("gemstone_py.inspection", "InspectedReference"),
     "InspectedSlot": ("gemstone_py.inspection", "InspectedSlot"),

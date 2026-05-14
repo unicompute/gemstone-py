@@ -146,6 +146,7 @@ class PackagingSmokeTests(unittest.TestCase):
         pkg = importlib.import_module("gemstone_py")
         client_mod = importlib.import_module("gemstone_py.client")
         concurrency_mod = importlib.import_module("gemstone_py.concurrency")
+        converters_mod = importlib.import_module("gemstone_py.converters")
         gci_mod = importlib.import_module("gemstone_py._gci")
         provider_mod = importlib.import_module("gemstone_py.session_providers")
         facade_mod = importlib.import_module("gemstone_py.session_facade")
@@ -194,6 +195,13 @@ class PackagingSmokeTests(unittest.TestCase):
         self.assertIs(
             pkg.format_conflict_diagnostics,
             concurrency_mod.format_conflict_diagnostics,
+        )
+        self.assertIs(pkg.ValueConverter, converters_mod.ValueConverter)
+        self.assertIs(pkg.ValueConverterRegistry, converters_mod.ValueConverterRegistry)
+        self.assertIs(pkg.dataclass_to_dict, converters_mod.dataclass_to_dict)
+        self.assertIs(
+            pkg.scalar_value_converter_registry,
+            converters_mod.scalar_value_converter_registry,
         )
         self.assertIs(pkg.session_scope, web_mod.session_scope)
         self.assertIs(

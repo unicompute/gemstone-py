@@ -61,6 +61,14 @@ class ValueConverterRegistry:
         """Append a converter after the existing converters."""
         self._converters.append(converter)
 
+    def extend(self, converters: Iterable[ValueConverter[Any]]) -> None:
+        """Append converters after the existing converters."""
+        self._converters.extend(converters)
+
+    def copy(self) -> "ValueConverterRegistry":
+        """Return an independent registry with the same converters in the same order."""
+        return ValueConverterRegistry(self._converters)
+
     def converter_for(self, value: object) -> ValueConverter[Any] | None:
         """Return the first converter registered for ``value``."""
         for converter in self._converters:
@@ -75,12 +83,20 @@ class ValueConverterRegistry:
             raise TypeError(f"No value converter registered for {type(value).__name__!r}")
         return Oop(converter.to_oop(session, value))
 
+    def to_oops(self, session: GemStoneSession, values: Iterable[object]) -> list[Oop]:
+        """Convert ``values`` to ``Oop`` markers using registered converters."""
+        return [self.to_oop(session, value) for value in values]
+
     def from_oop(self, name: str, session: GemStoneSession, oop: int) -> object:
         """Convert ``oop`` through a registered converter selected by name."""
         for converter in self._converters:
             if converter.name == name:
                 return converter.from_oop(session, oop)
         raise KeyError(name)
+
+    def from_oops(self, name: str, session: GemStoneSession, oops: Iterable[int]) -> list[object]:
+        """Convert ``oops`` through a registered converter selected by name."""
+        return [self.from_oop(name, session, oop) for oop in oops]
 
     def names(self) -> tuple[str, ...]:
         """Return registered converter names in matching order."""
