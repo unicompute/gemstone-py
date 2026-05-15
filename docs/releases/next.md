@@ -111,4 +111,8 @@ gemstone-codegen \
   --output examples/typed_access/codegen_demo/generated \
   --check
 ```
+
+The VS Code workbench Codegen Explorer now consumes
+`python-gemstone-database-explorer`'s `/codegen/*` API for live class,
+protocol, method, source, preview, and normalized selection JSON handoff.
 ````

@@ -401,8 +401,10 @@ with GemStoneSession(config=config) as session:
     booking.mark_paid(1_779_912_000)
 ```
 
-See `docs/codegen.md` for selector rules, async wrappers, and CI `--check`
-usage. Generated classes also expose `__gemstone_protocol__` and
+See `docs/codegen.md` for selector rules, async wrappers, CI `--check` usage,
+and the VS Code Codegen Explorer flow that consumes the database explorer's
+`/codegen/*` endpoints for live discovery, source lookup, selection JSON, and
+preview generation. Generated classes also expose `__gemstone_protocol__` and
 `__gemstone_selectors__` so diagnostics, admin UI, and code review tooling can
 identify where a wrapper came from without parsing generated source files.
 

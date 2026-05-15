@@ -276,10 +276,11 @@ The report can open settings, copy itself, or copy an environment export script.
 The workbench also exposes Codegen commands for wrapper drift checks, wrapper
 regeneration, the generated-wrapper FastAPI demo, and the Codegen docs. Use
 `GemStone: Open Codegen Explorer` when you want a visual flow: browse live
-dictionaries/classes/methods through the database explorer, select wrapper
-targets, preview generated files in a temporary directory, diff against the
-checked-in output package, save `codegen-workbench.json`, and then run the
-Codegen check or generation command.
+dictionaries/classes/protocols/methods/source through the database explorer's
+`/codegen/*` API, select wrapper targets, preview generated files through
+`/codegen/preview`, diff against the checked-in output package, save normalized
+selection JSON to `codegen-workbench.json`, and then run the Codegen check or
+generation command.
 
 Codegen screenshots and the concrete booking-wrapper workflow are documented
 in [docs/codegen.md](docs/codegen.md). The demo selection file is

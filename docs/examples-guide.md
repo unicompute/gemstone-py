@@ -144,11 +144,12 @@ maintainer scripts, Jasper links, setup verification actions, and launcher plus
 webview commands for `python-gemstone-database-explorer`.
 
 For generated wrappers, run `GemStone: Open Codegen Explorer`. It connects to
-the configured database explorer, browses live dictionaries/classes/protocols/
-methods/source, lets you select wrapper targets, previews generated files in a
-temporary directory, diffs them against the configured output package, saves a
-reusable `codegen-workbench.json` mapping, and can run the Codegen check,
-generation, FastAPI demo, and live target probe from the same view.
+the configured database explorer's `/codegen/*` API, browses live
+dictionaries/classes/protocols/methods/source, lets you select wrapper targets,
+previews generated files through `/codegen/preview`, diffs them against the
+configured output package, saves normalized selection JSON to
+`codegen-workbench.json`, and can run the Codegen check, generation, FastAPI
+demo, and live target probe from the same view.
 
 Install it from the Visual Studio Marketplace:
 
@@ -489,7 +490,9 @@ Open `GemStone: Open Codegen Explorer`, connect to
 `python-gemstone-database-explorer`, select `OkzBooking` and `OkzCustomer`,
 preview the generated files, diff them against
 `examples/typed_access/codegen_demo/generated`, then save the selection. The
-example mapping file records the selectors to select from the live stone:
+example mapping file records the live-stone selection in the normalized
+selection JSON shape shared with the browser explorer. It includes fields,
+selectors, generated Python names, argument names, and return annotations:
 
 ```text
 examples/typed_access/codegen_demo/codegen-workbench.example.json

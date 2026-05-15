@@ -129,7 +129,9 @@ repos:
 The VS Code workbench includes `GemStone: Open Codegen Explorer` for the visual
 workflow around the same generator. It sits between the live
 `python-gemstone-database-explorer` class browser and the checked-in Protocol
-module:
+module. The browser explorer provides the stable `/codegen/*` JSON API; the
+VS Code workbench consumes that API instead of owning GemStone discovery or
+code-generation rules.
 
 ![Codegen commands in the Command Palette](../vscode-gemstone-py-workbench/media/screenshots/codegen-command-palette.png)
 
@@ -138,19 +140,24 @@ module:
 1. Start the database explorer with `gemstone-py: Launch Database Explorer`.
 2. Run `GemStone: Open Codegen Explorer`.
 3. Click `Connect` to load dictionaries from the live stone.
-4. Browse dictionaries, classes, protocols, methods, and source.
+4. Browse dictionaries, classes, protocols/categories, methods, and source
+   through `/codegen/dictionaries`, `/codegen/classes`, `/codegen/protocols`,
+   `/codegen/methods`, and `/codegen/source`.
 5. Select classes and instance/class-side methods as wrapper targets.
-6. Use `Preview Wrappers` to generate into a temporary directory.
-7. Use `Diff Output` to compare the temporary output against the configured
+6. Save or load normalized selection JSON with fields, selectors, generated
+   Python names, argument names, and return annotations.
+7. Use `Preview Wrappers` to call `/codegen/preview` before writing files.
+8. Use `Diff Output` to compare the preview output against the configured
    generated package.
-8. Save the selection to `codegen-workbench.json`.
 9. Run `Run Check`, `Generate`, or `Run Demo` when the preview looks right.
 
 The visual selection file is intentionally separate from the Protocol module.
-It records the live classes and methods you chose while you design or review
-wrappers; the generated Python still comes from explicit
-`@gemstone_class(...)` Protocol definitions so the API remains reviewable and
-type-checkable.
+It records the live classes, fields, methods, class-side selectors, and edited
+Python metadata you chose while you design or review wrappers; the generated
+Python still comes from explicit `@gemstone_class(...)` Protocol definitions
+so the API remains reviewable and type-checkable. The database explorer
+normalizes this file with `/codegen/export-selection`, so the browser UI, VS
+Code workbench, and future tooling can share the same handoff format.
 
 The demo mapping file is:
 
@@ -158,15 +165,16 @@ The demo mapping file is:
 examples/typed_access/codegen_demo/codegen-workbench.example.json
 ```
 
-It records this useful first selection:
+It records this useful first selection in the current normalized schema:
 
-| Class | Class-side selectors | Instance selectors |
-| --- | --- | --- |
-| `OkzBooking` | `findById:` | `status`, `customer`, `markPaid:`, `transferTo:byUserId:`, `yourself` |
-| `OkzCustomer` | none | `name`, `yourself` |
+| Class | Fields | Class-side selectors | Instance selectors |
+| --- | --- | --- | --- |
+| `OkzBooking` | `status` | `findById:` | `customer`, `markPaid:`, `transferTo:byUserId:`, `yourself` |
+| `OkzCustomer` | `name` | none | `yourself` |
 
-Use that mapping as the checklist when you browse the live classes. Keep the
-Protocol module as the source of truth for the generated Python API.
+Use that mapping as the checklist when you browse the live classes, or import
+it into the explorer to restore the richer method metadata. Keep the Protocol
+module as the source of truth for the generated Python API.
 
 ## Concrete Demo Workflow
 

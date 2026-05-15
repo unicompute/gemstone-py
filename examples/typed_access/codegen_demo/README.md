@@ -44,18 +44,21 @@ The companion VS Code workbench can drive the same workflow visually. Open
 `GemStone: Open Codegen Explorer`, connect to the configured database explorer,
 select `OkzBooking` and `OkzCustomer`, preview wrappers, diff them against this
 `generated/` package, and save the selection as a reusable mapping. This
-example includes a starter mapping:
+example includes a starter mapping in the normalized selection JSON shape
+returned by `python-gemstone-database-explorer`'s `/codegen/export-selection`
+endpoint:
 
 ```text
 examples/typed_access/codegen_demo/codegen-workbench.example.json
 ```
 
-Use it as a concrete checklist for the live selection:
+Use it as a concrete checklist for the live selection, or import it into the
+explorer to restore the richer method metadata:
 
-| GemStone class | Class-side selectors | Instance selectors |
-| --- | --- | --- |
-| `OkzBooking` | `findById:` | `status`, `customer`, `markPaid:`, `transferTo:byUserId:`, `yourself` |
-| `OkzCustomer` | none | `name`, `yourself` |
+| GemStone class | Fields | Class-side selectors | Instance selectors |
+| --- | --- | --- | --- |
+| `OkzBooking` | `status` | `findById:` | `customer`, `markPaid:`, `transferTo:byUserId:`, `yourself` |
+| `OkzCustomer` | `name` | none | `yourself` |
 
 Run the generated-wrapper FastAPI demo:
 
