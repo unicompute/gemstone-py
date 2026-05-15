@@ -743,6 +743,9 @@ test("openCodegenExplorer creates a visual codegen webview", () => {
   assert.match(webviewPanels[0].webview.html, /Preview Wrappers/);
   assert.match(webviewPanels[0].webview.html, /Diff Output/);
   assert.match(webviewPanels[0].webview.html, /Test Live Targets/);
+  assert.match(webviewPanels[0].webview.html, /\/codegen\/dictionaries/);
+  assert.match(webviewPanels[0].webview.html, /\/codegen\/preview/);
+  assert.match(webviewPanels[0].webview.html, /\/codegen\/export-selection/);
   assert.equal(typeof webviewPanels[0].webview.messageHandler, "function");
 });
 

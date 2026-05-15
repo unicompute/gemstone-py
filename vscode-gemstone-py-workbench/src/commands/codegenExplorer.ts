@@ -23,14 +23,26 @@ interface CodegenExplorerMessage {
 interface CodegenExplorerClassSelection {
   dictionary: string;
   className: string;
-  instanceMethods: string[];
-  classMethods: string[];
+  protocolName?: string;
+  fields?: string[];
+  methods?: CodegenExplorerMethodSelection[];
+  classMethods?: CodegenExplorerMethodSelection[];
+  instanceMethods?: string[];
+}
+
+interface CodegenExplorerMethodSelection {
+  selector: string;
+  pythonName?: string;
+  argNames?: string[];
+  returnAnnotation?: string;
 }
 
 interface CodegenMappingPayload {
   codegenModule?: string;
   codegenOutput?: string;
   mappingPath?: string;
+  moduleName?: string;
+  async?: boolean;
   classes?: CodegenExplorerClassSelection[];
 }
 
@@ -93,6 +105,8 @@ async function handleCodegenExplorerCommand(
       return currentCodegenExplorerConfig(explorerUrl);
     case "explorerGet":
       return explorerGet(explorerUrl, readString(payload, "path"));
+    case "explorerPost":
+      return explorerPost(explorerUrl, readString(payload, "path"), payload.body);
     case "launchExplorer":
       return vscode.commands.executeCommand("gemstonePy.launchDatabaseExplorer");
     case "openExplorer":
@@ -124,6 +138,11 @@ async function handleCodegenExplorerCommand(
     case "diffGenerated":
       return diffGenerated(
         readString(payload, "codegenModule") || DEFAULT_CODEGEN_MODULE,
+        readString(payload, "codegenOutput") || DEFAULT_CODEGEN_OUTPUT,
+      );
+    case "diffPreviewFiles":
+      return diffPreviewFiles(
+        payload.files,
         readString(payload, "codegenOutput") || DEFAULT_CODEGEN_OUTPUT,
       );
     case "testSelected":
@@ -184,16 +203,40 @@ async function explorerGet(explorerUrl: string, requestPath: string): Promise<un
   return requestJson(url);
 }
 
-function requestJson(url: URL): Promise<unknown> {
+async function explorerPost(
+  explorerUrl: string,
+  requestPath: string,
+  body: unknown,
+): Promise<unknown> {
+  if (!requestPath.startsWith("/")) {
+    throw new Error(`explorer path must start with /: ${requestPath}`);
+  }
+  const url = new URL(requestPath, explorerUrl);
+  return requestJson(url, { method: "POST", body });
+}
+
+function requestJson(
+  url: URL,
+  options: { method?: "GET" | "POST"; body?: unknown } = {},
+): Promise<unknown> {
   const client = url.protocol === "https:" ? https : http;
+  const method = options.method || "GET";
+  const encodedBody =
+    method === "POST" ? JSON.stringify(options.body ?? {}) : undefined;
   return new Promise((resolve, reject) => {
     const request = client.request(
       url,
       {
-        method: "GET",
+        method,
         timeout: 10000,
         headers: {
           Accept: "application/json",
+          ...(encodedBody
+            ? {
+                "Content-Type": "application/json",
+                "Content-Length": Buffer.byteLength(encodedBody).toString(),
+              }
+            : {}),
         },
       },
       (response) => {
@@ -225,6 +268,9 @@ function requestJson(url: URL): Promise<unknown> {
       request.destroy(new Error(`timed out fetching ${url.toString()}`));
     });
     request.on("error", reject);
+    if (encodedBody) {
+      request.write(encodedBody);
+    }
     request.end();
   });
 }
@@ -237,8 +283,8 @@ async function loadMapping(mappingPath: string): Promise<Record<string, unknown>
       exists: false,
       path: fullPath,
       mapping: {
-        version: 1,
-        codegenModule: DEFAULT_CODEGEN_MODULE,
+        schemaVersion: 1,
+        moduleName: DEFAULT_CODEGEN_MODULE,
         codegenOutput: DEFAULT_CODEGEN_OUTPUT,
         classes: [],
       },
@@ -257,8 +303,9 @@ async function saveMapping(payload: Record<string, unknown>): Promise<Record<str
   const fullPath = resolveRepoFile(config.repoPath, mappingPayload.mappingPath);
   fs.mkdirSync(path.dirname(fullPath), { recursive: true });
   const mapping = {
-    version: 1,
-    codegenModule: mappingPayload.codegenModule,
+    schemaVersion: 1,
+    moduleName: mappingPayload.codegenModule,
+    async: mappingPayload.async,
     codegenOutput: mappingPayload.codegenOutput,
     classes: mappingPayload.classes,
   };
@@ -281,7 +328,24 @@ async function diffGenerated(
 ): Promise<GeneratedDiffFile[]> {
   const config = getConfig();
   const generated = await previewGenerated(moduleName);
-  const outputPath = resolveCodegenOutput(config.repoPath, outputDir);
+  return diffFilesAgainstOutput(generated, config.repoPath, outputDir);
+}
+
+async function diffPreviewFiles(
+  files: unknown,
+  outputDir: string,
+): Promise<GeneratedDiffFile[]> {
+  const config = getConfig();
+  const generated = normalizeGeneratedPreviewFiles(files);
+  return diffFilesAgainstOutput(generated, config.repoPath, outputDir);
+}
+
+function diffFilesAgainstOutput(
+  generated: GeneratedPreviewFile[],
+  repoPath: string,
+  outputDir: string,
+): GeneratedDiffFile[] {
+  const outputPath = resolveCodegenOutput(repoPath, outputDir);
   return generated.map((file) => {
     const currentPath = path.join(outputPath, file.path);
     if (!pathExists(currentPath)) {
@@ -303,17 +367,52 @@ async function diffGenerated(
   });
 }
 
+function normalizeGeneratedPreviewFiles(value: unknown): GeneratedPreviewFile[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .filter((item) => item && typeof item === "object")
+    .map((item) => {
+      const raw = item as Record<string, unknown>;
+      return {
+        path: readString(raw, "path"),
+        protocolName: readString(raw, "protocolName"),
+        className: readString(raw, "className"),
+        source: readString(raw, "source"),
+        warnings: readStringArray(raw.warnings),
+      };
+    })
+    .filter((item) => item.path.length > 0);
+}
+
 async function testSelected(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
   const mappingPayload = normalizeMappingPayload(payload);
+  const probeClasses = mappingPayload.classes.map((item) => ({
+    dictionary: item.dictionary,
+    className: item.className,
+    instanceMethods: [
+      ...new Set([
+        ...(item.fields || []),
+        ...methodSelectors(item.methods || []),
+        ...(item.instanceMethods || []),
+      ]),
+    ],
+    classMethods: methodSelectors(item.classMethods || []),
+  }));
   return (await runPythonJson(
     testSelectedScript(),
     [
       mappingPayload.codegenModule,
       mappingPayload.codegenOutput,
-      JSON.stringify(mappingPayload.classes),
+      JSON.stringify(probeClasses),
     ],
     20000,
   )) as Record<string, unknown>;
+}
+
+function methodSelectors(methods: CodegenExplorerMethodSelection[]): string[] {
+  return methods.map((method) => method.selector).filter((selector) => selector.length > 0);
 }
 
 async function runPythonJson(
@@ -448,9 +547,17 @@ function normalizeMappingPayload(payload: Record<string, unknown>): Required<Cod
     .map((item) => normalizeSelection(item))
     .filter((item): item is CodegenExplorerClassSelection => item !== undefined);
   return {
-    codegenModule: readString(payload, "codegenModule") || DEFAULT_CODEGEN_MODULE,
+    codegenModule:
+      readString(payload, "moduleName") ||
+      readString(payload, "codegenModule") ||
+      DEFAULT_CODEGEN_MODULE,
     codegenOutput: readString(payload, "codegenOutput") || DEFAULT_CODEGEN_OUTPUT,
     mappingPath: readString(payload, "mappingPath") || DEFAULT_MAPPING_PATH,
+    moduleName:
+      readString(payload, "moduleName") ||
+      readString(payload, "codegenModule") ||
+      DEFAULT_CODEGEN_MODULE,
+    async: payload.async !== false,
     classes,
   };
 }
@@ -467,9 +574,39 @@ function normalizeSelection(value: unknown): CodegenExplorerClassSelection | und
   return {
     dictionary: readString(item, "dictionary"),
     className,
+    protocolName: readString(item, "protocolName") || `${className}Proto`,
+    fields: readStringArray(item.fields),
+    methods: readMethodSelections(item.methods ?? item.instanceMethods),
+    classMethods: readMethodSelections(item.classMethods),
     instanceMethods: readStringArray(item.instanceMethods),
-    classMethods: readStringArray(item.classMethods),
   };
+}
+
+function readMethodSelections(value: unknown): CodegenExplorerMethodSelection[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((item): CodegenExplorerMethodSelection | undefined => {
+      if (typeof item === "string") {
+        return { selector: item };
+      }
+      if (!item || typeof item !== "object") {
+        return undefined;
+      }
+      const raw = item as Record<string, unknown>;
+      const selector = readString(raw, "selector");
+      if (!selector) {
+        return undefined;
+      }
+      return {
+        selector,
+        pythonName: readString(raw, "pythonName") || undefined,
+        argNames: readStringArray(raw.argNames),
+        returnAnnotation: readString(raw, "returnAnnotation") || undefined,
+      };
+    })
+    .filter((item): item is CodegenExplorerMethodSelection => item !== undefined);
 }
 
 function readStringArray(value: unknown): string[] {
@@ -704,7 +841,8 @@ function codegenExplorerHtml(): string {
       text-align: left;
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
+      white-space: normal;
+      line-height: 1.25;
     }
     .row.active {
       background: var(--vscode-list-activeSelectionBackground);
@@ -863,9 +1001,10 @@ function codegenExplorerHtml(): string {
       currentClass: '',
       meta: false,
       protocols: [],
-      protocol: '-- all --',
+      protocol: '',
       methods: [],
       selected: new Map(),
+      lastPreviewFiles: [],
       outputTab: 'preview',
       output: {
         preview: '',
@@ -904,11 +1043,24 @@ function codegenExplorerHtml(): string {
     });
 
     function payload() {
+      const moduleName = document.getElementById('codegenModule').value.trim();
       return {
-        codegenModule: document.getElementById('codegenModule').value.trim(),
+        moduleName,
+        codegenModule: moduleName,
+        async: true,
         codegenOutput: document.getElementById('codegenOutput').value.trim(),
         mappingPath: document.getElementById('mappingPath').value.trim(),
         classes: Array.from(state.selected.values())
+      };
+    }
+
+    function codegenSelectionPayload() {
+      const data = payload();
+      return {
+        schemaVersion: 1,
+        moduleName: data.moduleName,
+        async: data.async,
+        classes: data.classes
       };
     }
 
@@ -949,7 +1101,9 @@ function codegenExplorerHtml(): string {
         state.selected.set(key, {
           dictionary,
           className,
-          instanceMethods: [],
+          protocolName: className + 'Proto',
+          fields: [],
+          methods: [],
           classMethods: []
         });
       }
@@ -976,8 +1130,9 @@ function codegenExplorerHtml(): string {
 
     function renderProtocols() {
       const select = document.getElementById('protocolSelect');
-      select.innerHTML = state.protocols.map((name) =>
-        '<option value="' + escapeHtml(name) + '">' + escapeHtml(name) + '</option>'
+      const protocols = ['', ...state.protocols.filter((name) => name)];
+      select.innerHTML = protocols.map((name) =>
+        '<option value="' + escapeHtml(name) + '">' + escapeHtml(name || 'All protocols') + '</option>'
       ).join('');
       select.value = state.protocol;
     }
@@ -985,19 +1140,81 @@ function codegenExplorerHtml(): string {
     function renderMethods() {
       const current = state.currentClass;
       const selection = current ? state.selected.get(keyFor(state.dictionary, current)) : undefined;
-      const selectedMethods = new Set(selection ? (state.meta ? selection.classMethods : selection.instanceMethods) : []);
-      document.getElementById('methodList').innerHTML = state.methods.map((selector) => {
-        const checked = selectedMethods.has(selector) ? ' checked' : '';
-        return '<div class="row"><input type="checkbox" data-method-check="' + escapeHtml(selector) + '"' + checked + '><button data-method="' + escapeHtml(selector) + '">' + escapeHtml(selector) + '</button></div>';
+      const selectedMethods = new Set((selection ? (state.meta ? selection.classMethods : selection.methods) : []).map((method) => method.selector));
+      const selectedFields = new Set(selection ? selection.fields || [] : []);
+      document.getElementById('methodList').innerHTML = state.methods.map((method) => {
+        const selector = method.selector || '';
+        const checked = selectedMethods.has(selector) || (!state.meta && method.propertyCandidate && selectedFields.has(method.pythonName || selector)) ? ' checked' : '';
+        const detail = [method.category, method.pythonName, method.argCount + ' arg' + (method.argCount === 1 ? '' : 's')].filter(Boolean).join(' / ');
+        return '<div class="row"><input type="checkbox" data-method-check="' + escapeHtml(selector) + '"' + checked + '><button data-method="' + escapeHtml(selector) + '">' + escapeHtml(selector) + '<br><span class="muted">' + escapeHtml(detail) + '</span></button></div>';
       }).join('') || '<div class="row"><span></span><span class="muted">No methods loaded.</span></div>';
     }
 
     function renderSelected() {
       const rows = Array.from(state.selected.values());
       document.getElementById('selectedTable').innerHTML = rows.map((item) =>
-        '<tr><td>' + escapeHtml(item.dictionary) + '</td><td>' + escapeHtml(item.className) + '</td><td>' + escapeHtml(item.instanceMethods.join(', ')) + '</td><td>' + escapeHtml(item.classMethods.join(', ')) + '</td></tr>'
+        '<tr><td>' + escapeHtml(item.dictionary) + '</td><td>' + escapeHtml(item.className) + '</td><td>' + escapeHtml([...(item.fields || []), ...(item.methods || []).map((method) => method.selector)].join(', ')) + '</td><td>' + escapeHtml((item.classMethods || []).map((method) => method.selector).join(', ')) + '</td></tr>'
       ).join('') || '<tr><td colspan="4" class="muted">No classes selected.</td></tr>';
       setOutput('mapping', JSON.stringify(payload(), null, 2));
+    }
+
+    function findCurrentMethod(selector) {
+      selector = String(selector || '');
+      return state.methods.find((method) => method.selector === selector) || { selector, pythonName: selector, argCount: selector.split(':').length - 1 };
+    }
+
+    function methodArgNames(method) {
+      const count = Math.max(0, Number(method.argCount || 0));
+      return Array.from({ length: count }, (_, index) => 'arg' + (index + 1));
+    }
+
+    function toMethodSelection(method) {
+      return {
+        selector: method.selector,
+        pythonName: method.pythonName || method.selector,
+        argNames: methodArgNames(method),
+        returnAnnotation: 'Any'
+      };
+    }
+
+    function removeMethodSelection(list, selector) {
+      const index = list.findIndex((method) => method.selector === selector);
+      if (index !== -1) {
+        list.splice(index, 1);
+      }
+    }
+
+    function applyMapping(mapping) {
+      const classes = Array.isArray(mapping.classes) ? mapping.classes : [];
+      state.selected = new Map();
+      for (const item of classes) {
+        if (!item || !item.className) {
+          continue;
+        }
+        const normalized = {
+          dictionary: item.dictionary || '',
+          className: item.className,
+          protocolName: item.protocolName || item.className + 'Proto',
+          fields: Array.isArray(item.fields) ? item.fields : [],
+          methods: normalizeMethodList(item.methods || item.instanceMethods),
+          classMethods: normalizeMethodList(item.classMethods)
+        };
+        state.selected.set(keyFor(normalized.dictionary, normalized.className), normalized);
+      }
+    }
+
+    function normalizeMethodList(value) {
+      return Array.isArray(value) ? value.map((item) => {
+        if (typeof item === 'string') {
+          return { selector: item, pythonName: item, argNames: [], returnAnnotation: 'Any' };
+        }
+        return {
+          selector: item.selector || '',
+          pythonName: item.pythonName || item.selector || '',
+          argNames: Array.isArray(item.argNames) ? item.argNames : [],
+          returnAnnotation: item.returnAnnotation || 'Any'
+        };
+      }).filter((item) => item.selector) : [];
     }
 
     async function explorerGet(path) {
@@ -1010,7 +1227,7 @@ function codegenExplorerHtml(): string {
 
     async function connect() {
       setStatus('Connecting to explorer...');
-      const data = await explorerGet('/class-browser/dictionaries');
+      const data = await explorerGet('/codegen/dictionaries');
       state.dictionaries = data.dictionaries || [];
       state.dictionary = state.dictionaries[0] || '';
       renderDictionaries();
@@ -1023,8 +1240,8 @@ function codegenExplorerHtml(): string {
         return;
       }
       setStatus('Loading classes...');
-      const data = await explorerGet('/class-browser/classes?dictionary=' + encodeURIComponent(state.dictionary));
-      state.classes = data.classes || [];
+      const data = await explorerGet('/codegen/classes?dictionary=' + encodeURIComponent(state.dictionary));
+      state.classes = (data.classes || []).map((item) => item.className || item).filter(Boolean);
       state.currentClass = state.classes[0] || '';
       renderClasses();
       await loadClassDetails();
@@ -1042,15 +1259,14 @@ function codegenExplorerHtml(): string {
       }
       const meta = state.meta ? '1' : '0';
       const base = 'class=' + encodeURIComponent(state.currentClass) + '&dictionary=' + encodeURIComponent(state.dictionary) + '&meta=' + meta;
-      const categories = await explorerGet('/class-browser/categories?' + base);
-      state.protocols = categories.categories || ['-- all --'];
-      state.protocol = state.protocols.includes(state.protocol) ? state.protocol : '-- all --';
+      const categories = await explorerGet('/codegen/protocols?' + base);
+      state.protocols = categories.protocols || [];
+      state.protocol = state.protocols.includes(state.protocol) ? state.protocol : '';
       renderProtocols();
-      const methods = await explorerGet('/class-browser/methods?' + base + '&protocol=' + encodeURIComponent(state.protocol));
+      const methods = await explorerGet('/codegen/methods?' + base + '&protocol=' + encodeURIComponent(state.protocol));
       state.methods = methods.methods || [];
       renderMethods();
-      const source = await explorerGet('/class-browser/source?' + base);
-      document.getElementById('sourcePreview').textContent = source.source || '';
+      document.getElementById('sourcePreview').textContent = 'Select a selector.';
     }
 
     async function showMethodSource(selector) {
@@ -1059,7 +1275,7 @@ function codegenExplorerHtml(): string {
       }
       const meta = state.meta ? '1' : '0';
       const query = 'class=' + encodeURIComponent(state.currentClass) + '&dictionary=' + encodeURIComponent(state.dictionary) + '&meta=' + meta + '&selector=' + encodeURIComponent(selector);
-      const source = await explorerGet('/class-browser/source?' + query);
+      const source = await explorerGet('/codegen/source?' + query);
       document.getElementById('sourcePreview').textContent = source.source || '';
     }
 
@@ -1078,7 +1294,7 @@ function codegenExplorerHtml(): string {
         return 'No generated files.';
       }
       return files.map((file) =>
-        '# ' + file.path + '\\n' + (file.warnings.length ? '# warnings: ' + file.warnings.join('; ') + '\\n' : '') + file.source
+        '# ' + file.path + '\\n' + ((file.warnings || []).length ? '# warnings: ' + file.warnings.join('; ') + '\\n' : '') + (file.source || '')
       ).join('\\n\\n');
     }
 
@@ -1147,25 +1363,45 @@ function codegenExplorerHtml(): string {
         void withBusy('Loading side...', loadClassDetails);
       } else if (target.hasAttribute('data-class-check')) {
         const className = target.getAttribute('data-class-check');
+        if (!className) {
+          return;
+        }
         if (target.checked) {
           ensureSelection(state.dictionary, className);
         } else {
           state.selected.delete(keyFor(state.dictionary, className));
         }
+        state.lastPreviewFiles = [];
         renderClasses();
         renderMethods();
         renderSelected();
       } else if (target.hasAttribute('data-method-check')) {
         const selector = target.getAttribute('data-method-check');
-        const selection = ensureSelection(state.dictionary, state.currentClass);
-        const list = state.meta ? selection.classMethods : selection.instanceMethods;
-        const existing = list.indexOf(selector);
-        if (target.checked && existing === -1) {
-          list.push(selector);
-          list.sort();
-        } else if (!target.checked && existing !== -1) {
-          list.splice(existing, 1);
+        if (!selector) {
+          return;
         }
+        const selection = ensureSelection(state.dictionary, state.currentClass);
+        const method = findCurrentMethod(selector);
+        if (!state.meta && method.propertyCandidate) {
+          const fieldName = method.pythonName || selector;
+          const existing = selection.fields.indexOf(fieldName);
+          if (target.checked && existing === -1) {
+            selection.fields.push(fieldName);
+            selection.fields.sort();
+          } else if (!target.checked && existing !== -1) {
+            selection.fields.splice(existing, 1);
+          }
+        } else {
+          const list = state.meta ? selection.classMethods : selection.methods;
+          const existing = list.findIndex((item) => item.selector === selector);
+          if (target.checked && existing === -1) {
+            list.push(toMethodSelection(method));
+            list.sort((left, right) => left.selector.localeCompare(right.selector));
+          } else if (!target.checked && existing !== -1) {
+            removeMethodSelection(list, selector);
+          }
+        }
+        state.lastPreviewFiles = [];
         renderClasses();
         renderMethods();
         renderSelected();
@@ -1190,36 +1426,43 @@ function codegenExplorerHtml(): string {
     document.getElementById('generateBtn').addEventListener('click', () => void request('generateWrappers', payload()));
     document.getElementById('demoBtn').addEventListener('click', () => void request('runDemo'));
     document.getElementById('saveBtn').addEventListener('click', () => void withBusy('Saving mapping...', async () => {
-      const result = await request('saveMapping', payload());
+      const exported = await request('explorerPost', { path: '/codegen/export-selection', body: codegenSelectionPayload() });
+      const result = await request('saveMapping', {
+        ...exported.selection,
+        codegenOutput: document.getElementById('codegenOutput').value.trim(),
+        mappingPath: document.getElementById('mappingPath').value.trim()
+      });
       setOutput('mapping', JSON.stringify(result.mapping, null, 2));
       setStatus('Saved ' + result.path);
     }));
     document.getElementById('loadBtn').addEventListener('click', () => void withBusy('Loading mapping...', async () => {
       const result = await request('loadMapping', payload());
       const mapping = result.mapping || {};
-      document.getElementById('codegenModule').value = mapping.codegenModule || document.getElementById('codegenModule').value;
+      document.getElementById('codegenModule').value = mapping.moduleName || mapping.codegenModule || document.getElementById('codegenModule').value;
       document.getElementById('codegenOutput').value = mapping.codegenOutput || document.getElementById('codegenOutput').value;
-      state.selected = new Map();
-      for (const item of mapping.classes || []) {
-        state.selected.set(keyFor(item.dictionary || '', item.className), {
-          dictionary: item.dictionary || '',
-          className: item.className,
-          instanceMethods: item.instanceMethods || [],
-          classMethods: item.classMethods || []
-        });
-      }
+      applyMapping(mapping);
+      state.lastPreviewFiles = [];
       renderClasses();
       renderMethods();
       renderSelected();
       setStatus(result.exists ? 'Loaded ' + result.path : 'No mapping file yet');
     }));
     document.getElementById('previewBtn').addEventListener('click', () => void withBusy('Generating preview...', async () => {
-      const files = await request('previewGenerated', payload());
+      const preview = await request('explorerPost', { path: '/codegen/preview', body: codegenSelectionPayload() });
+      const files = preview.files || [];
+      state.lastPreviewFiles = files;
       setOutput('preview', formatPreview(files));
-      setStatus('Generated preview in a temporary directory');
+      setStatus('Generated preview through /codegen/preview');
     }));
     document.getElementById('diffBtn').addEventListener('click', () => void withBusy('Diffing generated output...', async () => {
-      const files = await request('diffGenerated', payload());
+      if (!state.lastPreviewFiles.length) {
+        const preview = await request('explorerPost', { path: '/codegen/preview', body: codegenSelectionPayload() });
+        state.lastPreviewFiles = preview.files || [];
+      }
+      const files = await request('diffPreviewFiles', {
+        codegenOutput: document.getElementById('codegenOutput').value.trim(),
+        files: state.lastPreviewFiles
+      });
       setOutput('diff', formatDiff(files));
       setStatus('Diff complete');
     }));

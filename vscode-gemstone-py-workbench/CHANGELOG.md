@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.5
+
+- Moved the Codegen Explorer integration into gemstone-py Workbench. The VS Code
+  webview now consumes the database explorer's `/codegen/*` endpoints for live
+  discovery, source lookup, preview generation, selection export, and diffing
+  generated files.
+
 ## 0.3.4
 
 - Fixed the Marketplace README logo URL so it resolves through the

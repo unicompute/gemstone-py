@@ -192,14 +192,18 @@ FastAPI demo, and open `docs/codegen.md`.
 
 Use `GemStone: Open Codegen Explorer` for the visual wrapper workflow. It uses
 the configured `python-gemstone-database-explorer` service as the live GemStone
-browser and keeps wrapper generation inside the `gemstone-py` checkout.
+browser and keeps wrapper generation inside the `gemstone-py` checkout. The
+workbench talks to the explorer's stable `/codegen/*` JSON API for dictionary,
+class, protocol, selector, source, preview, and selection-export operations.
 
 The explorer can:
 
 - connect to the configured live stone through the database explorer
 - browse dictionaries, classes, protocols, methods, and source
 - select classes and instance/class-side methods as wrapper targets
-- preview generated Python wrappers in a temporary directory before writing
+- save and load the same rich selection JSON used by the browser explorer,
+  including generated Python names, argument names, and return annotations
+- preview generated Python wrappers through `/codegen/preview` before writing
   files
 - diff generated output against the configured output package
 - save the selected classes and methods to `codegen-workbench.json`
