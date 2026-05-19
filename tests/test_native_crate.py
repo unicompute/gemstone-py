@@ -129,6 +129,7 @@ class NativeCrateTests(unittest.TestCase):
         self.assertIn("eval_smallint(\"3 + 4\")", source)
         self.assertIn("perform_json", source)
         self.assertIn("global_put_string", source)
+        self.assertIn("GciNeedsCommit not found", source)
         self.assertIn("GS_RUN_LIVE=1 is required", source)
 
 

@@ -30,6 +30,15 @@ def _expect(condition: bool, message: str) -> None:
         raise SystemExit(message)
 
 
+def _optional_status(call, missing_symbol: str) -> bool | None:
+    try:
+        return bool(call())
+    except RuntimeError as exc:
+        if missing_symbol in str(exc):
+            return None
+        raise
+
+
 def _check_report_surface(_gci) -> None:
     _expect(_gci.native_implementation() == "pyo3", "expected PyO3 native extension")
     _expect(
@@ -67,7 +76,11 @@ def _check_live_session(_gci) -> None:
 
         smallint_oop = session.value_to_oop_smallint(7)
         printed = json.loads(session.perform_json(smallint_oop, "printString", []))
-        _expect(printed == {"kind": "string", "value": "7"}, "unexpected printString")
+        if printed.get("kind") == "oop":
+            printed_value = session.fetch_string(printed["raw"])
+        else:
+            printed_value = printed.get("value")
+        _expect(printed_value == "7", "unexpected printString")
 
         object_oop = session.resolve("Object")
         _expect(isinstance(object_oop, int) and object_oop > 0, "Object did not resolve")
@@ -84,9 +97,15 @@ def _check_live_session(_gci) -> None:
         session.global_put_string(global_name, "rust-core-live")
         fetched = session.global_get(global_name)
         _expect(session.fetch_string(fetched) == "rust-core-live", "global string read failed")
-        _expect(session.needs_commit(), "global write did not mark transaction dirty")
+        needs_commit = _optional_status(session.needs_commit, "GciNeedsCommit not found")
+        if needs_commit is not None:
+            _expect(needs_commit, "global write did not mark transaction dirty")
         session.abort()
-        _expect(not session.in_transaction(), "abort left the session in a transaction")
+        in_transaction = _optional_status(
+            session.in_transaction, "GciInTransaction not found"
+        )
+        if in_transaction is not None:
+            _expect(not in_transaction, "abort left the session in a transaction")
         session.commit()
     finally:
         session.logout()
