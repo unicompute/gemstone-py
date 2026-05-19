@@ -18,6 +18,8 @@ All notable changes to `gemstone-py` should be recorded here.
   without parsing generated source.
 - Added schema fingerprinting helpers for checking expected GemStone-side roots,
   class definitions, and indexes before application startup.
+- Bumped `gemstone-py-native` to 0.1.3 for the Rust-backed native wheel
+  publish lane after the downstream live `RustCoreSession` smoke passed.
 
 ## 0.2.14 - 2026-05-11
 

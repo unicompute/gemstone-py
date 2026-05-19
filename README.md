@@ -138,7 +138,7 @@ package metadata for the expected sdist and Linux/macOS/Windows wheel families.
 The sdist job also builds the native sdist back into a wheel before upload,
 catching missing source archive contents before publish. PyPI publishes require
 a native release tag that matches `gemstone-py-native`'s version, for example
-`native-v0.1.2`. TestPyPI and PyPI publishes require GitHub OIDC Trusted
+`native-v0.1.3`. TestPyPI and PyPI publishes require GitHub OIDC Trusted
 Publishing and produce PyPI publish attestations.
 
 For development from source:
@@ -213,7 +213,7 @@ gemstone-examples fastapi --reload
 gemstone-examples litestar --reload
 gemstone-fastapi-example --reload
 gemstone-litestar-example --reload
-gemstone-publish-verify --gemstone-version 0.2.14 --native-version 0.1.2 --skip-install
+gemstone-publish-verify --gemstone-version 0.2.14 --native-version 0.1.3 --skip-install
 ```
 
 Feature examples from the repository checkout:
@@ -989,7 +989,7 @@ packaged verifier. It checks project JSON, version-specific JSON, the simple
 index, and temporary-virtualenv installs:
 
 ```bash
-gemstone-publish-verify --gemstone-version 0.2.14 --native-version 0.1.2
+gemstone-publish-verify --gemstone-version 0.2.14 --native-version 0.1.3
 ```
 
 Use `--skip-install` when you only want the metadata/index checks, or

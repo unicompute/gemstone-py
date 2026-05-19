@@ -91,7 +91,7 @@ gemstone-smalltalk-demo
 
 12. Verify the public package indexes from your local shell:
 ```bash
-gemstone-publish-verify --gemstone-version 0.2.10 --native-version 0.1.2
+gemstone-publish-verify --gemstone-version 0.2.14 --native-version 0.1.3
 ```
 
 Use `--skip-install` for a faster metadata-only check. The verifier checks

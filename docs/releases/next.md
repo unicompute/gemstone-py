@@ -32,6 +32,8 @@ Use a minor release for the next larger feature milestone:
 - Documentation refreshed across the main guides, cookbook, examples guide,
   performance notes, observability notes, framework adapter notes, and printable
   docs.
+- `gemstone-py-native 0.1.3` refreshes the native wheel lane after the
+  Rust-backed `RustCoreSession` live smoke passed.
 
 ## Install
 
