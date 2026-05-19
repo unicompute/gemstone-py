@@ -44,6 +44,14 @@ before the PyPI, Marketplace, and GitHub release assets exist.
 GS_RUN_LIVE=1 ./scripts/run_live_checks.sh
 ```
 
+For native wheel releases, also run the Rust-core bridge smoke through the
+installed `gemstone-py-native` extension:
+
+```bash
+python scripts/run_native_rust_core_live_smoke.py --dry-run
+GS_RUN_LIVE=1 python scripts/run_native_rust_core_live_smoke.py --require-live
+```
+
 5. Run the maintained benchmark lane and keep the JSON report with the release notes:
 ```bash
 ./scripts/run_benchmarks.sh --json --output benchmark-report.json

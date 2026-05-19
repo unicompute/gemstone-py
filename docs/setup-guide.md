@@ -405,6 +405,18 @@ The live script prints the module coverage list before running. That makes it
 easier to notice when a new live integration module was added but not wired
 into the maintained lane.
 
+Rust-core native smoke for `gemstone-py-native`:
+
+```bash
+python scripts/run_native_rust_core_live_smoke.py --dry-run
+GS_RUN_LIVE=1 python scripts/run_native_rust_core_live_smoke.py --require-live
+```
+
+The dry run verifies the installed PyO3 extension exposes the
+`RustCoreSession` bridge and `rust_core_*_json()` reports. The live run logs in
+through `gemstone_rs::py_native`, checks `3 + 4`, performs `printString`,
+round-trips a string, writes and aborts a temporary global, and logs out.
+
 Longer live soak tests:
 
 ```bash

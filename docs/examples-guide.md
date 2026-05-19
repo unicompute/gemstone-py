@@ -1139,6 +1139,7 @@ You need both. They are not interchangeable.
 2. `gemstone-benchmarks --suite gci --entries 1000000`
 3. `docs/performance.md`
 4. `./scripts/run_native_checks.sh`
+5. `GS_RUN_LIVE=1 python scripts/run_native_rust_core_live_smoke.py --require-live`
 
 ## Practical Advice
 

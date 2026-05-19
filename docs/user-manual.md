@@ -984,6 +984,16 @@ starting Python.
 
 The runnable repository example is `examples/native_backend/check_backend.py`.
 
+For the Rust-backed shared-core bridge inside `gemstone-py-native`, run:
+
+```bash
+python scripts/run_native_rust_core_live_smoke.py --dry-run
+GS_RUN_LIVE=1 python scripts/run_native_rust_core_live_smoke.py --require-live
+```
+
+Use the dry run in wheel/sdist packaging checks. Use the live command before
+publishing native wheels that are expected to exercise `gemstone_rs::py_native`.
+
 ## Recommended Adoption Path
 
 If you are bringing `gemstone-py` into a project, a sensible order is:

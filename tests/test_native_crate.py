@@ -115,6 +115,21 @@ class NativeCrateTests(unittest.TestCase):
         self.assertIn("PIP_NO_CACHE_DIR=1", source)
         self.assertIn("rust_core_available", source)
         self.assertIn("Expected gemstone-rs shared core bridge from sdist install", source)
+        self.assertIn("run_native_rust_core_live_smoke.py", source)
+        self.assertIn('PYTHONPATH="${repo_root}"', source)
+
+    def test_native_rust_core_live_smoke_checks_bridge_surface(self) -> None:
+        source = pathlib.Path("scripts/run_native_rust_core_live_smoke.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("RustCoreSession.login_from_env", source)
+        self.assertIn("rust_core_capabilities_json", source)
+        self.assertIn("rust_core_migration_json", source)
+        self.assertIn("eval_smallint(\"3 + 4\")", source)
+        self.assertIn("perform_json", source)
+        self.assertIn("global_put_string", source)
+        self.assertIn("GS_RUN_LIVE=1 is required", source)
 
 
 if __name__ == "__main__":

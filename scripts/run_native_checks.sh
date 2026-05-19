@@ -64,6 +64,8 @@ PY
 "${pybin}" -m venv "${native_venv}"
 "${native_venv}/bin/python" -m pip install --no-deps "${wheel_path}"
 PYTHONPATH="${repo_root}" \
+  "${native_venv}/bin/python" "${repo_root}/scripts/run_native_rust_core_live_smoke.py" --dry-run
+PYTHONPATH="${repo_root}" \
   GEMSTONE_PY_GCI_BACKEND=native \
   "${native_venv}/bin/python" - <<'PY'
 import gemstone_py._gci as gci
@@ -108,6 +110,8 @@ PY
 
 "${pybin}" -m venv "${sdist_venv}"
 PIP_NO_CACHE_DIR=1 "${sdist_venv}/bin/python" -m pip install --no-deps "${sdist_path}"
+PYTHONPATH="${repo_root}" \
+  "${sdist_venv}/bin/python" "${repo_root}/scripts/run_native_rust_core_live_smoke.py" --dry-run
 "${sdist_venv}/bin/python" - <<'PY'
 from gemstone_py_native import _gci, rust_core_available
 

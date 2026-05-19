@@ -41,6 +41,19 @@ print(hasattr(_gci, "RustCoreSession"))
 PY
 ```
 
+Run the native Rust-core smoke:
+
+```bash
+python scripts/run_native_rust_core_live_smoke.py --dry-run
+GS_RUN_LIVE=1 python scripts/run_native_rust_core_live_smoke.py --require-live
+```
+
+The dry run verifies the installed extension exposes `RustCoreSession` and the
+`rust_core_*_json()` reports. The live run logs in through
+`gemstone_rs::py_native`, checks `3 + 4 == 7`, performs `printString`, resolves
+`Object`, round-trips a string, writes and aborts a temporary global, and logs
+out.
+
 Package wheels:
 
 ```bash
