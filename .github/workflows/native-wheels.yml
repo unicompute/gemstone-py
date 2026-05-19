@@ -304,9 +304,11 @@ jobs:
           with tarfile.open(archives[0]) as archive:
               archive.extractall(extract_root)
 
-          manifests = sorted(extract_root.glob("*/gemstone-py-native/Cargo.toml"))
-          if len(manifests) != 1:
-              manifests = sorted(extract_root.glob("*/Cargo.toml"))
+          manifests = [
+              manifest
+              for manifest in sorted(extract_root.glob("**/Cargo.toml"))
+              if 'name = "gemstone-py-native"' in manifest.read_text(encoding="utf-8")
+          ]
           if len(manifests) != 1:
               raise SystemExit(f"Expected one native package Cargo.toml from sdist, got {manifests!r}")
 
@@ -329,6 +331,14 @@ jobs:
           wheel_name = wheels[0].name
           if "cp311-abi3" not in wheel_name:
               raise SystemExit(f"Native sdist-built wheel is not abi3 tagged: {wheel_name}")
+          subprocess.run(
+              [sys.executable, "-m", "pip", "install", "--force-reinstall", str(wheels[0])],
+              check=True,
+          )
+          subprocess.run(
+              [sys.executable, "scripts/run_native_rust_core_live_smoke.py", "--dry-run"],
+              check=True,
+          )
           PY
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -422,11 +432,16 @@ jobs:
         run: |
           python - <<'PY'
           import gemstone_py._gci as gci
+          from gemstone_py_native import _gci as native_gci
 
           if gci.IMPLEMENTATION != "native":
               raise SystemExit(f"Expected native backend, got {gci.IMPLEMENTATION!r}")
           if gci._smallint_to_python(gci._python_to_smallint(-42)) != -42:
               raise SystemExit("Native smallint helper round trip failed")
+          if native_gci.rust_core_implementation() != "gemstone-rs":
+              raise SystemExit("Native wheel is not backed by gemstone-rs")
+          if not hasattr(native_gci, "RustCoreSession"):
+              raise SystemExit("Native wheel is missing RustCoreSession")
           PY
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -508,11 +523,16 @@ jobs:
         run: |
           python - <<'PY'
           import gemstone_py._gci as gci
+          from gemstone_py_native import _gci as native_gci
 
           if gci.IMPLEMENTATION != "native":
               raise SystemExit(f"Expected native backend, got {gci.IMPLEMENTATION!r}")
           if gci._smallint_to_python(gci._python_to_smallint(-42)) != -42:
               raise SystemExit("Native smallint helper round trip failed")
+          if native_gci.rust_core_implementation() != "gemstone-rs":
+              raise SystemExit("Native wheel is not backed by gemstone-rs")
+          if not hasattr(native_gci, "RustCoreSession"):
+              raise SystemExit("Native wheel is missing RustCoreSession")
           PY
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
