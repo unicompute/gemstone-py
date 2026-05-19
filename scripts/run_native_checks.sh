@@ -13,9 +13,10 @@ fi
 native_root="${repo_root}/gemstone-py-native"
 artifacts_dir="$(mktemp -d "${TMPDIR:-/tmp}/gemstone-py-native.XXXXXX")"
 native_venv="$(mktemp -d "${TMPDIR:-/tmp}/gemstone-py-native-venv.XXXXXX")"
+sdist_venv="$(mktemp -d "${TMPDIR:-/tmp}/gemstone-py-native-sdist-venv.XXXXXX")"
 
 cleanup() {
-  rm -rf "${artifacts_dir}" "${native_venv}"
+  rm -rf "${artifacts_dir}" "${native_venv}" "${sdist_venv}"
 }
 trap cleanup EXIT
 
@@ -84,7 +85,6 @@ if [[ ! -f "${sdist_path}" ]]; then
 fi
 
 "${pybin}" - "${sdist_path}" "${artifacts_dir}" <<'PY'
-import subprocess
 import sys
 import tarfile
 from pathlib import Path
@@ -92,7 +92,6 @@ from pathlib import Path
 archive_path = Path(sys.argv[1])
 artifacts_dir = Path(sys.argv[2])
 extract_root = artifacts_dir / "sdist-src"
-wheel_dir = artifacts_dir / "sdist-wheel"
 
 with tarfile.open(archive_path) as archive:
     archive.extractall(extract_root)
@@ -105,27 +104,19 @@ manifests = [
 if len(manifests) != 1:
     raise SystemExit(f"Expected one native package Cargo.toml from sdist, got {manifests!r}")
 
-subprocess.run(
-    [
-        sys.executable,
-        "-m",
-        "maturin",
-        "build",
-        "--manifest-path",
-        str(manifests[0]),
-        "--out",
-        str(wheel_dir),
-        "--target-dir",
-        str(artifacts_dir / "sdist-target"),
-    ],
-    check=True,
-)
+PY
 
-wheels = sorted(wheel_dir.glob("gemstone_py_native-*.whl"))
-if len(wheels) != 1:
-    raise SystemExit(f"Expected one native sdist-built wheel, got {wheels!r}")
-if "cp311-abi3" not in wheels[0].name:
-    raise SystemExit(f"Native sdist-built wheel is not abi3 tagged: {wheels[0].name}")
+"${pybin}" -m venv "${sdist_venv}"
+PIP_NO_CACHE_DIR=1 "${sdist_venv}/bin/python" -m pip install --no-deps "${sdist_path}"
+"${sdist_venv}/bin/python" - <<'PY'
+from gemstone_py_native import _gci, rust_core_available
+
+if _gci.native_implementation() != "pyo3":
+    raise SystemExit("Expected pyo3 native extension from sdist install")
+if not rust_core_available():
+    raise SystemExit("Expected gemstone-rs shared core bridge from sdist install")
+if _gci.rust_core_implementation() != "gemstone-rs":
+    raise SystemExit("Expected gemstone-rs shared core implementation")
 PY
 
 echo "Native checks passed"

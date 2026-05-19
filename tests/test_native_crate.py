@@ -106,13 +106,15 @@ class NativeCrateTests(unittest.TestCase):
         self.assertIn("maturin build", source)
         self.assertIn("maturin sdist", source)
         self.assertIn("cp311-abi3", source)
-        self.assertIn("gemstone-py-native/Cargo.toml", source)
+        self.assertIn('name = "gemstone-py-native"', source)
         self.assertIn("License-Expression: MIT", source)
         self.assertIn("Classifier: Programming Language :: Rust", source)
         self.assertIn("GEMSTONE_PY_GCI_BACKEND=native", source)
         self.assertIn("Expected native backend", source)
         self.assertIn("_smallint_to_python", source)
-        self.assertIn("sdist-built wheel", source)
+        self.assertIn("PIP_NO_CACHE_DIR=1", source)
+        self.assertIn("rust_core_available", source)
+        self.assertIn("Expected gemstone-rs shared core bridge from sdist install", source)
 
 
 if __name__ == "__main__":
