@@ -12,6 +12,7 @@ from gemstone_py.aio import (
     AsyncSessionPool,
 )
 from gemstone_py.aio.fastapi import pool_session_dependency, session_dependency
+from gemstone_py.persistent_root import GsDict
 
 
 class RecordingSpan:
@@ -297,6 +298,52 @@ class AsyncSessionTests(unittest.IsolatedAsyncioTestCase):
                 ("update_many", {"Alpha": 1}, {"Beta": 2}),
             ],
         )
+
+    async def test_async_persistent_root_materializes_gsdict_results(self):
+        class FakeGsDict(GsDict):
+            def __init__(self, data):
+                self.data = data
+
+            def keys(self):
+                return list(self.data.keys())
+
+            def __getitem__(self, key):
+                return self.data[key]
+
+        class FakeRoot:
+            instances = []
+
+            def __init__(self, sync_session, name):
+                self.sync_session = sync_session
+                self.name = name
+                self.instances.append(self)
+
+            def __getitem__(self, key):
+                self.sync_session._record(f"getitem:{key}")
+                return FakeGsDict(
+                    {
+                        "name": "Async Root",
+                        "nested": FakeGsDict({"count": 9}),
+                    }
+                )
+
+        sync_session = FakeGemStoneSession()
+        session = AsyncSession(session=sync_session)
+
+        with mock.patch("gemstone_py.aio.persistent_root.PersistentRoot", FakeRoot):
+            root = AsyncPersistentRoot(session, "UserGlobals")
+            result = await root.get("Alpha")
+
+        session.close()
+
+        self.assertEqual(
+            result,
+            {
+                "name": "Async Root",
+                "nested": {"count": 9},
+            },
+        )
+        self.assertNotEqual(sync_session.thread_ids[0], threading.get_ident())
 
 
 class AsyncSessionPoolTests(unittest.IsolatedAsyncioTestCase):

@@ -97,9 +97,11 @@ wheel_dir = artifacts_dir / "sdist-wheel"
 with tarfile.open(archive_path) as archive:
     archive.extractall(extract_root)
 
-manifests = sorted(extract_root.glob("*/gemstone-py-native/Cargo.toml"))
-if len(manifests) != 1:
-    manifests = sorted(extract_root.glob("*/Cargo.toml"))
+manifests = [
+    manifest
+    for manifest in sorted(extract_root.glob("**/Cargo.toml"))
+    if 'name = "gemstone-py-native"' in manifest.read_text(encoding="utf-8")
+]
 if len(manifests) != 1:
     raise SystemExit(f"Expected one native package Cargo.toml from sdist, got {manifests!r}")
 

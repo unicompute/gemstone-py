@@ -4,10 +4,15 @@ use gemstone_gci::{
     GCI_LOGIN_PW_ENCRYPTED, GCI_MAX_ERR_ARGS, OOP_ASCII_NUL, OOP_FALSE, OOP_ILLEGAL, OOP_NIL,
     OOP_TRUE,
 };
-use pyo3::exceptions::{PyOSError, PyTypeError, PyValueError};
+use gemstone_rs::py_native::{
+    capabilities, compatibility_report, conformance_report, handoff_report, migration_report,
+    samples_report, smoke_dry_run_report, PyNativeErrorInfo, PyNativeSession, PyNativeValue,
+};
+use pyo3::exceptions::{PyOSError, PyRuntimeError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyList, PyModule};
 use pyo3::Bound;
+use std::cell::RefCell;
 use std::ffi::{c_char, c_double, c_int, c_uint, c_void, CString};
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
@@ -398,6 +403,254 @@ impl NativeGciLibrary {
     }
 }
 
+#[pyclass(unsendable)]
+struct RustCoreSession {
+    inner: RefCell<Option<PyNativeSession>>,
+}
+
+#[pymethods]
+impl RustCoreSession {
+    #[staticmethod]
+    fn login_from_env() -> PyResult<Self> {
+        Ok(Self {
+            inner: RefCell::new(Some(
+                PyNativeSession::login_from_env().map_err(rust_core_py_err)?,
+            )),
+        })
+    }
+
+    fn session_id(&self) -> PyResult<i32> {
+        with_rust_core_session(&self.inner, |session| Ok(session.session_id()))
+    }
+
+    fn eval_repr(&self, source: &str) -> PyResult<String> {
+        with_rust_core_session(&self.inner, |session| {
+            session
+                .eval(source)
+                .map(|value| format!("{value:?}"))
+                .map_err(rust_core_py_err)
+        })
+    }
+
+    fn eval_json(&self, source: &str) -> PyResult<String> {
+        with_rust_core_session(&self.inner, |session| {
+            session
+                .eval(source)
+                .map(|value| value.to_json())
+                .map_err(rust_core_py_err)
+        })
+    }
+
+    fn eval_smallint(&self, source: &str) -> PyResult<i64> {
+        with_rust_core_session(&self.inner, |session| match session.eval(source) {
+            Ok(PyNativeValue::SmallInt(value)) => Ok(value),
+            Ok(other) => Err(PyValueError::new_err(format!(
+                "expected SmallInt from eval, got {other:?}"
+            ))),
+            Err(error) => Err(rust_core_py_err(error)),
+        })
+    }
+
+    fn eval_oop(&self, source: &str) -> PyResult<u64> {
+        with_rust_core_session(&self.inner, |session| {
+            session.eval_oop(source).map_err(rust_core_py_err)
+        })
+    }
+
+    fn execute(&self, source: &str) -> PyResult<u64> {
+        with_rust_core_session(&self.inner, |session| {
+            session.execute(source).map_err(rust_core_py_err)
+        })
+    }
+
+    fn resolve(&self, name: &str) -> PyResult<u64> {
+        with_rust_core_session(&self.inner, |session| {
+            session.resolve(name).map_err(rust_core_py_err)
+        })
+    }
+
+    fn value_to_oop_nil(&self) -> PyResult<u64> {
+        with_rust_core_session(&self.inner, |session| {
+            session
+                .value_to_oop(PyNativeValue::Nil)
+                .map_err(rust_core_py_err)
+        })
+    }
+
+    fn value_to_oop_bool(&self, value: bool) -> PyResult<u64> {
+        with_rust_core_session(&self.inner, |session| {
+            session
+                .value_to_oop(PyNativeValue::Bool(value))
+                .map_err(rust_core_py_err)
+        })
+    }
+
+    fn value_to_oop_smallint(&self, value: i64) -> PyResult<u64> {
+        with_rust_core_session(&self.inner, |session| {
+            session
+                .value_to_oop(PyNativeValue::SmallInt(value))
+                .map_err(rust_core_py_err)
+        })
+    }
+
+    fn value_to_oop_char(&self, value: &str) -> PyResult<u64> {
+        let mut chars = value.chars();
+        let ch = chars
+            .next()
+            .ok_or_else(|| PyValueError::new_err("expected exactly one character"))?;
+        if chars.next().is_some() {
+            return Err(PyValueError::new_err("expected exactly one character"));
+        }
+        with_rust_core_session(&self.inner, |session| {
+            session
+                .value_to_oop(PyNativeValue::Char(ch))
+                .map_err(rust_core_py_err)
+        })
+    }
+
+    fn value_to_oop_string(&self, value: &str) -> PyResult<u64> {
+        with_rust_core_session(&self.inner, |session| {
+            session
+                .value_to_oop(PyNativeValue::String(value.to_string()))
+                .map_err(rust_core_py_err)
+        })
+    }
+
+    fn value_to_oop_symbol(&self, value: &str) -> PyResult<u64> {
+        with_rust_core_session(&self.inner, |session| {
+            session
+                .value_to_oop(PyNativeValue::Symbol(value.to_string()))
+                .map_err(rust_core_py_err)
+        })
+    }
+
+    fn value_to_oop_raw(&self, value: u64) -> PyResult<u64> {
+        with_rust_core_session(&self.inner, |session| {
+            session
+                .value_to_oop(PyNativeValue::Oop(value))
+                .map_err(rust_core_py_err)
+        })
+    }
+
+    fn perform_raw_oop(&self, receiver: u64, selector: &str, args: Vec<u64>) -> PyResult<u64> {
+        with_rust_core_session(&self.inner, |session| {
+            session
+                .perform_oop_raw(receiver, selector, &args)
+                .map_err(rust_core_py_err)
+        })
+    }
+
+    fn perform_json(&self, receiver: u64, selector: &str, args: Vec<u64>) -> PyResult<String> {
+        with_rust_core_session(&self.inner, |session| {
+            session
+                .perform_raw(receiver, selector, &args)
+                .map(|value| value.to_json())
+                .map_err(rust_core_py_err)
+        })
+    }
+
+    fn new_string(&self, value: &str) -> PyResult<u64> {
+        with_rust_core_session(&self.inner, |session| {
+            session.new_string(value).map_err(rust_core_py_err)
+        })
+    }
+
+    fn new_symbol(&self, value: &str) -> PyResult<u64> {
+        with_rust_core_session(&self.inner, |session| {
+            session.new_symbol(value).map_err(rust_core_py_err)
+        })
+    }
+
+    fn fetch_string(&self, oop: u64) -> PyResult<String> {
+        with_rust_core_session(&self.inner, |session| {
+            session.fetch_string(oop).map_err(rust_core_py_err)
+        })
+    }
+
+    fn global_get(&self, symbol_name: &str) -> PyResult<u64> {
+        with_rust_core_session(&self.inner, |session| {
+            session.global_get(symbol_name).map_err(rust_core_py_err)
+        })
+    }
+
+    fn global_put_raw(&self, symbol_name: &str, value: u64) -> PyResult<()> {
+        with_rust_core_session(&self.inner, |session| {
+            session
+                .global_put_raw(symbol_name, value)
+                .map_err(rust_core_py_err)
+        })
+    }
+
+    fn global_put_string(&self, symbol_name: &str, value: &str) -> PyResult<()> {
+        with_rust_core_session(&self.inner, |session| {
+            session
+                .global_put_value(symbol_name, PyNativeValue::String(value.to_string()))
+                .map_err(rust_core_py_err)
+        })
+    }
+
+    fn global_put_smallint(&self, symbol_name: &str, value: i64) -> PyResult<()> {
+        with_rust_core_session(&self.inner, |session| {
+            session
+                .global_put_value(symbol_name, PyNativeValue::SmallInt(value))
+                .map_err(rust_core_py_err)
+        })
+    }
+
+    fn add_to_export_set(&self, oop: u64) -> PyResult<()> {
+        with_rust_core_session(&self.inner, |session| {
+            session.add_to_export_set(oop).map_err(rust_core_py_err)
+        })
+    }
+
+    fn remove_from_export_set(&self, oop: u64) -> PyResult<()> {
+        with_rust_core_session(&self.inner, |session| {
+            session
+                .remove_from_export_set(oop)
+                .map_err(rust_core_py_err)
+        })
+    }
+
+    fn needs_commit(&self) -> PyResult<bool> {
+        with_rust_core_session(&self.inner, |session| {
+            session.needs_commit().map_err(rust_core_py_err)
+        })
+    }
+
+    fn in_transaction(&self) -> PyResult<bool> {
+        with_rust_core_session(&self.inner, |session| {
+            session.in_transaction().map_err(rust_core_py_err)
+        })
+    }
+
+    fn commit(&self) -> PyResult<()> {
+        with_rust_core_session(&self.inner, |session| {
+            session.commit().map_err(rust_core_py_err)
+        })
+    }
+
+    fn abort(&self) -> PyResult<()> {
+        with_rust_core_session(&self.inner, |session| {
+            session.abort().map_err(rust_core_py_err)
+        })
+    }
+
+    fn logout(&self) -> PyResult<()> {
+        if let Some(mut session) = self.inner.borrow_mut().take() {
+            session.logout().map_err(rust_core_py_err)?;
+        }
+        Ok(())
+    }
+}
+
+impl Drop for RustCoreSession {
+    fn drop(&mut self) {
+        if let Some(mut session) = self.inner.borrow_mut().take() {
+            let _ = session.logout();
+        }
+    }
+}
+
 #[pyfunction]
 fn _is_smallint(oop: u64) -> bool {
     is_smallint(oop)
@@ -433,6 +686,46 @@ fn _char_to_python(oop: u64) -> PyResult<String> {
 #[pyfunction]
 fn native_implementation() -> &'static str {
     "pyo3"
+}
+
+#[pyfunction]
+fn rust_core_implementation() -> &'static str {
+    "gemstone-rs"
+}
+
+#[pyfunction]
+fn rust_core_capabilities_json() -> String {
+    capabilities().to_json()
+}
+
+#[pyfunction]
+fn rust_core_samples_json() -> String {
+    samples_report().to_json()
+}
+
+#[pyfunction]
+fn rust_core_smoke_dry_run_json() -> String {
+    smoke_dry_run_report().to_json()
+}
+
+#[pyfunction]
+fn rust_core_migration_json() -> String {
+    migration_report().to_json()
+}
+
+#[pyfunction]
+fn rust_core_compatibility_json() -> String {
+    compatibility_report().to_json()
+}
+
+#[pyfunction]
+fn rust_core_conformance_json() -> String {
+    conformance_report().to_json()
+}
+
+#[pyfunction]
+fn rust_core_handoff_json() -> String {
+    handoff_report().to_json()
 }
 
 #[pyfunction]
@@ -483,6 +776,7 @@ fn _gci(py: Python<'_>, module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add("GCI_LOGIN_IS_GCSTS", GCI_LOGIN_IS_GCSTS)?;
     module.add("IMPLEMENTATION", "native")?;
     module.add_class::<NativeGciLibrary>()?;
+    module.add_class::<RustCoreSession>()?;
 
     module.add_function(wrap_pyfunction!(_is_smallint, module)?)?;
     module.add_function(wrap_pyfunction!(_is_smalldouble, module)?)?;
@@ -491,6 +785,14 @@ fn _gci(py: Python<'_>, module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(_is_char, module)?)?;
     module.add_function(wrap_pyfunction!(_char_to_python, module)?)?;
     module.add_function(wrap_pyfunction!(native_implementation, module)?)?;
+    module.add_function(wrap_pyfunction!(rust_core_implementation, module)?)?;
+    module.add_function(wrap_pyfunction!(rust_core_capabilities_json, module)?)?;
+    module.add_function(wrap_pyfunction!(rust_core_samples_json, module)?)?;
+    module.add_function(wrap_pyfunction!(rust_core_smoke_dry_run_json, module)?)?;
+    module.add_function(wrap_pyfunction!(rust_core_migration_json, module)?)?;
+    module.add_function(wrap_pyfunction!(rust_core_compatibility_json, module)?)?;
+    module.add_function(wrap_pyfunction!(rust_core_conformance_json, module)?)?;
+    module.add_function(wrap_pyfunction!(rust_core_handoff_json, module)?)?;
     module.add_function(wrap_pyfunction!(gci_init, module)?)?;
     module.add_function(wrap_pyfunction!(_load_library, module)?)?;
     module.add_function(wrap_pyfunction!(_bind, module)?)?;
@@ -511,6 +813,7 @@ fn _gci(py: Python<'_>, module: &Bound<'_, PyModule>) -> PyResult<()> {
             "GCI_LOGIN_IS_GCSTS",
             "GciErrSType",
             "NativeGciLibrary",
+            "RustCoreSession",
             "_is_smallint",
             "_is_smalldouble",
             "_smallint_to_python",
@@ -521,6 +824,14 @@ fn _gci(py: Python<'_>, module: &Bound<'_, PyModule>) -> PyResult<()> {
             "_bind",
             "gci_init",
             "native_implementation",
+            "rust_core_implementation",
+            "rust_core_capabilities_json",
+            "rust_core_samples_json",
+            "rust_core_smoke_dry_run_json",
+            "rust_core_migration_json",
+            "rust_core_compatibility_json",
+            "rust_core_conformance_json",
+            "rust_core_handoff_json",
         ],
     )?;
     module.add("__all__", exports)?;
@@ -600,4 +911,20 @@ fn ctypes_address(py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<usize> {
 
 fn gci_py_err(err: gemstone_gci::GciError) -> PyErr {
     PyOSError::new_err(err.to_string())
+}
+
+fn with_rust_core_session<T>(
+    inner: &RefCell<Option<PyNativeSession>>,
+    f: impl FnOnce(&mut PyNativeSession) -> PyResult<T>,
+) -> PyResult<T> {
+    let mut guard = inner.borrow_mut();
+    let session = guard
+        .as_mut()
+        .ok_or_else(|| PyRuntimeError::new_err("GemStone session is logged out"))?;
+    f(session)
+}
+
+fn rust_core_py_err(error: gemstone_rs::Error) -> PyErr {
+    let info = PyNativeErrorInfo::from_error(&error);
+    PyRuntimeError::new_err(format!("{:?}: {}", info.kind, info.message))
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.6
+
+- Replaced the Marketplace VSIX icon with the purple gemstone mark used by the
+  JavaScript workbench.
+
 ## 0.3.5
 
 - Moved the Codegen Explorer integration into gemstone-py Workbench. The VS Code

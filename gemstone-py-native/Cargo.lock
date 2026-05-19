@@ -16,12 +16,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "gemstone-gci"
+version = "0.2.2"
+dependencies = [
+ "libloading",
+]
+
+[[package]]
 name = "gemstone-py-native"
 version = "0.1.2"
 dependencies = [
- "gemstone-gci",
+ "gemstone-gci 0.1.0",
+ "gemstone-rs",
  "pyo3",
 ]
+
+[[package]]
+name = "gemstone-rs"
+version = "0.2.2"
+dependencies = [
+ "gemstone-gci 0.2.2",
+ "gemstone-rs-macros",
+]
+
+[[package]]
+name = "gemstone-rs-macros"
+version = "0.2.2"
 
 [[package]]
 name = "heck"

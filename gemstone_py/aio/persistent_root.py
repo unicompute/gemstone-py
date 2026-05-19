@@ -6,7 +6,8 @@ from collections.abc import Awaitable, Iterable
 from typing import Any, cast
 
 from gemstone_py.aio import AsyncSession
-from gemstone_py.persistent_root import PersistentRoot
+from gemstone_py.ordered_collection import OrderedCollection
+from gemstone_py.persistent_root import GsDict, PersistentRoot
 
 
 class AsyncPersistentRoot:
@@ -45,10 +46,14 @@ class AsyncPersistentRoot:
     async def get(self, key: str, default: Any = ...) -> Any:
         if default is ...:
             return await self._session.run_sync(
-                lambda sync_session: self._for_session(sync_session).__getitem__(key)
+                lambda sync_session: _materialize_async_value(
+                    self._for_session(sync_session).__getitem__(key)
+                )
             )
         return await self._session.run_sync(
-            lambda sync_session: self._for_session(sync_session).get(key, default)
+            lambda sync_session: _materialize_async_value(
+                self._for_session(sync_session).get(key, default)
+            )
         )
 
     async def contains(self, key: str) -> bool:
@@ -71,7 +76,10 @@ class AsyncPersistentRoot:
         return cast(
             list[tuple[str, Any]],
             await self._session.run_sync(
-                lambda sync_session: self._for_session(sync_session).items()
+                lambda sync_session: [
+                    (key, _materialize_async_value(value))
+                    for key, value in self._for_session(sync_session).items()
+                ]
             ),
         )
 
@@ -79,7 +87,10 @@ class AsyncPersistentRoot:
         return cast(
             list[Any],
             await self._session.run_sync(
-                lambda sync_session: self._for_session(sync_session).values()
+                lambda sync_session: [
+                    _materialize_async_value(value)
+                    for value in self._for_session(sync_session).values()
+                ]
             ),
         )
 
@@ -92,25 +103,33 @@ class AsyncPersistentRoot:
         return cast(
             dict[str, Any],
             await self._session.run_sync(
-                lambda sync_session: self._for_session(sync_session).get_many(
-                    key_list,
-                    default=default,
-                )
+                lambda sync_session: {
+                    key: _materialize_async_value(value)
+                    for key, value in self._for_session(sync_session)
+                    .get_many(key_list, default=default)
+                    .items()
+                }
             ),
         )
 
     async def pop(self, key: str, default: Any = ...) -> Any:
         if default is ...:
             return await self._session.run_sync(
-                lambda sync_session: self._for_session(sync_session).pop(key)
+                lambda sync_session: _materialize_async_value(
+                    self._for_session(sync_session).pop(key)
+                )
             )
         return await self._session.run_sync(
-            lambda sync_session: self._for_session(sync_session).pop(key, default)
+            lambda sync_session: _materialize_async_value(
+                self._for_session(sync_session).pop(key, default)
+            )
         )
 
     async def setdefault(self, key: str, default: Any = None) -> Any:
         return await self._session.run_sync(
-            lambda sync_session: self._for_session(sync_session).setdefault(key, default)
+            lambda sync_session: _materialize_async_value(
+                self._for_session(sync_session).setdefault(key, default)
+            )
         )
 
     async def update(self, other: Any = None, /, **kwargs: Any) -> None:
@@ -138,6 +157,27 @@ class AsyncPersistentRoot:
         if self._root is None:
             self._root = PersistentRoot(sync_session, self._name)
         return self._root
+
+
+def _materialize_async_value(value: Any) -> Any:
+    """Return values that can be used safely outside the sync session thread."""
+    if isinstance(value, GsDict):
+        return {
+            key: _materialize_async_value(value[key])
+            for key in value.keys()
+        }
+    if isinstance(value, OrderedCollection):
+        return [_materialize_async_value(item) for item in value.to_list()]
+    if isinstance(value, list):
+        return [_materialize_async_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_materialize_async_value(item) for item in value)
+    if isinstance(value, dict):
+        return {
+            key: _materialize_async_value(item)
+            for key, item in value.items()
+        }
+    return value
 
 
 __all__ = ["AsyncPersistentRoot"]

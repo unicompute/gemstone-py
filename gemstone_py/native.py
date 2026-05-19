@@ -19,4 +19,10 @@ def native_fast_path_available() -> bool:
     return native_module() is not None
 
 
-__all__ = ["native_fast_path_available", "native_module"]
+def rust_core_available() -> bool:
+    """Return whether the optional native extension exposes the gemstone-rs core."""
+    module = native_module()
+    return module is not None and hasattr(module, "RustCoreSession")
+
+
+__all__ = ["native_fast_path_available", "native_module", "rust_core_available"]

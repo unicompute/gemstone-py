@@ -14,6 +14,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 gemstone-gci = { path = "../crates/gemstone-gci" }
+gemstone-rs = { version = "0.2.2", path = "../../gemstone-rs/crates/gemstone-rs" }
 pyo3 = { version = "0.28", features = ["abi3-py311", "extension-module"] }
 
 [workspace]

@@ -10,6 +10,12 @@ methods, releases the GIL around blocking GCI calls, and replaces hot OOP tag
 helpers with native implementations. Wheels are built with the Python 3.11
 stable ABI.
 
+The same extension also exposes the first additive gemstone-rs shared-core
+surface through `RustCoreSession` and `rust_core_*_json()` helpers. That path is
+backed by `gemstone_rs::py_native` and is intentionally separate from the
+existing `_gci` compatibility API, so existing `gemstone-py` backend selection
+keeps working while the Rust-core migration is proven in tests.
+
 Direct Rust applications should use the separate `gemstone-rs` workspace. When
 checked out beside `gemstone-py`, it lives at `../../gemstone-rs` from this
 directory. It provides the safe Rust `Config` and `Session` API over the same
@@ -21,6 +27,18 @@ Build locally:
 python -m pip install maturin
 cd gemstone-py-native
 maturin develop
+```
+
+Check the Rust-core handoff surface:
+
+```bash
+python - <<'PY'
+from gemstone_py_native import _gci
+
+print(_gci.rust_core_implementation())
+print(_gci.rust_core_capabilities_json())
+print(hasattr(_gci, "RustCoreSession"))
+PY
 ```
 
 Package wheels:
