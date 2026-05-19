@@ -328,12 +328,12 @@ jobs:
               [
                   sys.executable,
                   "-m",
-                  "maturin",
-                  "build",
-                  "--manifest-path",
-                  str(manifests[0]),
-                  "--out",
+                  "pip",
+                  "wheel",
+                  "--no-deps",
+                  "--wheel-dir",
                   "sdist-wheel",
+                  str(archives[0]),
               ],
               check=True,
           )
