@@ -988,13 +988,12 @@ class GemStoneSession:
         return lib
 
     def _check_result(self, oop: int) -> None:
-        if oop == OOP_ILLEGAL:
+        if oop == OOP_NIL:
             err = GciErrSType()
             lib = self._require_lib()
             lib.GciErr(ctypes.byref(err))
             if err.number != 0:
                 raise GemStoneError.from_err_struct(err)
-            raise GemStoneError("GCI call returned OOP_ILLEGAL")
 
     def _string_class_oops(self) -> frozenset[int]:
         if self.__string_class_oops_cache is not None:

@@ -113,15 +113,14 @@ class GemStoneClientFailureTests(unittest.TestCase):
         self.assertEqual(ctx.exception.number, 88)
         lib.GciExecuteStr.assert_not_called()
 
-    def test_check_result_raises_generic_error_when_gci_err_is_empty(self) -> None:
+    def test_check_result_is_noop_when_result_is_nil_without_gci_error(self) -> None:
         session = gemstone.GemStoneSession(username="alice", password="secret")
         lib = mock.Mock()
         session._lib = lib
 
-        with self.assertRaises(gemstone.GemStoneError) as ctx:
-            session._check_result(gemstone.OOP_ILLEGAL)
+        # OOP_NIL with no GciErr error is a legitimate nil result, not a failure.
+        session._check_result(gemstone.OOP_NIL)
 
-        self.assertEqual(str(ctx.exception), "GCI call returned OOP_ILLEGAL")
         lib.GciErr.assert_called_once_with(mock.ANY)
 
     def test_check_result_raises_structured_error_when_gci_err_is_present(self) -> None:
@@ -141,7 +140,7 @@ class GemStoneClientFailureTests(unittest.TestCase):
         lib.GciErr.side_effect = fill_error
 
         with self.assertRaises(gemstone.GemStoneError) as ctx:
-            session._check_result(gemstone.OOP_ILLEGAL)
+            session._check_result(gemstone.OOP_NIL)
 
         self.assertIn("Fetch failed", str(ctx.exception))
         self.assertEqual(ctx.exception.number, 19)
