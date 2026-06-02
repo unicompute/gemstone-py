@@ -17,6 +17,19 @@ class LiveSmokeTests(unittest.TestCase):
             self.assertIsInstance(ref, gemstone.OopRef)
             self.assertTrue(ref.print_string())
 
+    def test_error_exposes_live_exception_object(self):
+        config = gemstone.GemStoneConfig.from_env()
+
+        with gemstone.GemStoneSession(config=config) as session:
+            with self.assertRaises(gemstone.GemStoneError) as ctx:
+                session.eval("1/0")
+            err = ctx.exception
+            self.assertEqual(err.number, 2026)
+            self.assertIsNotNone(err.exception)
+            # session still logged in here -> selectors dispatch as methods
+            desc = err.exception.description()  # ZeroDivide#messageText is nil; use #description
+            self.assertIn("attempt to divide 1 by zero", desc)
+
 
 if __name__ == "__main__":
     unittest.main()

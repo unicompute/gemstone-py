@@ -13,7 +13,20 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
 from types import TracebackType
-from typing import Any, Iterator, Literal, Optional, Sequence, TypeAlias, TypeVar, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterator,
+    Literal,
+    Optional,
+    Sequence,
+    TypeAlias,
+    TypeVar,
+    cast,
+)
+
+if TYPE_CHECKING:
+    from .persistent_root import GsObject
 
 from ._gci import (
     GCI_ENCRYPT_BUF_SIZE,
@@ -61,20 +74,55 @@ T = TypeVar("T")
 class GemStoneError(RuntimeError):
     """Raised when a GCI call returns an error."""
 
-    def __init__(self, message: str, number: int = 0, fatal: bool = False):
+    def __init__(
+        self,
+        message: str,
+        number: int = 0,
+        fatal: bool = False,
+        *,
+        exception_oop: int = 0,
+        category: int = 0,
+        arg_oops: tuple[int, ...] = (),
+        session: "GemStoneSession | None" = None,
+    ):
         super().__init__(message)
         self.number = number
         self.fatal = fatal
+        self.exception_oop = exception_oop
+        self.category = category
+        self.arg_oops = arg_oops
+        self._session = session
+
+    @property
+    def exception(self) -> "GsObject | None":
+        """The live GemStone (Smalltalk) exception object behind this error.
+
+        Returns None if unavailable. Valid only while the session is logged in.
+        Call Smalltalk selectors as methods, e.g. err.exception.description(),
+        err.exception.messageText(), err.exception.contentsCopy().
+        """
+        if self._session is None or self.exception_oop in (OOP_NIL, OOP_ILLEGAL, 0):
+            return None
+        from gemstone_py.persistent_root import GsObject  # lazy: avoids circular import
+
+        return GsObject(self._session, self.exception_oop)
 
     @classmethod
-    def from_err_struct(cls, err: GciErrSType) -> "GemStoneError":
+    def from_err_struct(
+        cls, err: GciErrSType, *, session: "GemStoneSession | None" = None
+    ) -> "GemStoneError":
         msg = err.message.decode("utf-8", errors="replace").rstrip("\x00")
         reason = err.reason.decode("utf-8", errors="replace").rstrip("\x00")
         full = msg if not reason or reason == msg else f"{msg} [{reason}]"
+        arg_count = max(0, err.argCount)
         return cls(
             full or f"GemStone error #{err.number}",
             number=err.number,
             fatal=bool(err.fatal),
+            exception_oop=int(err.exceptionObj),
+            category=int(err.category),
+            arg_oops=tuple(int(err.args[i]) for i in range(arg_count)),
+            session=session,
         )
 
 
@@ -509,7 +557,7 @@ class GemStoneSession:
             err = GciErrSType()
             ok = lib.GciCommit(ctypes.byref(err))
             if not ok:
-                raise GemStoneError.from_err_struct(err)
+                raise GemStoneError.from_err_struct(err, session=self)
 
     def abort(self) -> None:
         with self._observe_operation("abort"):
@@ -519,7 +567,7 @@ class GemStoneSession:
             if ok:
                 return
             if err.number != 0:
-                raise GemStoneError.from_err_struct(err)
+                raise GemStoneError.from_err_struct(err, session=self)
             oop = int(
                 lib.GciExecuteStr(
                     b"System abortTransaction",
@@ -993,7 +1041,7 @@ class GemStoneSession:
             lib = self._require_lib()
             lib.GciErr(ctypes.byref(err))
             if err.number != 0:
-                raise GemStoneError.from_err_struct(err)
+                raise GemStoneError.from_err_struct(err, session=self)
 
     def _string_class_oops(self) -> frozenset[int]:
         if self.__string_class_oops_cache is not None:
