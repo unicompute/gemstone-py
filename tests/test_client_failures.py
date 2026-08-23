@@ -13,12 +13,20 @@ def _populate_error(
     message: str,
     reason: str | None = None,
     fatal: bool = False,
+    exception_oop: int = 0,
+    category: int = 0,
+    arg_oops: tuple[int, ...] = (),
 ) -> None:
     err = ctypes.cast(err_ptr, ctypes.POINTER(gemstone.GciErrSType)).contents
     err.number = number
     err.fatal = int(fatal)
     err.message = message.encode("utf-8")
     err.reason = (reason or message).encode("utf-8")
+    err.exceptionObj = exception_oop
+    err.category = category
+    err.argCount = len(arg_oops)
+    for i, oop in enumerate(arg_oops):
+        err.args[i] = oop
 
 
 class GemStoneClientFailureTests(unittest.TestCase):
@@ -113,15 +121,14 @@ class GemStoneClientFailureTests(unittest.TestCase):
         self.assertEqual(ctx.exception.number, 88)
         lib.GciExecuteStr.assert_not_called()
 
-    def test_check_result_raises_generic_error_when_gci_err_is_empty(self) -> None:
+    def test_check_result_is_noop_when_result_is_nil_without_gci_error(self) -> None:
         session = gemstone.GemStoneSession(username="alice", password="secret")
         lib = mock.Mock()
         session._lib = lib
 
-        with self.assertRaises(gemstone.GemStoneError) as ctx:
-            session._check_result(gemstone.OOP_ILLEGAL)
+        # OOP_NIL with no GciErr error is a legitimate nil result, not a failure.
+        session._check_result(gemstone.OOP_NIL)
 
-        self.assertEqual(str(ctx.exception), "GCI call returned OOP_ILLEGAL")
         lib.GciErr.assert_called_once_with(mock.ANY)
 
     def test_check_result_raises_structured_error_when_gci_err_is_present(self) -> None:
@@ -141,11 +148,49 @@ class GemStoneClientFailureTests(unittest.TestCase):
         lib.GciErr.side_effect = fill_error
 
         with self.assertRaises(gemstone.GemStoneError) as ctx:
-            session._check_result(gemstone.OOP_ILLEGAL)
+            session._check_result(gemstone.OOP_NIL)
 
         self.assertIn("Fetch failed", str(ctx.exception))
         self.assertEqual(ctx.exception.number, 19)
         self.assertTrue(ctx.exception.fatal)
+
+    def test_check_result_carries_exception_data_and_exposes_proxy(self) -> None:
+        from gemstone_py.persistent_root import GsObject
+
+        session, lib = self._logged_in_session()
+
+        def fill_error(err_ptr: object) -> None:
+            _populate_error(
+                err_ptr,
+                number=2026,
+                message="divide by zero",
+                exception_oop=0x12345,
+                category=7,
+                arg_oops=(0xAA, 0xBB),
+            )
+
+        lib.GciErr.side_effect = fill_error
+
+        with self.assertRaises(gemstone.GemStoneError) as ctx:
+            session._check_result(gemstone.OOP_NIL)
+
+        err = ctx.exception
+        self.assertEqual(err.exception_oop, 0x12345)
+        self.assertEqual(err.category, 7)
+        self.assertEqual(err.arg_oops, (0xAA, 0xBB))
+
+        proxy = err.exception
+        self.assertIsInstance(proxy, GsObject)
+        self.assertEqual(proxy.oop, 0x12345)
+
+    def test_exception_is_none_without_session(self) -> None:
+        err = gemstone.GemStoneError("boom", number=1, exception_oop=0x99)
+        self.assertIsNone(err.exception)
+
+    def test_exception_is_none_without_exception_oop(self) -> None:
+        session, _ = self._logged_in_session()
+        err = gemstone.GemStoneError("boom", number=1, session=session)
+        self.assertIsNone(err.exception)
 
     def test_activate_session_raises_when_session_id_is_invalid(self) -> None:
         session = gemstone.GemStoneSession(username="alice", password="secret")

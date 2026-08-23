@@ -40,6 +40,7 @@ Usage
 """
 
 import ctypes
+from decimal import Decimal
 from typing import Any, Iterable, Iterator, cast
 
 import gemstone_py as _gs
@@ -697,6 +698,26 @@ def _from_oop(s: _gs.GemStoneSession, oop: int) -> Any:
         return float_value
 
     cls_oop = s.fetch_class(oop)
+
+    # Exact fixed-point decimals -> Decimal (NOT float; asFloat is lossy for money).
+    # asString yields clean decimal text on this stone (e.g. '19.99'), so Decimal()
+    # parses it directly.
+    if cls_oop in (
+        _class_oop(s, 'SmallScaledDecimal'),
+        _class_oop(s, 'ScaledDecimal'),
+    ):
+        return Decimal(s.fetch_string(s.perform_oop(oop, 'asString')))
+
+    # Unicode strings -> str. Route through a server-side asString rather than a raw
+    # fetch_string(oop): fetch_string does a raw byte fetch + UTF-8 decode, which is
+    # correct for Unicode7 (1 byte/char ASCII) but mangles multibyte Unicode16. For
+    # truly lossless Unicode16 the most robust path is encodeAsUTF8 server-side, but
+    # asString is sufficient for ASCII content.
+    if cls_oop in (
+        _class_oop(s, 'Unicode7'),
+        _class_oop(s, 'Unicode16'),
+    ):
+        return s.fetch_string(s.perform_oop(oop, 'asString'))
 
     if cls_oop == _class_oop(s, 'StringKeyValueDictionary'):
         return GsDict(s, oop)

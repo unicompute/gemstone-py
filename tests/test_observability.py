@@ -1,3 +1,4 @@
+import ctypes
 import unittest
 from unittest import mock
 
@@ -100,7 +101,15 @@ class ObservabilityTests(unittest.TestCase):
 
     def test_operation_errors_are_recorded(self):
         session, tracer, metrics = _observed_session()
-        session._lib.GciPerform.return_value = gemstone.OOP_ILLEGAL
+        session._lib.GciPerform.return_value = gemstone.OOP_NIL
+
+        def fail(err_ptr):
+            err = ctypes.cast(err_ptr, ctypes.POINTER(gemstone.GciErrSType)).contents
+            err.number = 2335
+            err.message = b"does not understand: #missing"
+            err.reason = b""
+
+        session._lib.GciErr.side_effect = fail
 
         with self.assertRaises(gemstone.GemStoneError):
             session.perform_oop(123, "missing")
